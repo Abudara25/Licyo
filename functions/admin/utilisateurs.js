@@ -14,7 +14,7 @@ import {
   formatDateFr,
 } from '../_shared/admin-auth.js';
 import { ensureSchema } from '../_shared/inscriptions-db.js';
-import { listMembers, inviteMember, changeRole, revokeMember, AccountError, ROLES, ROLE_KEYS, PERMISSIONS, roleLabel, logAudit } from '../_shared/accounts.js';
+import { listMembers, inviteMember, changeRole, revokeMember, AccountError, ROLES, ROLE_KEYS, roleLabel, logAudit } from '../_shared/accounts.js';
 import { sendAdminInvitation, mailConfigured } from '../_shared/confirmation-email.js';
 import { loadOrganization } from '../_shared/organization.js';
 
@@ -36,7 +36,7 @@ function memberRow(m, admin) {
     ? `<form method="POST">
          <input type="hidden" name="action" value="role"><input type="hidden" name="userId" value="${escapeHtml(m.id)}">
          <label class="visually-hidden" for="role-${escapeHtml(m.id)}">Rôle de ${escapeHtml(m.name || m.email)}</label>
-         <select id="role-${escapeHtml(m.id)}" name="role">${roleOptions(admin.role, m.role)}</select>
+         <select id="role-${escapeHtml(m.id)}" name="role" class="adm-select">${roleOptions(admin.role, m.role)}</select>
          <button type="submit" class="adm-btn adm-btn-sm adm-btn-ghost">Changer</button>
        </form>
        ${m.status === 'invited' ? `<form method="POST"><input type="hidden" name="action" value="resend"><input type="hidden" name="userId" value="${escapeHtml(m.id)}"><button type="submit" class="adm-btn adm-btn-sm adm-btn-ghost">${icon('send')}Renvoyer</button></form>` : ''}
@@ -50,7 +50,7 @@ function memberRow(m, admin) {
   return `<li class="adm-user-row">
     <div>
       <h3>${escapeHtml(m.name || m.email)} ${status}</h3>
-      <p>${escapeHtml(m.email)} · <strong>${escapeHtml(roleLabel(m.role))}</strong></p>
+      <p>${m.name ? `${escapeHtml(m.email)} · ` : ''}<strong>${escapeHtml(roleLabel(m.role))}</strong></p>
       <p>${last}</p>
     </div>
     <div class="adm-user-actions">${actions}</div>
@@ -61,7 +61,7 @@ async function render(env, admin, { message = '', error = '', email = '', role =
   const members = await listMembers(env.DB, admin.organizationId);
   const badges = await adminBadges(env, admin);
   const roles = ROLE_KEYS.map(
-    (r) => `<li><strong>${escapeHtml(ROLES[r].label)}</strong> : ${escapeHtml(ROLES[r].description)}${ROLES[r].permissions.length ? ` <span class="adm-help">(${ROLES[r].permissions.map((p) => escapeHtml(PERMISSIONS[p])).join(' ; ')})</span>` : ''}</li>`
+    (r) => `<li><strong>${escapeHtml(ROLES[r].label)}</strong> : ${escapeHtml(ROLES[r].description)}</li>`
   ).join('');
   const body = `${adminHead('Utilisateurs')}
 ${adminShell({
@@ -87,7 +87,7 @@ ${adminShell({
         </div>
         <div class="form-field">
           <label for="invite-role">Rôle</label>
-          <select id="invite-role" name="role">${roleOptions(admin.role, role)}</select>
+          <select id="invite-role" name="role" class="adm-select">${roleOptions(admin.role, role)}</select>
         </div>
       </div>
       <p class="adm-help">La personne reçoit un lien personnel, valable 7 jours, pour choisir son mot de passe.</p>

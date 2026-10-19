@@ -19,10 +19,28 @@ const LABELS = {
   'compte.mot-de-passe-reinitialise': 'Mot de passe réinitialisé',
 };
 
+// Formulaires de l'admin (journalisés par admin-access.js sous la forme « chemin:action »).
+const PAGES = {
+  inscriptions: 'Inscriptions', adherents: 'Adhérents', contacts: 'Contacts', preinscriptions: 'Pré-inscriptions', reinscription: 'Réinscription',
+  categories: 'Catégories', parametres: 'Paramètres', email: 'E-mail aux familles', utilisateurs: 'Utilisateurs', compte: 'Mon compte', 'inscription-status': 'Ouverture des inscriptions',
+};
+const ACTIONS = {
+  'toggle-paye': 'paiement enregistré ou annulé', 'bulk-reminder': 'relance envoyée', 'bulk-archive': 'fiches archivées', archive: 'fiche archivée',
+  restore: 'fiche restaurée', delete: 'suppression définitive', licence: 'n° de licence', note: 'note interne', 'suivi-club': 'suivi licence et tenue',
+  'bulk-reinscription': 'liens de réinscription envoyés', 'bulk-reinscription-rappel': 'rappel de réinscription', 'family-link-send': 'nouveau lien envoyé à la famille',
+  'family-link-revoke': 'liens famille révoqués', 'notification-email': 'adresse du club', 'family-info': 'infos familles', automations: 'automatisations',
+  'run-reminders': 'relances lancées', 'send-summary': 'récapitulatif envoyé', send: 'envoi', birthplace: 'lieu de naissance', refuser: 'refus',
+};
+
 function label(action) {
   if (LABELS[action]) return LABELS[action];
   if (action.startsWith('utilisateur.role:')) return `Rôle changé (${action.slice(17)})`;
-  return action;
+  const match = /^\/admin\/([a-z-]+)(\/[^:]*)?(?::([a-z-]+))?$/.exec(action);
+  if (!match) return action;
+  const [, page, rest, act] = match;
+  const where = PAGES[page] || page;
+  const what = act ? ACTIONS[act] || act : rest ? 'modification d’une fiche' : 'modification';
+  return `${where} : ${what}`;
 }
 
 export async function onRequestGet({ request, env }) {

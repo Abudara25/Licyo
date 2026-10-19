@@ -994,3 +994,11 @@ dd .adm-link, .adm-kv .adm-link, .adm-prein-line a { display: inline-flex; align
   .adm-audit tr { display: block; padding: 8px 0; border-bottom: 1px solid var(--cream-200); }
   .adm-audit td { display: block; border: 0; padding: 2px 0; }
 }
+@media (max-width: 600px) {
+  .adm-audit, .adm-audit tbody, .adm-audit tr { display: block; width: 100%; min-width: 0; }
+}
+.adm-user-actions .adm-btn { white-space: nowrap; }
+@media (max-width: 600px) {
+  .adm-user-actions form:first-child { width: 100%; }
+  .adm-user-actions form:first-child select { flex: 1; min-width: 0; }
+}
