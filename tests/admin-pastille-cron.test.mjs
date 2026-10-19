@@ -70,7 +70,7 @@ test('pastille : barre du haut et barre du bas, texte pour lecteur d’écran, p
   assert.match(many, /\(12 dossiers à vérifier\)/, 'le nombre exact reste lu');
   // La pastille ne touche que l'onglet Inscriptions (pas la Corbeille, qui pointe aussi vers /admin/inscriptions).
   assert.match(three, /href="\/admin\/inscriptions" class="adm-tab">Inscriptions<span class="visually-hidden">/);
-  assert.match(three, /href="\/admin\/inscriptions\?view=archive" class="adm-tab">Corbeille<\/a>/);
+  assert.match(three, /href="\/admin\/inscriptions\?view=archive" class="">[^<]*<svg[\s\S]*?<\/svg>Corbeille<\/a>/, "Corbeille (menu Plus) sans pastille");
 });
 
 test('pastille : affichée sur les pages admin de la session (tableau de bord, fiche), jamais celle d’une autre organisation', async () => {
