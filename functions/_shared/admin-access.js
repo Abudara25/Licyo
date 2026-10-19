@@ -6,12 +6,14 @@
 //    organisation (admin.organizationId) ; ici on ne décide que « ce rôle a-t-il le droit d'ouvrir cette page ».
 // 2. Navigation : dans les pages HTML renvoyées, les liens vers des pages interdites au rôle sont retirés (onglets,
 //    menu « Plus », raccourcis du tableau de bord), et le menu du compte (nom, rôle) est inséré dans la barre du haut.
-// 3. Journal d'audit : chaque envoi de formulaire accepté (statut < 400) est noté (chemin, action, compte), sans
+// 3. Vocabulaire : les mots du football des gabarits (FFF, Footclubs…) sont traduits selon le sport du club.
+// 4. Journal d'audit : chaque envoi de formulaire accepté (statut < 400) est noté (chemin, action, compte), sans
 //    aucun contenu de formulaire.
 //
 // Routes sans session (connexion, mot de passe oublié, invitation, premier accès) : laissées aux handlers.
 import { isAuthed, escapeHtml, icon } from './admin-auth.js';
 import { logAudit } from './accounts.js';
+import { getSportProfile, applySportVocabulary } from './sport-profile.js';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -101,8 +103,13 @@ export async function adminAccessMiddleware({ request, env, next }) {
   if (write && response.status < 400) {
     await logAudit(env.DB, admin.organizationId, { userId: admin.userId, action: `${url.pathname}${action ? `:${action}` : ''}` });
   }
-  if (!(response.headers.get('Content-Type') || '').toLowerCase().startsWith('text/html')) return response;
-  const html = decorateAdminHtml(await response.text(), admin);
+  const type = (response.headers.get('Content-Type') || '').toLowerCase();
+  const isHtml = type.startsWith('text/html');
+  if (!isHtml && !type.startsWith('text/csv')) return response;
+  // Vocabulaire du sport du club (fédération, plateforme de licence…) : voir sport-profile.js.
+  const profile = await getSportProfile(env, admin.organizationId).catch(() => null);
+  const text = applySportVocabulary(await response.text(), profile);
+  const html = isHtml ? decorateAdminHtml(text, admin) : text;
   const headers = new Headers(response.headers);
   headers.delete('Content-Length');
   return new Response(html, { status: response.status, statusText: response.statusText, headers });

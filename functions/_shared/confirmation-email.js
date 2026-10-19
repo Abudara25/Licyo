@@ -19,6 +19,7 @@ import { getNotificationEmail, getCategoriesConfig, getFamilyInfo } from './sett
 import { isInscriptionComplete, familyHasActionPending, dossierStatus, refusMotifs, hasBirthPlace, photoRefusMotifs } from './inscriptions-db.js';
 import { logEmail } from './email-log.js';
 import { sendSmtp } from './smtp.js';
+import { getSportProfile, applySportVocabulary } from './sport-profile.js';
 
 const escapeHtml = (str = '') =>
   String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -750,6 +751,16 @@ export const mailConfigured = (env) => Boolean(env.SMTP_PASSWORD || env.BREVO_AP
 // partir, un second envoi ferait un doublon). Le nom de la fonction est resté pour ne rien changer ailleurs.
 async function brevoSend(env, body, log = null) {
   if (!mailConfigured(env)) return false;
+  // Vocabulaire du sport du club (fédération, plateforme de licence, « École de foot »…) : voir sport-profile.js.
+  if (log?.organizationId) {
+    const profile = await getSportProfile(env, log.organizationId).catch(() => null);
+    body = {
+      ...body,
+      subject: applySportVocabulary(body.subject, profile),
+      htmlContent: applySportVocabulary(body.htmlContent, profile),
+      textContent: applySportVocabulary(body.textContent, profile),
+    };
+  }
   // Exemples d'e-mails (email-samples.js) : tout part vers l'adresse de test, objet préfixé, jamais rattaché à une
   // fiche. Posé uniquement par le code (objet env recopié), jamais par une variable Cloudflare.
   if (env.__sampleTo) {

@@ -103,7 +103,9 @@ Légende : ✅ fait et testé · 🟡 partiel · ⬜ à faire.
 | Personnes, familles, relations, adhésions par saison, historique | ✅ (`crm.js`, `crm-schema.js`) |
 | Préinscription, places, transformation | 🟡 (liste d'intérêt, ouverture automatique) |
 | Dossiers, documents, validation, relances | ✅ |
-| Champs personnalisés et vocabulaire par sport | voir journal |
+| Vocabulaire par sport (fédération, plateforme des licences, équipement) | ✅ (`sport-profile.js`, 14 sports, Paramètres) |
+| Champs personnalisés par sport (grade, ceinture, certificat…) | ⬜ |
+| Licence et équipement facultatifs dans le formulaire public | ⬜ |
 | Affectation aux équipes et historique | 🟡 (`group_memberships`) |
 
 ### Phase 5 : services opérationnels
@@ -129,6 +131,12 @@ Un club d'un autre sport (tennis, padel, judo...), parcours complet sans aucune 
 ## Journal des avancées
 
 Les étapes réalisées sont ajoutées ici, la plus récente en haut.
+
+### 2026-10-20 : profil sportif du club
+
+- Paramètres › « Sport et fédération » : 14 sports proposés (football, basket, hand, rugby, volley, judo, karaté, boxe, muay thaï, natation, tennis, gymnastique, athlétisme, autre), avec sigle et nom de la fédération, plateforme des licences, sous-titre, équipement, tous modifiables.
+- Les gabarits gardent le vocabulaire du football comme forme de référence ; il est traduit au dernier moment pour l'admin (middleware) et pour chaque e-mail (point d'envoi unique). Le club de démo reste en football.
+- Tests : `tests/sport-profile.test.mjs`.
 
 ### 2026-10-20 : fin des cas spéciaux du club historique (phase 1)
 

@@ -3,6 +3,7 @@
 // (phase 3, 2026-10-20), il n'y a plus de mot de passe partagé ici : chacun gère le sien dans « Mon compte »
 // (/admin/compte) et les accès se gèrent dans « Utilisateurs » (/admin/utilisateurs).
 import { retentionDue, RETENTION_YEARS } from '../_shared/retention.js';
+import { getSportProfile, setSportProfile, SPORT_PRESETS, SPORT_KEYS } from '../_shared/sport-profile.js';
 import {
   isAuthed,
   loginPage,
@@ -174,7 +175,38 @@ function retentionSection(due) {
   </section>`;
 }
 
-function page({ notificationEmail, emailError, emailOk, auto, badges, family, due = [] }) {
+function sportSection(sport, { sportOk = false } = {}) {
+  const field = (id, name, label, help = '') => `<div class="form-field">
+        <label for="${id}">${label}</label>
+        <input type="text" id="${id}" name="${name}" value="${escapeHtml(sport[name] || '')}" maxlength="120" placeholder="${escapeHtml(SPORT_PRESETS[sport.sport][name] || '')}">
+        ${help ? `<small class="form-hint">${help}</small>` : ''}
+      </div>`;
+  return `<section class="adm-surface" id="sport">
+    <h2 class="adm-h2">${icon('tag')}Sport et fédération</h2>
+    <p class="adm-help" style="margin-top:8px;">Adapte les mots de l’admin et des e-mails à votre sport (licence, fédération, plateforme où le club enregistre les licences). Laissez un champ vide pour reprendre la valeur proposée.</p>
+    ${sportOk ? flash('ok', 'Sport enregistré.') : ''}
+    <form method="POST">
+      <input type="hidden" name="action" value="sport">
+      <div class="form-field">
+        <label for="sport-key">Sport principal</label>
+        <select id="sport-key" name="sport" class="adm-select">${SPORT_KEYS.map((k) => `<option value="${k}"${k === sport.sport ? ' selected' : ''}>${escapeHtml(SPORT_PRESETS[k].label)}</option>`).join('')}</select>
+        <small class="form-hint">Après un changement de sport, enregistrez puis vérifiez les champs ci-dessous.</small>
+      </div>
+      <div class="form-row">
+        ${field('sport-fed', 'federation', 'Sigle de la fédération', 'Ex. : celui qui délivre les licences.')}
+        ${field('sport-platform', 'platform', 'Plateforme des licences', 'Vide : « l’espace en ligne de la fédération ».')}
+      </div>
+      ${field('sport-fed-name', 'federationName', 'Nom complet de la fédération')}
+      <div class="form-row">
+        ${field('sport-tagline', 'tagline', 'Sous-titre du club dans les e-mails')}
+        ${field('sport-equipment', 'equipment', 'Équipement à commander', 'Ex. : taille de maillot, de kimono. Vide si aucun.')}
+      </div>
+      <div class="adm-form-actions"><button type="submit" class="adm-btn adm-btn-primary">${icon('check')}Enregistrer</button></div>
+    </form>
+  </section>`;
+}
+
+function page({ notificationEmail, emailError, emailOk, auto, badges, family, sport, sportOk, due = [] }) {
   return `${adminHead('Paramètres')}
 ${adminShell({
   active: 'parametres',
@@ -198,6 +230,8 @@ ${adminShell({
       <div class="adm-form-actions"><button type="submit" class="adm-btn adm-btn-primary">${icon('check')}Enregistrer</button></div>
     </form>
   </section>
+
+  ${sportSection(sport, { sportOk })}
 
   ${familyInfoSection(family)}
 
@@ -239,7 +273,8 @@ async function render(request, env, organizationId, props, { status = 200, heade
     // KV indisponible : champ vide.
   }
   const due = await retentionDue(env.DB, organizationId).catch(() => null);
-  return new Response(page({ ...props, auto, badges, due, family: { ...family, ...(props.family || {}) } }), { status, headers: { 'Content-Type': 'text/html;charset=UTF-8', ...headers } });
+  const sport = await getSportProfile(env, organizationId);
+  return new Response(page({ ...props, auto, badges, due, sport, family: { ...family, ...(props.family || {}) } }), { status, headers: { 'Content-Type': 'text/html;charset=UTF-8', ...headers } });
 }
 
 // Dernier passage du cron, et dernier échec s'il est plus récent (voir recordCronFailure dans functions/api/cron.js).
@@ -297,6 +332,15 @@ export async function onRequestPost({ request, env }) {
     const config = Object.fromEntries(Object.keys(DEFAULT_AUTOMATIONS).map((key) => [key, form.get(key) === 'on']));
     await setAutomationsConfig(env, org, config);
     return render(request, env, admin.organizationId, { notificationEmail }, { message: 'Automatisations enregistrées.' });
+  }
+
+  if (action === 'sport') {
+    const previous = await getSportProfile(env, org);
+    const sport = String(form.get('sport') || '');
+    // Sport changé : les champs affichés étaient ceux de l'ancien sport, on repart du nouveau préréglage.
+    const fields = sport === previous.sport ? Object.fromEntries(['federation', 'federationName', 'platform', 'tagline', 'equipment'].map((f) => [f, form.get(f)])) : {};
+    await setSportProfile(env, org, { sport, ...fields });
+    return render(request, env, org, { notificationEmail, sportOk: true });
   }
 
   if (action === 'helloasso' || action === 'helloasso-clear') {
