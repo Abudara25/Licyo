@@ -65,7 +65,7 @@ test('dossier publié : copie à l’identique de chaque fichier public du dép�
 
 test('tout fichier de la racine du dépôt est classé : publié ou interne (une nouvelle page doit être ajoutée à l’allowlist)', async () => {
   const INTERNAL_ROOT = new Set(['CLAUDE.md', 'AGENTS.md', 'README.md', 'package.json', 'package-lock.json', 'status.json', '_routes.json', 'desktop.ini', 'dist', 'node_modules',
-    'functions', 'tests', 'scripts', 'workers', 'styles', 'renderer', 'sites', 'content', 'prototypes']);
+    'functions', 'tests', 'scripts', 'workers', 'styles', 'renderer', 'sites', 'content', 'prototypes', 'docs']);
   const unclassified = (await readdir('.', { withFileTypes: true }))
     .map((entry) => entry.name)
     .filter((name) => !name.startsWith('.') || name === '.well-known')

@@ -20,8 +20,8 @@ const MAX_DECODE_LEVELS = 4;
 // content/ : sources des actualités, lues seulement par les Functions (_shared/news.js), jamais publiées.
 // prototypes/ : maquettes locales (ex. console Platform), servies seulement par leur serveur local ;
 // jamais sur un domaine de club.
-const INTERNAL_DIRECTORIES = new Set(['tests', 'scripts', 'workers', 'functions', 'node_modules', 'styles', 'renderer', 'sites', 'content', 'prototypes']);
-const INTERNAL_ROOT_FILES = new Set(['package.json', 'package-lock.json', 'claude.md', 'agents.md', 'status.json', 'desktop.ini', '_routes.json']);
+const INTERNAL_DIRECTORIES = new Set(['tests', 'scripts', 'workers', 'functions', 'node_modules', 'styles', 'renderer', 'sites', 'content', 'prototypes', 'docs']);
+const INTERNAL_ROOT_FILES = new Set(['package.json', 'package-lock.json', 'claude.md', 'agents.md', 'readme.md', 'status.json', 'desktop.ini', '_routes.json']);
 const PUBLIC_DOT_ROOT = '.well-known';
 
 // "/a//b/./c/../d/" → ["a", "b", "d"] (minuscules). Jamais au-dessus de la racine.
