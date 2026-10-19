@@ -71,7 +71,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⬜ à faire.
 | Aucun repli servant le contenu d'un club à un autre (réponses neutres) | ✅ | `public-site.js`, tests `public-routing`, `tenant-isolation` |
 | Routage des pages cohérent avec la configuration | ✅ | `functions/[[path]].js` |
 | Migrations, révisions, contrôles d'intégrité | ✅ | `schema.js`, `repairSchemaInvariants` |
-| Plus aucun cas spécial pour un club « historique » | voir journal | `settings-kv.js`, `integrations.js`, `schema.js` |
+| Plus aucun cas spécial pour un club « historique » | 🟡 clés globales, miroir KV et secrets de plateforme retirés ; restent les valeurs de référence du club de démo (catégories, lieu, pré-inscription) et son secours statique | `settings-kv.js`, `integrations.js` |
+| Tâches quotidiennes pour tous les clubs | ✅ un appel traite chaque club actif | `functions/api/cron.js` |
 
 ### Phase 2 : terminer le moteur de site vitrine
 
@@ -111,7 +112,7 @@ Légende : ✅ fait et testé · 🟡 partiel · ⬜ à faire.
 |---|---|
 | E-mails transactionnels (SMTP, Brevo en secours), journal | ✅ (identifiants de plateforme) |
 | Expéditeur et domaine d'envoi par club | ⬜ |
-| Paiement HelloAsso, rapprochement | 🟡 (secrets de plateforme, pas par club) |
+| Paiement HelloAsso, rapprochement | ✅ identifiants propres à chaque club, chiffrés (`integrations.js`, `SECRETS_KEY`) |
 | Présences, planning, convocations | ⬜ |
 
 ### Phase 6 : console SaaS
@@ -128,6 +129,13 @@ Un club d'un autre sport (tennis, padel, judo...), parcours complet sans aucune 
 ## Journal des avancées
 
 Les étapes réalisées sont ajoutées ici, la plus récente en haut.
+
+### 2026-10-20 : fin des cas spéciaux du club historique (phase 1)
+
+- Plus aucune clé KV globale lue ou écrite (ni copie miroir) : chaque réglage est sous `org:<club>:...`.
+- Identifiants HelloAsso propres à chaque club, saisis dans Paramètres, chiffrés en AES-GCM (clé dérivée de `SECRETS_KEY` et de l'identifiant du club) ; les variables globales `HELLOASSO_*` ne valent plus rien.
+- Le cron quotidien traite tous les clubs actifs (chacun avec son adresse, son état et ses alertes).
+- Tests : `tests/integrations.test.mjs`, tests KV, cron et isolation mis à jour.
 
 ### 2026-10-20 : comptes nominatifs et rôles (phase 3)
 

@@ -56,7 +56,8 @@ Serveur local complet : `npm run build`, puis `npx wrangler pages dev dist --d1 
 
 ## Dette héritée de Saint-Gratien FC (à traiter)
 
-- **Le club de démo est l'ancien « locataire historique »** : `DEMO_ORG_ID`, `DEMO_DOMAINS` (`schema.js`) et `isLegacyTenant` / `LEGACY_MIRROR` (`settings-kv.js`) gardent des comportements spéciaux (anciennes clés KV globales, secrets HelloAsso de plateforme, secours statique, valeurs par défaut des catégories). Le secret `ADMIN_PASSWORD` a disparu avec les comptes nominatifs. Pour une vraie plateforme, ces cas particuliers doivent disparaître : chaque organisation a ses réglages, secrets et mot de passe en base.
+- **Valeurs de référence du club de démo dans le code** : catégories par défaut (`settings-kv.js`), lieu (`public-data.js`), pré-inscription U10 (`preinscriptions.js`), articles (`news.js`) et secours statique (`public-site.js`, `DEMO_DOMAINS`). Elles ne servent qu'au club de démo, jamais à un autre ; à terme, un « modèle de club » en base les remplacera. Les clés KV globales, la copie miroir, `ADMIN_PASSWORD` et les secrets `HELLOASSO_*` de plateforme ont disparu.
+- **Secrets de plateforme** (variables Cloudflare) : `SETUP_SECRET` (premier accès d'un club), `SECRETS_KEY` (chiffrement des identifiants d'intégration des clubs, à ne jamais changer sans ressaisir ces identifiants), `CRON_SECRET`.
 - **Contenu orienté football** : catégories U6-U7 / U8-U9, pré-inscription U10, licence FFF, taille de maillot, textes et articles. À rendre générique (vocabulaire par sport, catégories libres, fédération configurable) pour viser tous les sports.
 - **Palette bordeaux et or** du club d'origine dans `styles/palettes/club-demo.css` et dans les constantes des e-mails : à remplacer par une palette par organisation.
 - **Une seule organisation déclarée** dans `sites/index.js` et la migration 1 ; pas encore d'écran d'onboarding (console plateforme).

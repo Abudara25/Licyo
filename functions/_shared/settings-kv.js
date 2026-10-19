@@ -1,20 +1,11 @@
-// Réglages d'une organisation, stockés dans le KV "licyo_config" (binding INSCRIPTION_STATUS).
+// Réglages d'une organisation, stockés dans le KV (binding INSCRIPTION_STATUS).
 //
-// Depuis la consolidation de la phase SaaS (2026-09-23), chaque réglage appartient à UNE organisation :
-// clé `org:<organizationId>:<nom>` (ex. org:org_demo:categories_config). Toutes les fonctions de ce module
-// exigent l'organizationId, déterminé côté serveur (session admin ou domaine). Aucune clé globale n'est
-// plus lue pour une autre organisation que Sportville.
-//
-// Reprise de l'existant : avant cette date, les clés étaient globales (notification_email,
-// categories_config…) et appartenaient à Sportville, seule organisation. Pour Sportville :
-// - lecture : clé de l'organisation, sinon ancienne clé globale (aucune donnée perdue au déploiement) ;
-// - écriture : clé de l'organisation ET ancienne clé (LEGACY_MIRROR), pour qu'un retour temporaire à
-//   l'ancien code retrouve des réglages à jour. À retirer une fois la phase SaaS stabilisée.
-// Classement des clés : toutes sont propres à une organisation ; aucune n'est globale à la plateforme.
+// Chaque réglage appartient à UNE organisation : clé `org:<organizationId>:<nom>` (ex. org:org_demo:categories_config).
+// Toutes les fonctions de ce module exigent l'organizationId, déterminé côté serveur (session admin ou domaine).
+// Aucune clé n'est globale à la plateforme. (Les anciennes clés globales du club historique et leur copie miroir ont
+// été retirées le 2026-10-20 : Licyo démarre sans données à reprendre.)
 import { DEMO_ORG_ID } from './schema.js';
 import { readGroupsConfig, writeGroupsConfig, bootstrapPublicData } from './public-data.js';
-
-const LEGACY_MIRROR = true;
 
 export const settingKey = (organizationId, name) => `org:${organizationId}:${name}`;
 
@@ -22,26 +13,23 @@ function requireOrganization(organizationId) {
   if (!organizationId || typeof organizationId !== 'string') throw new Error('Réglage KV : organisation requise');
 }
 
-const isLegacyTenant = (organizationId) => organizationId === DEMO_ORG_ID;
+// Club de démonstration : ses valeurs de référence (catégories, adresse du club) servent de valeurs par défaut, à lui
+// seul, comme le contenu de sites/club-demo/. Aucune autre organisation ne les reçoit jamais.
+const isDemo = (organizationId) => organizationId === DEMO_ORG_ID;
 
 export async function readSetting(env, organizationId, name) {
   requireOrganization(organizationId);
-  const value = await env.INSCRIPTION_STATUS.get(settingKey(organizationId, name));
-  if (value !== null && value !== undefined) return value;
-  return isLegacyTenant(organizationId) ? env.INSCRIPTION_STATUS.get(name) : null;
+  return env.INSCRIPTION_STATUS.get(settingKey(organizationId, name));
 }
 
 export async function writeSetting(env, organizationId, name, value, options) {
   requireOrganization(organizationId);
   await env.INSCRIPTION_STATUS.put(settingKey(organizationId, name), value, options);
-  if (LEGACY_MIRROR && isLegacyTenant(organizationId)) await env.INSCRIPTION_STATUS.put(name, value, options);
 }
 
 export async function deleteSetting(env, organizationId, name) {
   requireOrganization(organizationId);
   await env.INSCRIPTION_STATUS.delete(settingKey(organizationId, name));
-  // L'ancienne clé est toujours effacée pour Sportville : sinon la lecture la reprendrait.
-  if (isLegacyTenant(organizationId)) await env.INSCRIPTION_STATUS.delete(name);
 }
 
 async function readJson(env, organizationId, name) {
@@ -67,7 +55,7 @@ export async function getNotificationEmail(env, organizationId) {
   } catch {
     // KV indisponible : repli ci-dessous.
   }
-  return isLegacyTenant(organizationId) ? DEFAULT_NOTIFICATION_EMAIL : '';
+  return isDemo(organizationId) ? DEFAULT_NOTIFICATION_EMAIL : '';
 }
 
 export async function setNotificationEmail(env, organizationId, value) {
@@ -157,7 +145,7 @@ export async function getCategoriesConfig(env, organizationId) {
 
 async function readKvCategoriesConfig(env, organizationId) {
   requireOrganization(organizationId);
-  const defaults = isLegacyTenant(organizationId) ? DEFAULT_CATEGORIES_CONFIG : EMPTY_CATEGORIES_CONFIG;
+  const defaults = isDemo(organizationId) ? DEFAULT_CATEGORIES_CONFIG : EMPTY_CATEGORIES_CONFIG;
   const parsed = await readJson(env, organizationId, 'categories_config');
   // Complétée par les valeurs par défaut : une config enregistrée sans "saison" ne doit jamais produire
   // une inscription sans saison.
@@ -170,7 +158,7 @@ async function readKvCategoriesConfig(env, organizationId) {
 // Écriture en D1 d'abord (source de vérité) : si elle échoue, rien n'est écrit dans le KV. Le KV n'est
 // qu'une copie de compatibilité, écrite au mieux : une panne du KV APRÈS le succès de D1 ne fait pas
 // échouer la modification (elle est enregistrée), elle est seulement journalisée, et la copie se
-// reconstruit depuis D1 avec rebuildLegacyMirror. expectedVersion : voir writeGroupsConfig (conflit).
+// reconstruit depuis D1 avec rebuildCategoriesCopy. expectedVersion : voir writeGroupsConfig (conflit).
 export async function setCategoriesConfig(env, organizationId, config, { expectedVersion } = {}) {
   requireOrganization(organizationId);
   const { configVersion, ...toStore } = config; // version de contrôle : jamais recopiée dans le KV
@@ -179,13 +167,14 @@ export async function setCategoriesConfig(env, organizationId, config, { expecte
     await writeSetting(env, organizationId, 'categories_config', JSON.stringify(toStore));
   } catch (error) {
     if (!env.DB) throw error; // sans D1, le KV est la seule source : l'échec doit remonter
-    console.warn(`Catégories : copie KV non mise à jour pour ${organizationId} (${error?.message}) ; rebuildLegacyMirror la reconstruira depuis D1`);
+    console.warn(`Catégories : copie KV non mise à jour pour ${organizationId} (${error?.message}) ; rebuildCategoriesCopy la reconstruira depuis D1`);
   }
 }
 
-// Reconstruit la copie KV des catégories (ancienne clé de Sportville comprise) depuis D1 : à lancer après
-// une panne du KV. Sans effet si D1 n'a rien d'enregistré pour l'organisation. Renvoie true si écrite.
-export async function rebuildLegacyMirror(env, organizationId) {
+// Reconstruit la copie KV des catégories depuis D1 (secours quand D1 est en panne) : lancée chaque jour par le cron
+// pour rattraper une panne du KV survenue lors d'une modification. Sans effet si D1 n'a rien d'enregistré pour
+// l'organisation. Renvoie true si écrite.
+export async function rebuildCategoriesCopy(env, organizationId) {
   requireOrganization(organizationId);
   const stored = await readGroupsConfig(env, organizationId);
   if (!stored) return false;

@@ -1,7 +1,7 @@
 // Validation automatique des paiements HelloAsso (appelée par functions/api/helloasso-notification.js).
 // HelloAsso ne signe pas ses notifications (vérifié dans la documentation développeur le 2026-09-15) :
-// l'URL enregistrée chez HelloAsso contient un secret (HELLOASSO_WEBHOOK_SECRET), et si les identifiants
-// API HELLOASSO_CLIENT_ID/HELLOASSO_CLIENT_SECRET sont configurés, la commande est relue auprès de l'API
+// l'URL enregistrée chez HelloAsso contient le secret de notification du club, et si ses identifiants
+// API (identifiant et secret, enregistrés chiffrés dans /admin/parametres, voir integrations.js) sont configurés, la commande est relue auprès de l'API
 // HelloAsso (GET /v5/orders/{id}) plutôt que de faire confiance au contenu reçu.
 // Rattachement : formulaire HelloAsso d'une catégorie (liens de /admin/categories), puis fiche non payée
 // de la saison dont le nom de l'enfant correspond au participant — l'e-mail du payeur départage ou,
@@ -57,7 +57,7 @@ export async function processHelloAssoOrder(env, data, siteUrl, waitUntil, organ
   }
 
   // Identifiants API de l'organisation (jamais ceux d'une autre) : voir _shared/integrations.js.
-  const credentials = helloAssoCredentials(env, organizationId);
+  const credentials = await helloAssoCredentials(env, organizationId);
   const verified = Boolean(credentials.clientId && credentials.clientSecret);
   const order = verified ? await fetchVerifiedOrder(credentials, orderId) : data;
   const record = (status, ids, detail) =>

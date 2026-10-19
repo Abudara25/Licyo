@@ -1,7 +1,7 @@
 // Consolidation phase 2.1 : bootstrap, concurrence, cache, double écriture D1/KV.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getCategoriesConfig, setCategoriesConfig, rebuildLegacyMirror } from '../functions/_shared/settings-kv.js';
+import { getCategoriesConfig, setCategoriesConfig, rebuildCategoriesCopy } from '../functions/_shared/settings-kv.js';
 import {
   getPublicData, getCachedPublicData, saveLocation, saveSchedule, clearPublicDataCache, ConfigConflictError, getAdminPublicData,
 } from '../functions/_shared/public-data.js';
@@ -111,9 +111,9 @@ test('panne du KV après succès de D1 : la modification est enregistrée, la co
   assert.doesNotMatch(String(console.warn.mock.calls[0].arguments[0]), /@|Léa|Durand/, 'pas de donnée personnelle');
 
   env.INSCRIPTION_STATUS.put = put; // KV rétabli
-  assert.equal(await rebuildLegacyMirror(env, A), true);
+  assert.equal(await rebuildCategoriesCopy(env, A), true);
   assert.equal(JSON.parse(env.INSCRIPTION_STATUS.store.get(`org:${A}:categories_config`)).prix, 195);
-  assert.equal(JSON.parse(env.INSCRIPTION_STATUS.store.get('categories_config')).prix, 195, 'ancienne clé Sportville aussi');
+  assert.equal(env.INSCRIPTION_STATUS.store.get('categories_config'), undefined, 'aucune clé globale');
 });
 
 test('la lecture ne dépend plus du KV : D1 fait foi même si le KV est en retard', async () => {
@@ -161,7 +161,7 @@ test('un créneau identique est refusé proprement par l’admin ; supprimer un 
   assert.equal(locations.length, 2);
 });
 
-test('le service programmé reconstruit chaque jour la copie KV de Sportville depuis D1', async () => {
+test('le service programmé reconstruit chaque jour la copie KV de chaque club depuis D1', async () => {
   const { onRequestPost } = await import('../functions/api/cron.js');
   const { clearOrganizationCache } = await import('../functions/_shared/organization.js');
   clearOrganizationCache();
@@ -175,5 +175,5 @@ test('le service programmé reconstruit chaque jour la copie KV de Sportville de
   });
   assert.equal(response.status, 200);
   assert.equal((await response.json()).mirror, 'à jour');
-  assert.equal(JSON.parse(env.INSCRIPTION_STATUS.store.get('categories_config')).prix, config.prix);
+  assert.equal(JSON.parse(env.INSCRIPTION_STATUS.store.get(`org:${A}:categories_config`)).prix, config.prix);
 });

@@ -29,7 +29,7 @@ import {
 } from '../_shared/settings-kv.js';
 import { sendWeeklySummary, mailConfigured } from '../_shared/confirmation-email.js';
 import { runReminders, buildWeeklySummary } from '../_shared/automations.js';
-import { helloAssoCredentials } from '../_shared/integrations.js';
+import { helloAssoCredentials, saveHelloAssoCredentials, generateWebhookSecret, secretsConfigured } from '../_shared/integrations.js';
 
 const AUTOMATIONS = [
   {
@@ -102,6 +102,27 @@ function automationsSection(auto) {
     </div>`
         : ''
     }
+
+    <hr class="adm-divider">
+    <h3 class="adm-h3" id="helloasso">Identifiants HelloAsso du club</h3>
+    <p class="adm-help" style="margin-top:6px;">Chiffrés et propres à votre club. Ils ne sont jamais réaffichés : laissez un champ vide pour garder la valeur enregistrée. L’identifiant et le secret API se trouvent chez HelloAsso dans Mon compte › Intégrations et API.</p>
+    ${auto.secretsReady ? '' : flash('error', 'La plateforme n’a pas encore de clé de chiffrement (SECRETS_KEY) : les identifiants ne peuvent pas être enregistrés.')}
+    <form method="POST">
+      <input type="hidden" name="action" value="helloasso">
+      <div class="form-row">
+        <div class="form-field">
+          <label for="ha-client-id">Identifiant API (client id) ${auto.helloassoClientId ? '<small>· enregistré</small>' : ''}</label>
+          <input type="text" id="ha-client-id" name="clientId" autocomplete="off" maxlength="200" ${auto.secretsReady ? '' : 'disabled'}>
+        </div>
+        <div class="form-field">
+          <label for="ha-client-secret">Secret API (client secret) ${auto.helloassoClientSecret ? '<small>· enregistré</small>' : ''}</label>
+          <input type="password" id="ha-client-secret" name="clientSecret" autocomplete="new-password" maxlength="200" ${auto.secretsReady ? '' : 'disabled'}>
+        </div>
+      </div>
+      <label class="adm-check"><input type="checkbox" name="newWebhook" ${auto.webhookSecret ? '' : 'checked'} ${auto.secretsReady ? '' : 'disabled'}><span>${auto.webhookSecret ? 'Générer une nouvelle URL de notification (l’ancienne cessera de fonctionner)' : 'Générer l’URL de notification'}</span></label>
+      <div class="adm-form-actions" style="margin-top:12px;"><button type="submit" class="adm-btn adm-btn-primary" ${auto.secretsReady ? '' : 'disabled'}>${icon('lock')}Enregistrer</button></div>
+    </form>
+    ${auto.helloassoClientId || auto.webhookSecret ? `<form method="POST" class="admin-confirm-form" style="margin-top:8px;"><input type="hidden" name="action" value="helloasso-clear"><button type="submit" class="adm-btn adm-btn-sm adm-btn-danger" data-confirm="Effacer tous les identifiants HelloAsso du club ? Les paiements ne seront plus validés automatiquement.">${icon('trash')}Effacer les identifiants</button></form>` : ''}
 
     <hr class="adm-divider">
     <h3 class="adm-h3">Lancer maintenant</h3>
@@ -194,14 +215,18 @@ ${adminScripts('admin-nav')}
 }
 
 async function render(request, env, organizationId, props, { status = 200, headers = {}, message, error } = {}) {
+  const credentials = await helloAssoCredentials(env, organizationId);
   const auto = {
     config: await getAutomationsConfig(env, organizationId),
     cron: await getCronState(env, organizationId),
     siteUrl: new URL(request.url).origin,
     brevo: mailConfigured(env),
     mailVia: env.SMTP_PASSWORD ? (env.BREVO_API_KEY ? 'Infomaniak, secours Brevo' : 'Infomaniak') : 'Brevo',
-    webhookSecret: helloAssoCredentials(env, organizationId).webhookSecret || '',
-    helloassoApi: Boolean(helloAssoCredentials(env, organizationId).clientId && helloAssoCredentials(env, organizationId).clientSecret),
+    webhookSecret: credentials.webhookSecret || '',
+    helloassoApi: Boolean(credentials.clientId && credentials.clientSecret),
+    helloassoClientId: Boolean(credentials.clientId),
+    helloassoClientSecret: Boolean(credentials.clientSecret),
+    secretsReady: secretsConfigured(env),
     cronSecret: Boolean(env.CRON_SECRET),
     message,
     error,
@@ -272,6 +297,26 @@ export async function onRequestPost({ request, env }) {
     const config = Object.fromEntries(Object.keys(DEFAULT_AUTOMATIONS).map((key) => [key, form.get(key) === 'on']));
     await setAutomationsConfig(env, org, config);
     return render(request, env, admin.organizationId, { notificationEmail }, { message: 'Automatisations enregistrées.' });
+  }
+
+  if (action === 'helloasso' || action === 'helloasso-clear') {
+    if (!secretsConfigured(env)) return render(request, env, org, { notificationEmail }, { error: 'Enregistrement impossible : clé de chiffrement de la plateforme absente.', status: 503 });
+    try {
+      if (action === 'helloasso-clear') {
+        await saveHelloAssoCredentials(env, org, { webhookSecret: null, clientId: null, clientSecret: null });
+        return render(request, env, org, { notificationEmail }, { message: 'Identifiants HelloAsso effacés.' });
+      }
+      const clientId = String(form.get('clientId') || '').trim();
+      const clientSecret = String(form.get('clientSecret') || '').trim();
+      await saveHelloAssoCredentials(env, org, {
+        clientId: clientId || undefined,
+        clientSecret: clientSecret || undefined,
+        webhookSecret: form.get('newWebhook') === 'on' ? generateWebhookSecret() : undefined,
+      });
+    } catch {
+      return render(request, env, org, { notificationEmail }, { error: 'Identifiant ou secret invalide (lettres, chiffres et . _ - ~ + / = uniquement).', status: 400 });
+    }
+    return render(request, env, org, { notificationEmail }, { message: 'Identifiants HelloAsso enregistrés.' });
   }
 
   if (action === 'run-reminders') {

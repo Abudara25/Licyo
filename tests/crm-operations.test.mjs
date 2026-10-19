@@ -42,7 +42,9 @@ test('cron : une panne des automatisations n’empêche pas la réconciliation C
   });
   assert.deepEqual(ran, ['automations', 'crm'], 'les deux tâches ont tourné');
   assert.equal(response.status, 500, 'l’échec est visible du Worker programmé');
-  assert.deepEqual(await response.json(), { automations: 'échec', crm: 'fait' });
+  const { organizations, ...body } = await response.json();
+  assert.deepEqual(body, { automations: 'échec', crm: 'fait' });
+  assert.deepEqual(organizations[A], { automations: 'échec', crm: 'fait' }, 'résultats par club');
   const warned = t.mock.calls?.length ? '' : String(console.warn.mock.calls.map((c) => c.arguments[0]).join(' '));
   assert.doesNotMatch(warned, /Sonia|example\.test/, 'aucune donnée personnelle dans le journal');
 });
@@ -136,7 +138,7 @@ test('cron : un échec est noté dans l’état (affiché dans Paramètres), san
   assert.doesNotMatch(JSON.stringify(state), /sonia/);
 });
 
-test('cron : base injoignable pendant la résolution de l’organisation = 503 noté, jamais une exception', async (t) => {
+test('cron : base injoignable pendant la lecture des clubs = 503, jamais une exception', async (t) => {
   t.mock.method(console, 'warn', () => {});
   const { env } = await setup();
   const { getCronState } = await import('../functions/_shared/settings-kv.js');
@@ -146,5 +148,6 @@ test('cron : base injoignable pendant la résolution de l’organisation = 503 n
   const broken = { ...env, DB: { ...env.DB, prepare: () => { throw new Error('D1 indisponible'); }, batch: async () => { throw new Error('D1 indisponible'); } } };
   const response = await cron({ request: cronRequest(), env: broken, tasks: {} });
   assert.equal(response.status, 503);
-  assert.equal((await getCronState(env, A)).lastFailure.step, 'organisation');
+  // Panne de plateforme (aucun club lisible) : rien n'est attribué à un club en particulier ; le Worker voit le 503.
+  assert.equal((await getCronState(env, A)).lastFailure, undefined);
 });

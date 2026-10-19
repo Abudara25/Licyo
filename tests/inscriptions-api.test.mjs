@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { onRequestPost } from '../functions/api/inscriptions.js';
+import { DEMO_ORG_ID } from '../functions/_shared/schema.js';
 import { fixture, validData, synchronizeReads } from './helpers/inscriptions.mjs';
 import { resolveFamilyToken } from '../functions/_shared/family-links.js';
 
@@ -85,7 +86,7 @@ test('API : une même identité reste autorisée à la saison suivante', async (
   const tasks = [];
   assert.equal((await submit(env, validData, tasks)).status, 200);
   const { DEFAULT_CATEGORIES_CONFIG } = await import('../functions/_shared/settings-kv.js');
-  await env.INSCRIPTION_STATUS.put('categories_config', JSON.stringify({ ...DEFAULT_CATEGORIES_CONFIG, saison: '2027-2028' }));
+  await env.INSCRIPTION_STATUS.put(`org:${DEMO_ORG_ID}:categories_config`, JSON.stringify({ ...DEFAULT_CATEGORIES_CONFIG, saison: '2027-2028' }));
   assert.equal((await submit(env, validData, tasks)).status, 200);
   await Promise.all(tasks);
   assert.equal((await env.DB.prepare('SELECT COUNT(*) AS n FROM inscriptions').first()).n, 2);

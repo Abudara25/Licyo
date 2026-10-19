@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { processHelloAssoOrder } from '../functions/_shared/helloasso.js';
 import { DEFAULT_CATEGORIES_CONFIG } from '../functions/_shared/settings-kv.js';
 import { fixture, seedInscription, synchronizeReads } from './helpers/inscriptions.mjs';
+import { saveHelloAssoCredentials } from '../functions/_shared/integrations.js';
 
 const siteUrl = 'https://clubdemo.licyo.fr';
 const order = (overrides = {}) => ({
@@ -96,7 +97,8 @@ test('HelloAsso : une fiche archivée entre la lecture et la transaction ne pass
 });
 
 test('HelloAsso : panne de vérification API retentable, sans paiement ni commande traitée', async (t) => {
-  const env = { ...await fixture(), HELLOASSO_CLIENT_ID: 'test', HELLOASSO_CLIENT_SECRET: 'test' };
+  const env = { ...await fixture(), SECRETS_KEY: 'cle-de-chiffrement-de-test' };
+  await saveHelloAssoCredentials(env, DEMO_ORG_ID, { clientId: 'test-id', clientSecret: 'test-secret' });
   await seedInscription(env.DB);
   t.mock.method(globalThis, 'fetch', async () => new Response('{}', { status: 503 }));
   await assert.rejects(processHelloAssoOrder(env, order(), siteUrl, undefined, DEMO_ORG_ID), /HelloAsso token 503/);

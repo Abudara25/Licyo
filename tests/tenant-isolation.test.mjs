@@ -31,6 +31,7 @@ import { DEFAULT_CATEGORIES_CONFIG } from '../functions/_shared/settings-kv.js';
 import { fixture, seedInscription, validData } from './helpers/inscriptions.mjs';
 import { createR2 } from './helpers/d1.mjs';
 import { testUser, TEST_PASSWORD } from './helpers/accounts.mjs';
+import { saveHelloAssoCredentials } from '../functions/_shared/integrations.js';
 
 const ORG_B = 'org_test_association';
 const SITE_A = 'https://clubdemo.licyo.fr';
@@ -294,7 +295,12 @@ test('HelloAsso : le même numéro de commande chez A et chez B ne se bloque pas
 
 test('HelloAsso : le secret de notification de A ne vaut pas sur le domaine de B', async (t) => {
   const { env } = await setup();
-  const envWithSecret = { ...env, HELLOASSO_WEBHOOK_SECRET: 'secret-de-A' };
+  const envWithSecret = { ...env, SECRETS_KEY: 'cle-de-chiffrement-de-test' };
+  await saveHelloAssoCredentials(envWithSecret, DEMO_ORG_ID, { webhookSecret: 'secret-de-A' });
+  // Le texte chiffré de A recopié chez B ne se déchiffre pas (clé dérivée par club).
+  const stolen = envWithSecret.INSCRIPTION_STATUS.store.get(`org:${DEMO_ORG_ID}:integration_helloasso`);
+  assert.doesNotMatch(stolen, /secret-de-A/, 'jamais stocké en clair');
+  envWithSecret.INSCRIPTION_STATUS.store.set(`org:${ORG_B}:integration_helloasso`, stolen);
   t.mock.method(globalThis, 'fetch', async () => new Response('{}', { status: 201 }));
   const notify = (site) =>
     helloassoWebhook.onRequestPost({

@@ -35,7 +35,7 @@ test('premier accès : catégories et tarif importés du KV, lieu et créneau r�
 test('catégories personnalisées déjà enregistrées dans le KV : importées telles quelles', async () => {
   const env = await setup();
   const custom = { saison: '2026-2027', prix: 200, categories: [{ id: 'u10-u11', label: 'U10 - U11', anneeMin: 2016, anneeMax: 2017, active: true }] };
-  await env.INSCRIPTION_STATUS.put('categories_config', JSON.stringify(custom)); // ancienne clé globale
+  await env.INSCRIPTION_STATUS.put(`org:${A}:categories_config`, JSON.stringify(custom)); // copie KV du club
   const config = await getCategoriesConfig(env, A);
   assert.deepEqual(config.categories.map((c) => c.id), ['u10-u11']);
   assert.equal(config.prix, 200);

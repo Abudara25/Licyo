@@ -1,3 +1,6 @@
+// Plateforme multi-clubs (2026-10-20) : un seul appel quotidien traite TOUS les clubs actifs, chacun avec ses tâches,
+// son état et ses alertes ; l'adresse de chaque club (liens des e-mails) est son premier domaine enregistré.
+//
 // Tâches programmées (relances automatiques, récapitulatif du lundi — voir _shared/automations.js — copie KV
 // des catégories et réconciliation CRM). Cloudflare Pages ne sait pas planifier de tâche : le Worker
 // workers/cron appelle cette route chaque matin, avec le secret partagé CRON_SECRET (à définir à l'identique
@@ -7,11 +10,11 @@
 // inversement. Chacune est exécutée, son résultat est rapporté (sans donnée personnelle) ; si l'une a échoué la
 // réponse est un 500 (le Worker programmé le voit), après que toutes ont tourné.
 import { runDailyAutomations } from '../_shared/automations.js';
-import { resolveOrganization, unknownOrganization } from '../_shared/organization.js';
+import { resolveOrganization } from '../_shared/organization.js';
+import { ensureSchema } from '../_shared/inscriptions-db.js';
 import { timingSafeEqual } from '../_shared/security.js';
-import { rebuildLegacyMirror, getCategoriesConfig, getCronState, setCronState } from '../_shared/settings-kv.js';
+import { rebuildCategoriesCopy, getCategoriesConfig, getCronState, setCronState } from '../_shared/settings-kv.js';
 import { backfillOrganization, syncCurrentPeriod } from '../_shared/crm.js';
-import { DEMO_ORG_ID, DEMO_DOMAINS } from '../_shared/schema.js';
 import { sendCronFailureAlert } from '../_shared/confirmation-email.js';
 import { purgeExpiredFamilyLinks } from '../_shared/retention.js';
 
@@ -21,10 +24,9 @@ const CRM_DAILY_LIMIT = 200;
 export const CRON_TASKS = {
   automations: (env, organization, origin) => runDailyAutomations(env, organization.id, origin),
   mirror: async (env, organization) => {
-    // Copie KV des catégories de Sportville (compatibilité, retour arrière) : reconstruite chaque jour depuis D1,
-    // la source de vérité, pour rattraper une éventuelle panne du KV survenue lors d'une modification.
-    if (organization.id !== DEMO_ORG_ID) return null;
-    return (await rebuildLegacyMirror(env, organization.id)) ? 'à jour' : 'rien à copier';
+    // Copie KV des catégories (secours si D1 est en panne) : reconstruite chaque jour depuis D1, la source de vérité,
+    // pour rattraper une éventuelle panne du KV survenue lors d'une modification. Pour chaque organisation.
+    return (await rebuildCategoriesCopy(env, organization.id)) ? 'à jour' : 'rien à copier';
   },
   crm: async (env, organization) => {
     // CRM (phase 3) : relie les inscriptions pas encore reliées, remet en concordance celles qui ont divergé et règle
@@ -82,38 +84,58 @@ export async function recordCronFailure(env, organizationId, { step, error, site
   }
 }
 
-// Organisation du domaine, avec une seconde tentative : le cron tombe souvent sur une instance neuve dont la
-// préparation du schéma D1 peut dépasser son délai (base réveillée le matin), et une nouvelle tentative repart à neuf.
-async function resolveWithRetry(request, env) {
+// Clubs actifs et leur adresse publique (premier domaine enregistré), avec une seconde tentative : le cron tombe souvent
+// sur une instance neuve dont la préparation du schéma D1 peut dépasser son délai (base réveillée le matin).
+async function activeOrganizations(env) {
+  const load = async () => {
+    await ensureSchema(env.DB);
+    const { results } = await env.DB.prepare(
+      `SELECT o.id, o.slug, o.name, o.status,
+              (SELECT d.domain FROM organization_domains d WHERE d.organization_id = o.id ORDER BY d.rowid LIMIT 1) AS domain
+       FROM organizations o /* toutes-organisations */ WHERE o.status = 'active' ORDER BY o.created_at, o.id`
+    ).all();
+    return results;
+  };
   try {
-    return await resolveOrganization(request, env);
+    return await load();
   } catch {
-    return resolveOrganization(request, env);
+    return load();
   }
 }
+
+const originFor = (organization, fallback) =>
+  organization.domain && !organization.domain.endsWith('.pages.dev') ? `https://${organization.domain}` : fallback;
 
 export async function onRequestPost({ request, env, tasks }) {
   if (!env.CRON_SECRET || !timingSafeEqual(request.headers.get('Authorization') || '', `Bearer ${env.CRON_SECRET}`)) {
     return new Response('Forbidden', { status: 403 });
   }
   const json = (body, status) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
-  // Le Worker appelle https://clubdemo.licyo.fr/api/cron : l'organisation est celle de ce domaine.
-  let organization;
+  const requestOrigin = new URL(request.url).origin;
+  let organizations;
   try {
-    organization = await resolveWithRetry(request, env);
+    organizations = await activeOrganizations(env);
   } catch (error) {
-    // Base indisponible : l'échec est noté pour Sportville (reconnu par son domaine, sans la base).
-    if (DEMO_DOMAINS.includes(new URL(request.url).hostname)) await recordCronFailure(env, DEMO_ORG_ID, { step: 'organisation', error, siteUrl: new URL(request.url).origin });
-    console.warn(`Cron : organisation non résolue (${error?.name || 'erreur'})`);
+    console.warn(`Cron : clubs non lus (${error?.name || 'erreur'})`);
     return json({ error: 'organisation' }, 503);
   }
-  if (!organization) return unknownOrganization();
-  const { results, failed } = await runCronTasks(env, organization, new URL(request.url).origin, tasks);
-  if (failed) {
-    const names = Object.keys(results).filter((name) => results[name] === 'échec');
-    await recordCronFailure(env, organization.id, { step: names.join(', '), error: { name: 'TaskError' }, siteUrl: new URL(request.url).origin });
+  // Club du domaine appelé : ses résultats restent à la racine de la réponse (compatibilité).
+  const here = await resolveOrganization(request, env).catch(() => null);
+  const all = {};
+  let failedTotal = 0;
+  let rootResults = null;
+  for (const organization of organizations) {
+    const origin = here?.id === organization.id ? requestOrigin : originFor(organization, requestOrigin);
+    const { results, failed } = await runCronTasks(env, organization, origin, tasks);
+    if (failed) {
+      failedTotal += failed;
+      const names = Object.keys(results).filter((name) => results[name] === 'échec');
+      await recordCronFailure(env, organization.id, { step: names.join(', '), error: { name: 'TaskError' }, siteUrl: origin });
+    }
+    all[organization.id] = results;
+    if (here?.id === organization.id || (!here && !rootResults)) rootResults = results;
   }
-  // Compatibilité : les champs de runDailyAutomations restent à la racine de la réponse.
-  const body = { ...(typeof results.automations === 'object' && results.automations ? results.automations : {}), ...results };
-  return json(body, failed ? 500 : 200);
+  const results = rootResults || {};
+  const body = { ...(typeof results.automations === 'object' && results.automations ? results.automations : {}), ...results, organizations: all };
+  return json(body, failedTotal ? 500 : 200);
 }

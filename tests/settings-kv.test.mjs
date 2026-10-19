@@ -69,7 +69,7 @@ test('KV : les réglages de A et de B sont séparés dans les deux sens', async 
   assert.equal(await getNotificationEmail(env, B), 'club-b@example.fr');
 });
 
-test('KV : reprise des anciennes clés globales pour Sportville uniquement', async () => {
+test('KV : aucune clé globale lue ni écrite ; valeurs de démo pour le club de démo seulement', async () => {
   const env = {
     INSCRIPTION_STATUS: createKV({
       notification_email: 'ancienne@clubdemo.licyo.fr',
@@ -77,19 +77,12 @@ test('KV : reprise des anciennes clés globales pour Sportville uniquement', asy
       categories_config: JSON.stringify({ categories, saison: '2025-2026' }),
     }),
   };
-  assert.equal(await getNotificationEmail(env, A), 'ancienne@clubdemo.licyo.fr');
-  assert.equal(await getInscriptionStatus(env, A), 'closed');
-  assert.equal((await getCategoriesConfig(env, A)).saison, '2025-2026');
-  // Jamais pour une autre organisation.
-  assert.equal(await getNotificationEmail(env, B), '');
-  assert.equal(await getInscriptionStatus(env, B), null);
-
-  // Écriture de Sportville : clé de l'organisation, et ancienne clé tenue à jour (retour arrière).
+  assert.equal(await getNotificationEmail(env, A), DEFAULT_NOTIFICATION_EMAIL, 'ancienne clé globale ignorée');
+  assert.equal(await getInscriptionStatus(env, A), null);
+  assert.notEqual((await getCategoriesConfig(env, A)).saison, '2025-2026');
+  assert.equal(await getNotificationEmail(env, B), '', 'jamais la valeur de démo pour un autre club');
   await setNotificationEmail(env, A, 'nouvelle@clubdemo.licyo.fr');
   assert.equal(env.INSCRIPTION_STATUS.store.get(`org:${A}:notification_email`), 'nouvelle@clubdemo.licyo.fr');
-  assert.equal(env.INSCRIPTION_STATUS.store.get('notification_email'), 'nouvelle@clubdemo.licyo.fr');
-  await setNotificationEmail(env, B, 'b@example.fr');
-  assert.equal(env.INSCRIPTION_STATUS.store.get('notification_email'), 'nouvelle@clubdemo.licyo.fr', 'B n’écrit jamais les anciennes clés');
-  assert.equal(await getNotificationEmail(env, A), 'nouvelle@clubdemo.licyo.fr');
+  assert.equal(env.INSCRIPTION_STATUS.store.get('notification_email'), 'ancienne@clubdemo.licyo.fr', 'clé globale jamais écrite');
   assert.equal(DEFAULT_NOTIFICATION_EMAIL, 'contact@clubdemo.licyo.fr');
 });
