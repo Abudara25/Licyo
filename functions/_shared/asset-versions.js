@@ -15,10 +15,10 @@ export const ASSET_VERSIONS = Object.freeze({
   "assets/js/adresse-autocomplete.js": "7050f97583",
   "assets/js/contact.js": "e6ffff8638",
   "assets/js/erreur-403.js": "68399bc36f",
-  "assets/js/inscription.js": "69996daf2c",
+  "assets/js/inscription.js": "f6fbed9c13",
   "assets/js/main.js": "84bf26f2d5",
   "assets/js/naissance-autocomplete.js": "35e5df3788",
-  "assets/js/pdf-inscription.js": "2b5878e67f",
+  "assets/js/pdf-inscription.js": "e463cf97f8",
   "assets/js/preinscription.js": "b649c489b7",
   "assets/js/suivi.js": "beeb2447a3"
 });

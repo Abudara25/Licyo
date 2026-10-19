@@ -12,6 +12,7 @@
 // le lien personnel EST le contrôle d'accès, pas le statut ouvert/fermé du site.
 import { ensureInscriptionsTable, findCurrentSeasonSubmission } from '../_shared/inscriptions-db.js';
 import { resolveOrganization } from '../_shared/organization.js';
+import { getSportProfile } from '../_shared/sport-profile.js';
 import { getCategoriesConfig } from '../_shared/settings-kv.js';
 import { ensureFamilyLinksTable, isReinscriptionLinkValid } from '../_shared/family-links.js';
 
@@ -131,8 +132,8 @@ function shell({ title, intro, body }) {
 </footer>
 
 <script src="/assets/js/main.js?v=84bf26f2d5"></script>
-<script src="/assets/js/pdf-inscription.js?v=2b5878e67f"></script>
-<script src="/assets/js/inscription.js?v=69996daf2c"></script>
+<script src="/assets/js/pdf-inscription.js?v=e463cf97f8"></script>
+<script src="/assets/js/inscription.js?v=f6fbed9c13"></script>
 <script src="/assets/js/adresse-autocomplete.js?v=7050f97583"></script>
 <script src="/assets/js/naissance-autocomplete.js?v=35e5df3788"></script>
 </body>
@@ -140,7 +141,7 @@ function shell({ title, intro, body }) {
 `;
 }
 
-function formPage(row) {
+function formPage(row, { equipment = 'Taille de maillot' } = {}) {
   const nomEnfant = `${escapeHtml(row.enfant_prenom)} ${escapeHtml(row.enfant_nom)}`;
   const selected = (value, option) => (value === option ? 'selected' : '');
 
@@ -197,9 +198,9 @@ function formPage(row) {
           <input type="text" id="ville-naissance" name="villeNaissance" value="${escapeHtml(row.ville_naissance || '')}" placeholder="Ville de naissance" autocomplete="off" maxlength="200" required>
           <ul id="ville-naissance-suggestions" class="address-suggestions" role="listbox" aria-label="Communes correspondant au code postal" hidden></ul>
         </div>
-        <div class="form-row">
+${equipment ? `        <div class="form-row">
           <div class="form-field">
-            <label for="taille-maillot">Taille de maillot</label>
+            <label for="taille-maillot">${escapeHtml(equipment)}</label>
             <select id="taille-maillot" name="tailleMaillot" required>
               <option value="" disabled>Choisir une taille</option>
               <option value="4 ans" ${selected(row.taille_maillot, '4 ans')}>4 ans</option>
@@ -210,7 +211,7 @@ function formPage(row) {
             </select>
             <small style="font-size:.82rem;color:var(--color-text-muted);line-height:1.5;">Tenue Sportéquip (maillot, short, survêtement, sac) — à ajuster si votre enfant a grandi.</small>
           </div>
-        </div>
+        </div>` : ''}
         <div class="form-row">
           <div class="form-field">
             <label for="parent-prenom">Prénom du parent</label>
@@ -372,5 +373,5 @@ export async function onRequestGet({ request, env, params }) {
     saison
   );
 
-  return page(alreadyDone ? alreadyRegisteredPage(row) : formPage(row));
+  return page(alreadyDone ? alreadyRegisteredPage(row) : formPage(row, { equipment: (await getSportProfile(env, row.organization_id).catch(() => null))?.equipment ?? 'Taille de maillot' }));
 }

@@ -76,7 +76,7 @@ function buildInscriptionPdfDoc(data, depotUrl) {
   const lieuNaissance = [villeNaissance, data.paysNaissance].filter(Boolean).join(', ');
   line(`Date de naissance : ${data.naissance || '—'}  ·  Lieu : ${lieuNaissance || '—'}`);
   line(`Catégorie : ${data.categorie}`);
-  line(`Taille de maillot : ${data.tailleMaillot || '—'}`);
+  if (data.tailleMaillot) line(`Taille de maillot : ${data.tailleMaillot}`);
   y += 4;
 
   heading('Parent / responsable légal');

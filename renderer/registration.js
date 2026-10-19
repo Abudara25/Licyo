@@ -94,9 +94,11 @@ const OPTION_VALUE = /^[\p{L}\p{N} .,'()-]{1,60}$/u;
 export function checkRegistration(section) {
   allowKeys(section, 'registration', ['type', 'id', 'texts', 'groupOptions', 'sizes', 'paymentLabels', 'asideItems', 'contactHref'], ['comment']);
   checkShape(section.texts, SHAPE, 'registration.texts');
-  for (const list of ['groupOptions', 'sizes', 'asideItems']) {
+  for (const list of ['groupOptions', 'asideItems']) {
     if (!Array.isArray(section[list]) || !section[list].length || section[list].length > 20) throw new Error(`registration.${list} : 1 à 20 éléments`);
   }
+  // Tailles d'équipement : liste vide = sport sans tenue fournie, le champ n'est pas affiché.
+  if (!Array.isArray(section.sizes) || section.sizes.length > 20) throw new Error('registration.sizes : 0 à 20 éléments');
   for (const o of section.groupOptions) {
     allowKeys(o, 'registration.groupOption', ['value', 'label'], ['bind']);
     if (!OPTION_VALUE.test(o.value) || !isText(o.label)) throw new Error('registration.groupOption : valeur et libellé');
@@ -180,7 +182,7 @@ ${field('pays-naissance', 'paysNaissance', 'text', x.birthCountry, ' autocomplet
                   <ul id="ville-naissance-suggestions" class="address-suggestions" role="listbox" aria-label="${a(x.birthCity.suggestions)}" hidden></ul>
                 </div>
 
-                <div class="form-row">
+${section.sizes.length ? `                <div class="form-row">
                   <div class="form-field">
                     <label for="taille-maillot">${s(x.size.label)}</label>
                     <select id="taille-maillot" name="tailleMaillot" required>
@@ -191,7 +193,7 @@ ${section.sizes.map((v) => `                      <option value="${a(v)}">${s(v)
                   </div>
                 </div>
 
-                <div class="form-step-nav">
+` : ''}                <div class="form-step-nav">
                   <button type="button" class="btn btn-primary" data-step-next>${s(x.next)}</button>
                 </div>
               </fieldset>

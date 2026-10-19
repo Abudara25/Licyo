@@ -134,6 +134,10 @@ Un club d'un autre sport (tennis, padel, judo...), parcours complet sans aucune 
 
 Les étapes réalisées sont ajoutées ici, la plus récente en haut.
 
+### 2026-10-20 : tenue facultative selon le sport
+
+- Taille d'équipement exigée seulement si le sport du club fournit une tenue (profil sportif) ; champ masqué dans le formulaire (`sizes: []`) et dans la réinscription. Tests : `tests/sport-profile.test.mjs`.
+
 ### 2026-10-20 : console plateforme (phase 6, première version)
 
 - `/admin/plateforme`, réservée aux e-mails listés dans `PLATFORM_ADMIN_EMAILS` (permission `platform.manage`, distincte des rôles de club).

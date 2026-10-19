@@ -4,6 +4,7 @@
 // Protections : limite de débit par connexion, Cloudflare Turnstile (dès que ses clés sont définies),
 // formats et tranche d'âge revérifiés ici, anti-doublon par saison — et jamais de lien de suivi dans la
 // réponse à un doublon (il est renvoyé par e-mail aux adresses déjà enregistrées).
+import { getSportProfile } from '../_shared/sport-profile.js';
 import { ensureInscriptionsTable, findExistingInscription, buildDedupKey, isInscriptionComplete, SHIRT_SIZES as SIZES } from '../_shared/inscriptions-db.js';
 import { resolveOrganization, unknownOrganization } from '../_shared/organization.js';
 import { sendConfirmationEmail, sendAdminNotification, sendReminderEmail, sendFollowUpEmail } from '../_shared/confirmation-email.js';
@@ -12,10 +13,10 @@ import { getCategoriesConfig, getEffectiveInscriptionStatus } from '../_shared/s
 import { clientKey, hitRateLimit, verifyTurnstile } from '../_shared/security.js';
 import { syncInscriptionSafe } from '../_shared/crm.js';
 
-const REQUIRED_FIELDS = ['enfantPrenom', 'enfantNom', 'naissance', 'categorie', 'tailleMaillot', 'modePaiement', 'parentPrenom', 'parentNom', 'email', 'telephone'];
+const REQUIRED_FIELDS = ['enfantPrenom', 'enfantNom', 'naissance', 'categorie', 'modePaiement', 'parentPrenom', 'parentNom', 'email', 'telephone'];
 // Lieu de naissance (2026-09-27, requis par la licence FFF) : obligatoire dans le formulaire, mais accepté vide ici
 // pour ne pas refuser l'envoi d'une page ouverte avant sa mise en ligne ; le club le complète alors sur la fiche.
-const TEXT_FIELDS = [...REQUIRED_FIELDS, 'villeNaissance', 'paysNaissance', 'cpNaissance', 'adresse', 'codePostal', 'ville', 'parent2Prenom', 'parent2Nom', 'parent2Email', 'parent2Telephone', 'passSportCode'];
+const TEXT_FIELDS = [...REQUIRED_FIELDS, 'tailleMaillot', 'villeNaissance', 'paysNaissance', 'cpNaissance', 'adresse', 'codePostal', 'ville', 'parent2Prenom', 'parent2Nom', 'parent2Email', 'parent2Telephone', 'passSportCode'];
 const MAX_FIELD_LENGTH = 200;
 const SHIRT_SIZES = new Set(SIZES);
 const PAYMENT_METHODS = new Set(['HelloAsso', 'Carte bancaire', 'Espèces', 'Chèque']);
@@ -137,12 +138,15 @@ export async function onRequestPost({ request, env, waitUntil }) {
     return json({ error: 'Date de naissance invalide' }, 400);
   }
   if (data.cpNaissance && !/^\d{5}$/.test(data.cpNaissance)) return json({ error: 'Code postal de naissance invalide' }, 400);
-  if (!SHIRT_SIZES.has(data.tailleMaillot)) return json({ error: 'Taille de maillot invalide' }, 400);
+  if (data.tailleMaillot && !SHIRT_SIZES.has(data.tailleMaillot)) return json({ error: 'Taille de maillot invalide' }, 400);
   if (!PAYMENT_METHODS.has(data.modePaiement)) return json({ error: 'Mode de paiement invalide' }, 400);
 
   // Organisation du domaine qui reçoit le formulaire : jamais une valeur envoyée par le navigateur.
   const organization = await resolveOrganization(request, env).catch(() => null);
   if (!organization) return unknownOrganization();
+  // Taille d'équipement exigée seulement si le sport du club fournit une tenue (profil sportif).
+  const sportProfile = await getSportProfile(env, organization.id).catch(() => null);
+  if (!data.tailleMaillot && (!sportProfile || sportProfile.equipment)) return json({ error: 'Champ manquant : tailleMaillot' }, 400);
   const organizationId = organization.id;
 
   // Inscriptions fermées (réglage manuel, date de fermeture automatique, ou réinscription prioritaire en cours) : le

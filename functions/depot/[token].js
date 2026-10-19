@@ -143,7 +143,7 @@ export function familyShell(title, mainHtml) {
 </footer>
 
 <script src="/assets/js/main.js?v=84bf26f2d5"></script>
-<script src="/assets/js/pdf-inscription.js?v=2b5878e67f"></script>
+<script src="/assets/js/pdf-inscription.js?v=e463cf97f8"></script>
 <script src="/assets/js/suivi.js?v=beeb2447a3"></script>
 <script src="/assets/js/naissance-autocomplete.js?v=35e5df3788"></script>
 </body>

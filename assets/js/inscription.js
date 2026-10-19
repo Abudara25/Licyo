@@ -378,7 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
       categorie: form.categorie.value,
       saison,
       prix,
-      tailleMaillot: form.tailleMaillot.value,
+      tailleMaillot: form.tailleMaillot ? form.tailleMaillot.value : '',
       modePaiement: form.modePaiement.value,
       parentPrenom: form.parentPrenom.value.trim(),
       parentNom: form.parentNom.value.trim(),

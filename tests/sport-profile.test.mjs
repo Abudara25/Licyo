@@ -87,3 +87,35 @@ test('e-mails : traduits au point d’envoi selon le club', async (t) => {
   assert.doesNotMatch(all, /\bFFF\b|Footclubs|Football/);
   assert.match(all, /FFT|Fédération Française de Tennis/);
 });
+
+test('équipement : champ masqué si aucune taille, exigé seulement si le sport fournit une tenue', async () => {
+  const { renderPage } = await import('../renderer/render.js');
+  const { ASSET_VERSIONS } = await import('../functions/_shared/asset-versions.js');
+  const { siteForOrganization } = await import('../sites/index.js');
+  const { onRequestPost } = await import('../functions/api/inscriptions.js');
+  const { validData } = await import('./helpers/inscriptions.mjs');
+  const site = structuredClone(siteForOrganization(DEMO_ORG_ID));
+  const page = site.pages.find((p) => p.sections.some((s) => s.type === 'registration'));
+  const html = (sizes) => {
+    page.sections.find((s) => s.type === 'registration').sizes = sizes;
+    return renderPage({ site, page, mode: 'static', locale: 'fr-FR', assetVersions: ASSET_VERSIONS });
+  };
+  assert.match(html(['8 ans']), /name="tailleMaillot"/);
+  assert.doesNotMatch(html([]), /name="tailleMaillot"/);
+
+  const submit = (env, data) => onRequestPost({
+    request: new Request(`${SITE}/api/inscriptions`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': crypto.randomUUID() }, body: JSON.stringify(data) }),
+    env, waitUntil() {},
+  });
+  const { tailleMaillot, ...withoutSize } = validData;
+  assert.ok(tailleMaillot);
+  const env = await fixture();
+  const refused = await submit(env, withoutSize);
+  assert.equal(refused.status, 400, 'football : taille exigée');
+  assert.match((await refused.json()).error, /tailleMaillot/);
+  await setSportProfile(env, DEMO_ORG_ID, { sport: 'natation' });
+  const ok = await submit(env, withoutSize);
+  assert.equal(ok.status, 200, 'natation : ' + (await ok.clone().text()));
+  assert.equal((await env.DB.prepare('SELECT taille_maillot FROM inscriptions').first()).taille_maillot, '');
+  assert.equal((await submit(env, { ...validData, enfantPrenom: 'Autre', tailleMaillot: 'XXL inventée' })).status, 400, 'valeur fournie toujours contrôlée');
+});
