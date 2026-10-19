@@ -18,6 +18,7 @@
 import { crmStatements, repairCrmInvariants } from './crm-schema.js';
 import { NEWS_MIGRATION_VERSION, checkNewsSchema, newsMigrationStatements } from './news-schema.js';
 import { normalizeSql, SchemaIntegrityError } from './schema-utils.js';
+import { ACCOUNTS_MIGRATION_VERSION, accountsMigrationStatements, repairAccountsInvariants } from './accounts.js';
 
 // Première organisation réelle de la plateforme. Identifiant opaque et stable (le slug, lui, peut changer).
 export const DEMO_ORG_ID = 'org_demo';
@@ -29,7 +30,7 @@ export const DEMO_DOMAINS = Object.freeze(['clubdemo.licyo.fr', 'www.clubdemo.li
 // Tables rattachées à une organisation pendant la phase 1 (voir tests/tenant-scoping.test.mjs, qui vérifie
 // que toute requête sur ces tables filtre par organization_id). site_events (R0a) est créée par son module
 // (_shared/site-events.js, organization_id NOT NULL) ; l'ancienne table globale `events` n'y figure volontairement pas.
-export const TENANT_TABLES = ['inscriptions', 'email_log', 'admin_sessions', 'helloasso_orders', 'locations', 'groups', 'group_schedules', 'prices', 'contacts', 'contact_relationships', 'periods', 'memberships', 'group_memberships', 'contact_relationship_sources', 'contact_duplicate_candidates', 'site_configs', 'site_events', 'preinscriptions', 'articles', 'organization_news_state', 'family_links'];
+export const TENANT_TABLES = ['inscriptions', 'email_log', 'admin_sessions', 'helloasso_orders', 'locations', 'groups', 'group_schedules', 'prices', 'contacts', 'contact_relationships', 'periods', 'memberships', 'group_memberships', 'contact_relationship_sources', 'contact_duplicate_candidates', 'site_configs', 'site_events', 'preinscriptions', 'articles', 'organization_news_state', 'family_links', 'organization_memberships', 'user_tokens', 'admin_audit_log'];
 // Tables de la migration 3, figées : une migration déjà en production ne doit jamais changer de comportement.
 const PHASE1_TABLES = ['inscriptions', 'email_log', 'admin_sessions'];
 
@@ -328,6 +329,15 @@ export const MIGRATIONS = [
     name: 'news_articles',
     statements: (db) => newsMigrationStatements(db),
   },
+  {
+    // Phase 3 de la feuille de route (2026-10-20) : comptes nominatifs (users, globaux à la plateforme), appartenances
+    // aux clubs avec un rôle (organization_memberships), jetons d'invitation et de réinitialisation (user_tokens),
+    // journal d'audit (admin_audit_log), et compte propriétaire de chaque session admin (admin_sessions.user_id,
+    // nullable : les sessions ouvertes avant ne sont plus acceptées, voir admin-auth.js). Additive. Voir accounts.js.
+    version: ACCOUNTS_MIGRATION_VERSION,
+    name: 'accounts',
+    statements: (db) => accountsMigrationStatements(db),
+  },
 ];
 
 // Configuration du site : brouillon et version publiée d'une organisation (voir _shared/site-config.js).
@@ -556,6 +566,9 @@ export async function repairSchemaInvariants(db) {
   //              Tables, structure et données jamais recréées ni réparées (SchemaIntegrityError) ; seuls des index
   //              nommés ou des triggers ABSENTS sont recréés, dans la transaction ci-dessous.
   if (await migrationRecorded(db, NEWS_MIGRATION_VERSION)) statements.push(...(await checkNewsSchema(db)));
+
+  // 2 sexies. Comptes et rôles (migration 14) : tables, index et colonne admin_sessions.user_id recréés s'ils manquent.
+  if (await migrationRecorded(db, ACCOUNTS_MIGRATION_VERSION)) statements.push(...(await repairAccountsInvariants(db, { tableExists, columnNames })));
 
   // 3. Index indispensables aux requêtes filtrées par organisation.
   for (const [table, name, cols] of TENANT_INDEXES) {

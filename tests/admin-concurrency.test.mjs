@@ -6,12 +6,13 @@ import { DEMO_ORG_ID } from '../functions/_shared/schema.js';
 import { getCategoriesConfig } from '../functions/_shared/settings-kv.js';
 import * as categories from '../functions/admin/categories.js';
 import { fixture } from './helpers/inscriptions.mjs';
+import { testUser } from './helpers/accounts.mjs';
 
 const A = DEMO_ORG_ID;
 
 async function setup() {
   const env = { ...(await fixture()), ADMIN_PASSWORD: 'x' };
-  const cookie = (await createSession(env, A)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const cookie = (await createSession(env, A, await testUser(env, A))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
   const call = async (method, fields) => {
     let body;
     if (fields) {

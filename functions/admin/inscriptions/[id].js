@@ -24,6 +24,7 @@ import { photoTag,
   formatDateFr,
   formatBirth,
   ageAndCategory,
+  can,
 } from '../../_shared/admin-auth.js';
 import { getCategoriesConfig } from '../../_shared/settings-kv.js';
 import { activeFamilyLinks, revokeFamilyLinks, FAMILY_LINK_DAYS } from '../../_shared/family-links.js';
@@ -720,7 +721,8 @@ export async function onRequestPost({ request, env, params, waitUntil }) {
   const cpNaissance = keep('cpNaissance', 'cp_naissance');
   const numeroLicence = keep('numeroLicence', 'numero_licence');
   // Champ absent (ancien formulaire resté ouvert) : on garde le statut enregistré.
-  if (data.paye !== '0' && data.paye !== '1') data.paye = existing.paye ? '1' : '0';
+  // Sans la permission finance.write (rôles sans trésorerie), le statut de paiement n'est jamais modifié ici.
+  if ((data.paye !== '0' && data.paye !== '1') || !can(admin, 'finance.write')) data.paye = existing.paye ? '1' : '0';
   const paye = data.paye === '1' ? 1 : 0;
   const { categories } = await getCategoriesConfig(env, admin.organizationId);
 

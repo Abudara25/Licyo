@@ -540,7 +540,7 @@ async function ensureInternalToken(env, row) {
 // Contrairement à sendConfirmationEmail/sendAdminNotification (best-effort, fire-and-forget via
 // waitUntil), l'appelant (functions/admin/inscriptions.js, action=bulk-reminder) a besoin du
 // résultat pour compter succès/échecs et l'afficher dans la bannière — donc `await`ée, retourne
-// true/false comme sendPasswordChangeCode.
+// true/false comme les autres envois.
 // origin : 'manuel' (bouton de l'admin), 'auto' (runReminders) ou 'doublon' — seulement pour le journal.
 export async function sendReminderEmail(env, row, siteUrl, origin = 'manuel') {
   if (!mailConfigured(env)) return false;
@@ -688,42 +688,53 @@ export async function sendReinscriptionEmail(env, row, siteUrl, dateLimiteReinsc
   return brevoSend(env, body, { kind: isRappel ? 'reinscription_rappel' : 'reinscription', origin: 'manuel', inscriptionId: row.id, organizationId: row.organization_id });
 }
 
-// Code de double vérification avant un changement de mot de passe admin (voir
-// functions/admin/parametres.js et _shared/settings-kv.js). Contrairement aux e-mails ci-dessus,
-// un échec d'envoi ici DOIT bloquer le changement — sans lui, personne ne serait informé qu'un
-// mot de passe a été modifié. L'appelant vérifie donc le retour (true/false) plutôt que d'ignorer
-// l'erreur.
-// Seul le code à usage unique est envoyé : JAMAIS le mot de passe, ni l'ancien ni le nouveau (la fonction
-// ne le reçoit même pas ; vérifié par tests/emails.test.mjs). Texte volontairement sobre, sans « mot de
-// passe » dans l'objet : c'est le vocabulaire type de l'hameçonnage, que les filtres anti-spam pénalisent.
-export async function sendPasswordChangeCode(env, code, siteUrl = 'https://clubdemo.licyo.fr', organizationId = null) {
-  const to = await clubRecipients(env, organizationId);
-  if (!to.length) return false;
-
+// Comptes nominatifs (phase 3, 2026-10-20). Invitation à rejoindre l'espace admin d'un club : lien personnel, valable
+// 7 jours, à usage unique (accounts.js). Le lien n'est jamais journalisé (seuls le type, l'objet et le destinataire).
+export async function sendAdminInvitation(env, { to, roleLabel: role, inviterName = '', clubName = 'Club Démo', link, existing = false, siteUrl, organizationId }) {
+  const intro = `${inviterName ? `${escapeHtml(inviterName)} vous invite` : 'Vous êtes invité(e)'} à rejoindre l'espace admin du <strong>${escapeHtml(clubName)}</strong> avec le rôle <strong>${escapeHtml(role)}</strong>.`;
+  const how = existing
+    ? 'Vous avez déjà un compte sur la plateforme : ouvrez le lien et confirmez avec votre mot de passe habituel.'
+    : 'Ouvrez le lien pour choisir votre mot de passe. Il vous servira ensuite à vous connecter avec cette adresse e-mail.';
+  const cta = { label: 'Rejoindre l’espace admin', url: link };
   const html = clubEmail({
     siteUrl,
-    preheader: "Code à usage unique, valable 15 minutes.",
-    eyebrow: 'Espace admin · Sécurité',
-    title: 'Code de confirmation',
-    body: `${clubParagraph("Une modification des accès à l'espace admin vient d'être demandée depuis la page Paramètres. Pour la valider, saisissez ce code sur cette même page :")}
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 12px 0;">
-                <tr>
-                  <td align="center" style="padding:18px;background-color:${CREAM_100};border:1px dashed ${GOLD_500};border-radius:10px;font-family:'Courier New',Courier,monospace;font-size:34px;line-height:40px;font-weight:bold;letter-spacing:.3em;color:${MAROON_900};">${escapeHtml(code)}</td>
-                </tr>
-              </table>
-              <p style="margin:0 0 18px 0;text-align:center;font-size:13px;line-height:19px;color:${INK_700};">Code à usage unique, valable 15 minutes. Ce n'est pas un identifiant de connexion.</p>
-              ${clubCallout("Vous n'êtes pas à l'origine de cette demande ? Ne saisissez pas ce code : rien ne change tant qu'il n'a pas été saisi. Aucun e-mail du club ne vous demandera jamais vos identifiants.")}`,
+    preheader: 'Lien personnel, valable 7 jours.',
+    eyebrow: 'Espace admin · Invitation',
+    title: 'Vous êtes invité(e)',
+    body: `${clubParagraph(intro)}${clubParagraph(escapeHtml(how))}`,
+    cta,
+    footerHtml: `Lien personnel, valable 7 jours et utilisable une seule fois. Vous n'attendiez pas cette invitation ? Ignorez simplement cet e-mail.`,
   });
-
   return brevoSend(env, {
-    sender: { email: 'contact@clubdemo.licyo.fr', name: 'Club Démo — Site' },
-    to,
-    subject: "Espace admin : votre code de confirmation",
+    sender: { email: 'contact@clubdemo.licyo.fr', name: `${clubName} — Site` },
+    to: [{ email: to }],
+    subject: `Invitation à l'espace admin du ${clubName}`,
     htmlContent: html,
-    textContent: clubText(
-      `Une modification des accès à l'espace admin de clubdemo.licyo.fr vient d'être demandée depuis la page Paramètres.\n\nCode de confirmation : ${code}\n\nCode à usage unique, valable 15 minutes. Si vous n'êtes pas à l'origine de cette demande, ne saisissez pas ce code : rien ne change tant qu'il n'a pas été saisi.`
-    ),
-  }, { kind: 'code_admin', origin: 'manuel', organizationId });
+    textContent: clubText(`${inviterName ? `${inviterName} vous invite` : 'Vous êtes invité(e)'} à rejoindre l'espace admin du ${clubName} avec le rôle ${role}.\n\n${how}\n\nLien personnel, valable 7 jours et utilisable une seule fois.`, cta),
+  }, { kind: 'invitation_admin', origin: 'manuel', organizationId });
+}
+
+// Réinitialisation du mot de passe d'un compte (lien valable 1 heure, à usage unique). Objet neutre, sans le mot
+// « mot de passe » (vocabulaire d'hameçonnage pénalisé par les anti-spam), aucun mot de passe dans l'e-mail.
+export async function sendAdminPasswordReset(env, { to, clubName = 'Club Démo', link, siteUrl, organizationId }) {
+  const cta = { label: 'Choisir un nouveau mot de passe', url: link };
+  const html = clubEmail({
+    siteUrl,
+    preheader: 'Lien valable 1 heure.',
+    eyebrow: 'Espace admin · Sécurité',
+    title: 'Accès à votre compte',
+    body: `${clubParagraph("Une demande de nouveau mot de passe a été faite pour votre compte de l'espace admin. Ouvrez le lien ci-dessous pour en choisir un.")}
+              ${clubCallout("Vous n'êtes pas à l'origine de cette demande ? Ignorez cet e-mail : votre mot de passe actuel reste valable. Aucun e-mail du club ne vous demandera jamais vos identifiants.")}`,
+    cta,
+    footerHtml: 'Lien personnel, valable 1 heure et utilisable une seule fois.',
+  });
+  return brevoSend(env, {
+    sender: { email: 'contact@clubdemo.licyo.fr', name: `${clubName} — Site` },
+    to: [{ email: to }],
+    subject: 'Espace admin : accès à votre compte',
+    htmlContent: html,
+    textContent: clubText("Une demande de nouveau mot de passe a été faite pour votre compte de l'espace admin.\n\nLien valable 1 heure et utilisable une seule fois. Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail : votre mot de passe actuel reste valable.", cta),
+  }, { kind: 'reinitialisation_admin', origin: 'manuel', organizationId });
 }
 
 // ---------------------------------------------------------------------------------------------

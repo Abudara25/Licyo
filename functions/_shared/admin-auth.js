@@ -5,10 +5,6 @@
 import {
   sha256Hex,
   randomToken,
-  timingSafeEqual,
-  hashPassword,
-  verifyPassword,
-  isPasswordHash,
   clientKey,
   hitRateLimit,
   isRateLimited,
@@ -16,8 +12,7 @@ import {
 } from './security.js';
 import { dossierStatus, ARCHIVE_MOTIFS, ARCHIVE_MOTIFS_MANUELS, ensureSchema } from './inscriptions-db.js';
 import { resolveOrganization } from './organization.js';
-import { DEMO_ORG_ID } from './schema.js';
-import { getAdminPasswordHash, setAdminPasswordHash as storeAdminPasswordHash } from './settings-kv.js';
+import { authenticate, normalizeEmail, permissionsFor, roleLabel, logAudit } from './accounts.js';
 
 export const COOKIE_NAME = 'admin_session';
 // Ancien cookie, qui contenait le mot de passe lui-même : effacé à chaque connexion et déconnexion.
@@ -32,42 +27,6 @@ export const SESSION_WARNING_SECONDS = 2 * 60;
 const SESSION_TOUCH_SECONDS = 60;
 // 5 mots de passe erronés depuis une même connexion bloquent les essais pendant 15 minutes.
 const LOGIN_LIMIT = { limit: 5, windowSeconds: 15 * 60 };
-
-// Mot de passe admin PROPRE À CHAQUE ORGANISATION : empreinte PBKDF2 dans le KV, clé
-// org:<organizationId>:admin_password (voir settings-kv.js). Le mot de passe d'une organisation n'ouvre
-// jamais l'espace d'une autre. Le secret Cloudflare ADMIN_PASSWORD (antérieur au multi-organisation) ne
-// vaut que pour Sportville, et seulement tant qu'aucun mot de passe n'a été enregistré depuis
-// /admin/parametres. Une organisation sans mot de passe enregistré ne peut pas se connecter.
-export class AdminAuthUnavailableError extends Error {
-  constructor() {
-    super('Vérification du mot de passe impossible pour le moment');
-    this.name = 'AdminAuthUnavailableError';
-  }
-}
-
-export async function verifyAdminPassword(env, organizationId, candidate) {
-  if (typeof candidate !== 'string' || !candidate || !organizationId) return false;
-  let stored = null;
-  try {
-    stored = await getAdminPasswordHash(env, organizationId);
-  } catch {
-    // KV illisible : connexion refusée (AdminAuthUnavailableError, message « réessayez »). Le secret historique ne doit
-    // JAMAIS servir de repli ici : il réactiverait un ancien mot de passe après un changement depuis Paramètres
-    // (relevé par une revue Codex, 2026-10-08).
-    throw new AdminAuthUnavailableError();
-  }
-  if (stored) {
-    const ok = await verifyPassword(candidate, stored);
-    // Valeur enregistrée en clair avant le hachage : remplacée par son empreinte à la première connexion.
-    if (ok && !isPasswordHash(stored)) await setAdminPasswordHash(env, organizationId, await hashPassword(candidate)).catch(() => {});
-    return ok;
-  }
-  return organizationId === DEMO_ORG_ID && Boolean(env.ADMIN_PASSWORD) && timingSafeEqual(candidate, env.ADMIN_PASSWORD);
-}
-
-export async function setAdminPasswordHash(env, organizationId, passwordHash) {
-  await storeAdminPasswordHash(env, organizationId, passwordHash);
-}
 
 // La table admin_sessions (et son organization_id) est créée par les migrations (schema.js).
 const ensureSessionsTable = (db) => ensureSchema(db);
@@ -84,17 +43,30 @@ export const withCookies = (response, cookies) => {
   return response;
 };
 
-// Contexte admin de la requête : { organizationId } si la session est valide, sinon null.
-// L'organisation vient de la session (fixée à la connexion), jamais d'un paramètre du navigateur :
-// toutes les requêtes des pages admin filtrent ensuite sur admin.organizationId.
-// Authentifié ne veut pas dire « accès à tout » : uniquement aux données de cette organisation.
+// Contexte admin de la requête, ou null : { organizationId, userId, role, roleLabel, permissions, user: { name, email } }.
+// L'organisation vient de la session (fixée à la connexion), jamais d'un paramètre du navigateur : toutes les requêtes
+// des pages admin filtrent ensuite sur admin.organizationId. Depuis la phase 3 (comptes nominatifs), une session
+// appartient à un COMPTE qui doit avoir une appartenance active au club : retirer l'accès ou désactiver le compte ferme
+// ses sessions à la requête suivante. Les permissions découlent du rôle (accounts.js) ; leur contrôle par route est
+// fait par functions/_shared/admin-access.js.
 export async function isAuthed(request, env, { touch = true } = {}) {
   const session = await readSession(request, env, { touch });
-  return session && { organizationId: session.organizationId };
+  if (!session) return null;
+  return {
+    organizationId: session.organizationId,
+    userId: session.userId,
+    role: session.role,
+    roleLabel: roleLabel(session.role),
+    permissions: permissionsFor(session.role),
+    user: { name: session.name, email: session.email },
+  };
 }
 
-// Session de la requête : { organizationId, expiresAt } ou null. touch : prolonge l'expiration (activité) ; false pour
-// une simple lecture (GET /admin/session, qui ne doit pas maintenir la session ouverte à elle seule).
+export const can = (admin, permission) => Boolean(admin?.permissions?.includes(permission));
+
+// Session de la requête : { organizationId, userId, role, name, email, expiresAt } ou null. touch : prolonge
+// l'expiration (activité) ; false pour une simple lecture (GET /admin/session, qui ne doit pas maintenir la session
+// ouverte à elle seule).
 export async function readSession(request, env, { touch = true } = {}) {
   const token = readCookie(request, COOKIE_NAME);
   if (!token || !env.DB) return null;
@@ -102,19 +74,22 @@ export async function readSession(request, env, { touch = true } = {}) {
     await ensureSessionsTable(env.DB);
     const tokenHash = await sha256Hex(token);
     // Recherche par jeton, donc sans organisation connue à l'avance (le jeton désigne sa session et son
-    // organisation). Même requête : l'organisation doit exister et être active.
+    // organisation). Même requête : l'organisation doit exister et être active, le compte actif, et son appartenance
+    // au club active. Une session sans compte (ouverte avant les comptes nominatifs) n'ouvre plus rien.
     const row = await env.DB.prepare(
-      `SELECT s.created_at, s.expires_at, s.organization_id FROM admin_sessions s /* toutes-organisations */
+      `SELECT s.created_at, s.expires_at, s.organization_id, s.user_id, m.role, u.name, u.email
+       FROM admin_sessions s /* toutes-organisations */
        JOIN organizations o ON o.id = s.organization_id AND o.status = 'active'
+       JOIN organization_memberships m ON m.organization_id = s.organization_id AND m.user_id = s.user_id AND m.status = 'active'
+       JOIN users u ON u.id = s.user_id AND u.status = 'active'
        WHERE s.token_hash = ?`
     )
       .bind(tokenHash)
       .first();
     const now = Math.floor(Date.now() / 1000);
-    if (!row || row.expires_at <= now || !row.organization_id) return null;
+    if (!row || row.expires_at <= now || !row.organization_id || !row.user_id) return null;
     let expiresAt = row.expires_at;
-    // Échéance d'inactivité : jamais plus loin que maintenant + SESSION_IDLE_SECONDS (les sessions ouvertes avant la
-    // mise en place, valables 14 jours, sont ramenées à cette limite même par une simple lecture).
+    // Échéance d'inactivité : jamais plus loin que maintenant + SESSION_IDLE_SECONDS.
     const idleLimit = Math.min(now + SESSION_IDLE_SECONDS, row.created_at + SESSION_TTL_SECONDS);
     const target = touch ? idleLimit : Math.min(expiresAt, idleLimit);
     if (target < expiresAt || target - expiresAt >= SESSION_TOUCH_SECONDS) {
@@ -125,21 +100,23 @@ export async function readSession(request, env, { touch = true } = {}) {
       expiresAt = target;
     }
     if (expiresAt <= now) return null;
-    return { organizationId: row.organization_id, expiresAt };
+    return { organizationId: row.organization_id, userId: row.user_id, role: row.role, name: row.name || '', email: row.email, expiresAt };
   } catch {
     return null;
   }
 }
 
-// Ouvre une session pour une organisation ; renvoie les en-têtes Set-Cookie à ajouter à la réponse.
-export async function createSession(env, organizationId) {
+// Ouvre une session pour un compte dans un club ; renvoie les en-têtes Set-Cookie à ajouter à la réponse. Le compte
+// doit avoir une appartenance active au club (sinon readSession refusera la session).
+export async function createSession(env, organizationId, userId) {
   if (!organizationId) throw new Error('createSession : organisation requise');
+  if (!userId) throw new Error('createSession : compte requis');
   await ensureSessionsTable(env.DB);
   const token = randomToken();
   const now = Math.floor(Date.now() / 1000);
   await env.DB.prepare('DELETE FROM admin_sessions WHERE organization_id = ? AND expires_at <= ?').bind(organizationId, now).run();
-  await env.DB.prepare('INSERT INTO admin_sessions (token_hash, created_at, expires_at, organization_id) VALUES (?, ?, ?, ?)')
-    .bind(await sha256Hex(token), now, now + SESSION_IDLE_SECONDS, organizationId)
+  await env.DB.prepare('INSERT INTO admin_sessions (token_hash, created_at, expires_at, organization_id, user_id) VALUES (?, ?, ?, ?, ?)')
+    .bind(await sha256Hex(token), now, now + SESSION_IDLE_SECONDS, organizationId, userId)
     .run();
   return [cookie(COOKIE_NAME, token, SESSION_TTL_SECONDS), cookie(LEGACY_COOKIE_NAME, '', 0)];
 }
@@ -158,43 +135,50 @@ export async function destroySession(request, env) {
   return [cookie(COOKIE_NAME, '', 0), cookie(LEGACY_COOKIE_NAME, '', 0)];
 }
 
-// Après un changement de mot de passe : toutes les sessions de l'organisation, sur tous les appareils, sont fermées.
-export async function revokeAllSessions(env, organizationId) {
+// Après un changement ou une réinitialisation de mot de passe : toutes les sessions du COMPTE, dans tous ses clubs et
+// sur tous ses appareils, sont fermées (le mot de passe est celui du compte, commun à ses clubs).
+export async function revokeUserSessions(env, userId) {
   await ensureSessionsTable(env.DB);
-  await env.DB.prepare('DELETE FROM admin_sessions WHERE organization_id = ?').bind(organizationId).run();
+  await env.DB.prepare('DELETE FROM admin_sessions /* toutes-organisations */ WHERE user_id = ?').bind(userId).run();
 }
 
-// Formulaire de connexion (POST /admin/inscriptions sans action).
+// Formulaire de connexion (POST /admin/inscriptions sans action) : e-mail + mot de passe d'un compte qui a une
+// appartenance active au club du domaine. Message identique quelle que soit la cause (adresse inconnue, mot de passe
+// faux, pas d'accès à ce club) : rien n'est révélé. 5 échecs par connexion ou par adresse = 15 minutes d'attente.
 export async function handleLogin(request, env, form) {
-  const html = (error, status) => new Response(loginPage({ error }), { status, headers: { 'Content-Type': 'text/html;charset=UTF-8' } });
-  const bucket = `login:${await clientKey(request)}`;
+  const email = String(form.get('email') || '').trim();
+  const html = (error, status) => new Response(loginPage({ error, email }), { status, headers: { 'Content-Type': 'text/html;charset=UTF-8' } });
+  const buckets = [`login:${await clientKey(request)}`];
+  const normalized = normalizeEmail(email);
+  if (normalized) buckets.push(`login-email:${await sha256Hex(normalized)}`);
 
-  if (await isRateLimited(env.DB, bucket, LOGIN_LIMIT).catch(() => false)) {
-    return html('Trop de tentatives. Réessayez dans 15 minutes.', 429);
+  for (const bucket of buckets) {
+    if (await isRateLimited(env.DB, bucket, LOGIN_LIMIT).catch(() => false)) return html('Trop de tentatives. Réessayez dans 15 minutes.', 429);
   }
-  // Organisation du domaine sur lequel on se connecte : son mot de passe, et lui seul, est vérifié.
+  // Organisation du domaine sur lequel on se connecte : seuls ses membres y entrent.
   const organization = await resolveOrganization(request, env).catch(() => null);
   if (!organization) return html('Espace introuvable pour ce site.', 404);
-  let valid;
+  let account = null;
   try {
-    valid = await verifyAdminPassword(env, organization.id, String(form.get('password') || ''));
-  } catch (error) {
-    if (error instanceof AdminAuthUnavailableError) return html('Connexion impossible pour le moment (stockage indisponible). Réessayez dans un instant.', 503);
-    throw error;
-  }
-  if (!valid) {
-    await hitRateLimit(env.DB, bucket, LOGIN_LIMIT).catch(() => {});
-    return html('Mot de passe incorrect.', 401);
-  }
-  await clearRateLimit(env.DB, bucket).catch(() => {});
-
-  let cookies;
-  try {
-    cookies = await createSession(env, organization.id);
+    await ensureSchema(env.DB);
+    account = await authenticate(env.DB, organization.id, email, String(form.get('password') || ''));
   } catch {
     return html('Connexion impossible pour le moment (base de données indisponible). Réessayez dans un instant.', 503);
   }
-  return withCookies(new Response('', { status: 302, headers: { Location: '/admin/inscriptions' } }), cookies);
+  if (!account) {
+    for (const bucket of buckets) await hitRateLimit(env.DB, bucket, LOGIN_LIMIT).catch(() => {});
+    return html('Adresse e-mail ou mot de passe incorrect.', 401);
+  }
+  for (const bucket of buckets) await clearRateLimit(env.DB, bucket).catch(() => {});
+
+  let cookies;
+  try {
+    cookies = await createSession(env, organization.id, account.id);
+  } catch {
+    return html('Connexion impossible pour le moment (base de données indisponible). Réessayez dans un instant.', 503);
+  }
+  await logAudit(env.DB, organization.id, { userId: account.id, action: 'connexion' });
+  return withCookies(new Response('', { status: 302, headers: { Location: '/admin/dashboard' } }), cookies);
 }
 
 export const escapeHtml = (str = '') =>
@@ -203,7 +187,7 @@ export const escapeHtml = (str = '') =>
 // Version (?v=) de tous les assets chargés par l'admin — Cloudflare Pages les met en cache 4h sans
 // possibilité de le changer (voir CLAUDE.md). Valeur écrite par `npm run sync` (empreinte des assets) :
 // ne pas la modifier à la main.
-const ASSETS_VERSION = 'a967363661';
+const ASSETS_VERSION = '6b9d7ac0b7';
 const asset = (path) => `${path}?v=${ASSETS_VERSION}`;
 
 // Icônes au trait (viewBox 24, stroke 1.8), même convention que les SVG du site public.
@@ -285,6 +269,7 @@ const ADMIN_NAV_LINKS = [
   { key: 'events', href: '/admin/events', label: 'Événements', icon: 'activity' },
   // top: false = absent de la barre du haut (déjà pleine sur ordinateur), présent dans le menu « Plus » du mobile.
   { key: 'email', href: '/admin/email', label: 'Écrire un e-mail', icon: 'send', top: false },
+  { key: 'utilisateurs', href: '/admin/utilisateurs', label: 'Utilisateurs', icon: 'users', top: false },
   { key: 'categories', href: '/admin/categories', label: 'Catégories', icon: 'tag' },
   { key: 'parametres', href: '/admin/parametres', label: 'Paramètres', icon: 'settings' },
 ];
@@ -348,6 +333,7 @@ export function adminShell({ active, eyebrow = '', title, subtitle = '', stats =
       <span><strong>Club Démo</strong><small>Espace admin</small></span>
     </a>
     <nav class="adm-tabs" aria-label="Navigation admin">${tabs}</nav>
+    <!--adm-account-->
     <a href="/admin/logout" class="adm-logout" title="Déconnexion">${icon('logout')}<span class="visually-hidden">Déconnexion</span></a>
   </div>
 </div>
@@ -375,29 +361,36 @@ export function adminShell({ active, eyebrow = '', title, subtitle = '', stats =
     <summary class="adm-tabbar-link${moreActive ? ' is-active' : ''}">${icon('more')}<span>Plus</span></summary>
     <div class="adm-more-menu">
       ${moreLinks.map((l) => `<a href="${l.href}" class="${l.key === active ? 'is-active" aria-current="page' : ''}">${icon(l.icon)}${l.label}</a>`).join('')}
+      <!--adm-account-more-->
       <a href="/admin/logout">${icon('logout')}Déconnexion</a>
     </div>
   </details>
 </nav>`;
 }
 
-export function loginPage({ error } = {}) {
+export function loginPage({ error, email = '', notice = '' } = {}) {
   return `${adminHead('Connexion', 'adm adm-login-body')}
 <main class="adm-login">
   <form method="POST" action="/admin/inscriptions" class="adm-login-card">
     <img src="/assets/images/logo-96.webp" alt="Blason du Club Démo" width="72" height="72">
     <p class="adm-eyebrow">Espace admin</p>
     <h1>Connexion</h1>
-    ${error ? flash('error', typeof error === 'string' ? error : 'Mot de passe incorrect.') : ''}
+    ${error ? flash('error', typeof error === 'string' ? error : 'Adresse e-mail ou mot de passe incorrect.') : ''}
+    ${notice ? flash('ok', notice) : ''}
     <div id="login-inactif" hidden>${flash('info', 'Vous avez été déconnecté après 30 minutes d’inactivité.')}</div>
+    <div class="form-field">
+      <label for="email">Adresse e-mail</label>
+      <input type="email" id="email" name="email" autocomplete="username" autocapitalize="off" spellcheck="false" required ${email ? '' : 'autofocus'} value="${escapeHtml(email)}">
+    </div>
     <div class="form-field">
       <label for="password">Mot de passe</label>
       <div class="adm-password">
-        <input type="password" id="password" name="password" autocomplete="current-password" autocapitalize="off" spellcheck="false" required autofocus>
+        <input type="password" id="password" name="password" autocomplete="current-password" autocapitalize="off" spellcheck="false" required ${email ? 'autofocus' : ''}>
         <button type="button" class="adm-password-toggle" data-password-toggle="password" aria-pressed="false" aria-label="Afficher le mot de passe" hidden>${icon('eye')}</button>
       </div>
     </div>
     <button type="submit" class="adm-btn adm-btn-primary adm-btn-block">${icon('lock')}Se connecter</button>
+    <p class="adm-login-links"><a href="/admin/mot-de-passe-oublie">Mot de passe oublié ?</a></p>
   </form>
 </main>
 ${adminScripts('admin-login')}

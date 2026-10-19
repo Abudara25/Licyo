@@ -8,6 +8,7 @@ import { COOKIE_NAME, createSession } from '../functions/_shared/admin-auth.js';
 import { clearOrganizationCache } from '../functions/_shared/organization.js';
 import { DEMO_ORG_ID } from '../functions/_shared/schema.js';
 import { fixture, seedInscription } from './helpers/inscriptions.mjs';
+import { testUser } from './helpers/accounts.mjs';
 
 const A = DEMO_ORG_ID;
 const HOST = 'https://clubdemo.licyo.fr';
@@ -15,7 +16,7 @@ const HOST = 'https://clubdemo.licyo.fr';
 async function setup() {
   clearOrganizationCache();
   const env = { ...(await fixture()), ADMIN_PASSWORD: 'x' };
-  const cookie = (await createSession(env, A)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const cookie = (await createSession(env, A, await testUser(env, A))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
   const seed = (prenom, uploadedAt, status = 'a_verifier') =>
     seedInscription(env.DB, {
       enfant_prenom: prenom, email: `${prenom.toLowerCase()}@example.test`, dossier_key: `dossiers/${prenom}`,

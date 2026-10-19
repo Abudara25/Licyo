@@ -14,6 +14,7 @@ import { DEMO_ORG_ID, TENANT_TABLES, repairSchemaInvariants } from '../functions
 import { SITE_EVENT_LIMITS, SITE_EVENT_TYPES, ensureSiteEventsTable } from '../functions/_shared/site-events.js';
 import { exempleSite } from './fixtures/site-exemple.mjs';
 import { fixture } from './helpers/inscriptions.mjs';
+import { testUser } from './helpers/accounts.mjs';
 
 const A = DEMO_ORG_ID;
 const A_HOST = 'clubdemo.licyo.fr';
@@ -31,7 +32,7 @@ async function setup() {
   await saveDraftSiteConfig(env, B, JSON.parse(JSON.stringify(exempleSite)), { expectedRevision: 0 });
   await publishSiteConfig(env, B);
   await ensureSiteEventsTable(env.DB);
-  const cookie = async (org) => (await createSession(env, org)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const cookie = async (org) => (await createSession(env, org, await testUser(env, org))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
   return { env, cookieA: await cookie(A), cookieB: await cookie(B) };
 }
 

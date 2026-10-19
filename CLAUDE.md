@@ -22,11 +22,11 @@ npm run pages   # régénère les pages HTML depuis sites/ et renderer/
 npm run css     # régénère assets/css/styles.css depuis styles/
 npm run sync    # empreintes ?v= des assets + pages (après toute modification de assets/css ou assets/js)
 npm run build   # dossier publié dist/ (allowlist) + modules générés de functions/_generated/
-npm run check   # vérifie que tout est à jour, puis lance les 582 tests (node:test, D1 simulée par node:sqlite)
+npm run check   # vérifie que tout est à jour, puis lance tous les tests (node:test, D1 simulée par node:sqlite)
 npm test        # tests seuls
 ```
 
-Serveur local complet : `npm run build`, puis `npx wrangler pages dev dist --d1 DB --kv INSCRIPTION_STATUS --r2 DOSSIERS --binding ADMIN_PASSWORD=<test>`.
+Serveur local complet : `npm run build`, puis `npx wrangler pages dev dist --d1 DB --kv INSCRIPTION_STATUS --r2 DOSSIERS --binding SETUP_SECRET=<test>`, puis `/admin/premier-acces` pour créer le premier compte.
 
 ## Architecture
 
@@ -37,7 +37,8 @@ Serveur local complet : `npm run build`, puis `npx wrangler pages dev dist --d1 
 - **Multi-organisation** : tout le cœur parle d'`organization` / `organization_id`. Organisation résolue côté serveur (domaine pour le public, session pour l'admin), **jamais** lue dans une requête. Toute requête sur une table de `TENANT_TABLES` filtre `organization_id` (test statique `tests/tenant-scoping.test.mjs`, tests d'isolation A/B).
 - **Schéma D1** : migrations numérotées et additives dans `functions/_shared/schema.js` (+ `crm-schema.js`, `news-schema.js`), jamais réécrites une fois publiées ; `repairSchemaInvariants` contrôle à chaque démarrage.
 - **SiteConfig en base** (`functions/_shared/site-config.js`) : brouillon puis publication par organisation ; le site public ne lit que la version publiée.
-- **Admin** (`functions/admin/`, habillage `functions/_shared/admin-auth.js`, `assets/css/admin.css`) : inscriptions, adhérents (CRM), catégories, pré-inscriptions, e-mails, événements, paramètres. Session D1 glissante (30 min), CSRF automatique.
+- **Admin** (`functions/admin/`, habillage `functions/_shared/admin-auth.js`, `assets/css/admin.css`) : inscriptions, adhérents (CRM), catégories, pré-inscriptions, e-mails, événements, paramètres, utilisateurs, journal. Session D1 glissante (30 min), CSRF automatique.
+- **Comptes et rôles** (phase 3, `functions/_shared/accounts.js`) : un compte (`users`) par personne, global à la plateforme ; son accès à un club passe par une appartenance (`organization_memberships`) avec un rôle. Les permissions découlent du rôle et sont vérifiées pour chaque route par `functions/_shared/admin-access.js` (middleware admin), qui retire aussi de la navigation les liens interdits et tient le journal d'audit. **Toute nouvelle page admin doit être ajoutée à `requiredPermission`** (par défaut : `settings.manage`). Une session appartient à un compte (`admin_sessions.user_id`) ; `isAuthed()` renvoie `{ organizationId, userId, role, roleLabel, permissions, user }` et `can(admin, permission)` teste un droit. Plus aucun mot de passe partagé ni secret `ADMIN_PASSWORD`. Premier responsable d'un club : `/admin/premier-acces` avec le secret de plateforme `SETUP_SECRET`. Tests : comptes de test par `tests/helpers/accounts.mjs` (`testUser`).
 - **E-mails** : `functions/_shared/confirmation-email.js` (SMTP, Brevo en secours), journal `email-log.js`.
 - **Paiements** : HelloAsso (widget + notifications), `functions/_shared/helloasso.js`.
 - **Fichiers jamais servis** : `functions/_shared/internal-paths.js` + allowlist de `scripts/build-public.mjs` (tout nouveau fichier à la racine doit être classé, sinon `tests/public-output.test.mjs` échoue).
@@ -55,9 +56,10 @@ Serveur local complet : `npm run build`, puis `npx wrangler pages dev dist --d1 
 
 ## Dette héritée de Saint-Gratien FC (à traiter)
 
-- **Le club de démo est l'ancien « locataire historique »** : `DEMO_ORG_ID`, `DEMO_DOMAINS` (`schema.js`) et `isLegacyTenant` / `LEGACY_MIRROR` (`settings-kv.js`) gardent des comportements spéciaux (anciennes clés KV globales, secret `ADMIN_PASSWORD`, secrets HelloAsso de plateforme, secours statique, valeurs par défaut des catégories). Pour une vraie plateforme, ces cas particuliers doivent disparaître : chaque organisation a ses réglages, secrets et mot de passe en base.
+- **Le club de démo est l'ancien « locataire historique »** : `DEMO_ORG_ID`, `DEMO_DOMAINS` (`schema.js`) et `isLegacyTenant` / `LEGACY_MIRROR` (`settings-kv.js`) gardent des comportements spéciaux (anciennes clés KV globales, secrets HelloAsso de plateforme, secours statique, valeurs par défaut des catégories). Le secret `ADMIN_PASSWORD` a disparu avec les comptes nominatifs. Pour une vraie plateforme, ces cas particuliers doivent disparaître : chaque organisation a ses réglages, secrets et mot de passe en base.
 - **Contenu orienté football** : catégories U6-U7 / U8-U9, pré-inscription U10, licence FFF, taille de maillot, textes et articles. À rendre générique (vocabulaire par sport, catégories libres, fédération configurable) pour viser tous les sports.
 - **Palette bordeaux et or** du club d'origine dans `styles/palettes/club-demo.css` et dans les constantes des e-mails : à remplacer par une palette par organisation.
-- **Une seule organisation déclarée** dans `sites/index.js` et la migration 1 ; pas encore d'écran d'onboarding, de comptes utilisateurs multiples ni de rôles.
+- **Une seule organisation déclarée** dans `sites/index.js` et la migration 1 ; pas encore d'écran d'onboarding (console plateforme).
+- **Entraîneur** : voit tous les inscrits (pas encore limité à ses équipes).
 - **Sveltia CMS** (`admin/`) pointe vers le dépôt `Abudara25/Licyo` : outil mono-club, à remplacer par l'édition des actualités en base (phase 4E, services déjà prêts).
 - Fichiers propres au club de démo servis sur tout domaine : `sitemap.xml`, `robots.txt`, `llms.txt`, manifestes.

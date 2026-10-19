@@ -4,8 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DEMO_ORG_ID } from '../functions/_shared/schema.js';
-import { COOKIE_NAME, createSession, handleLogin, isAuthed, setAdminPasswordHash } from '../functions/_shared/admin-auth.js';
-import { hashPassword } from '../functions/_shared/security.js';
+import { COOKIE_NAME, createSession, handleLogin, isAuthed } from '../functions/_shared/admin-auth.js';
 import { setInscriptionStatus, setCategoriesConfig } from '../functions/_shared/settings-kv.js';
 import * as inscriptionStatusAdmin from '../functions/admin/inscription-status.js';
 import * as inscriptionStatusApi from '../functions/api/inscription-status.js';
@@ -31,6 +30,7 @@ import { ensureSiteEventsTable } from '../functions/_shared/site-events.js';
 import { DEFAULT_CATEGORIES_CONFIG } from '../functions/_shared/settings-kv.js';
 import { fixture, seedInscription, validData } from './helpers/inscriptions.mjs';
 import { createR2 } from './helpers/d1.mjs';
+import { testUser, TEST_PASSWORD } from './helpers/accounts.mjs';
 
 const ORG_B = 'org_test_association';
 const SITE_A = 'https://clubdemo.licyo.fr';
@@ -75,8 +75,8 @@ async function createSetup() {
   await ensureSiteEventsTable(env.DB);
   await env.DB.prepare("INSERT INTO site_events (organization_id, event, page) VALUES (?, 'contact_form_submit', '/route-secrete-b')").bind(ORG_B).run();
 
-  const cookieA = (await createSession(env, DEMO_ORG_ID)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
-  const cookieB = (await createSession(env, ORG_B)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const cookieA = (await createSession(env, DEMO_ORG_ID, await testUser(env, DEMO_ORG_ID))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const cookieB = (await createSession(env, ORG_B, await testUser(env, ORG_B))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
   return { env, a, b, cookieA, cookieB };
 }
 
@@ -231,22 +231,24 @@ test('la session de B ne voit pas les données de A (symétrie)', async () => {
   assert.doesNotMatch(html, /Adam/);
 });
 
-test('mot de passe admin propre à chaque organisation : celui de A n’ouvre jamais B', async () => {
+test('comptes : un responsable de A n’ouvre jamais B, et inversement', async () => {
   const { env } = await setup();
-  const login = (site, password) => {
+  await testUser(env, DEMO_ORG_ID, 'owner', { email: 'resp-a@club.example' });
+  await testUser(env, ORG_B, 'owner', { email: 'resp-b@club.example' });
+  const login = (site, email) => {
     const f = new FormData();
-    f.set('password', password);
+    f.set('email', email);
+    f.set('password', TEST_PASSWORD);
     return handleLogin(new Request(`${site}/admin/inscriptions`, { method: 'POST', headers: { 'CF-Connecting-IP': crypto.randomUUID() } }), env, f);
   };
-  assert.equal((await login(SITE_A, env.ADMIN_PASSWORD)).status, 302, 'mot de passe A sur le domaine A');
-  assert.equal((await login(SITE_B, env.ADMIN_PASSWORD)).status, 401, 'mot de passe A (secret historique) sur le domaine B');
-
-  await setAdminPasswordHash(env, ORG_B, await hashPassword('mot-de-passe-de-B'));
-  const okB = await login(SITE_B, 'mot-de-passe-de-B');
+  assert.equal((await login(SITE_A, 'resp-a@club.example')).status, 302, 'compte A sur le domaine A');
+  assert.equal((await login(SITE_B, 'resp-a@club.example')).status, 401, 'compte A sur le domaine B');
+  assert.equal((await login(SITE_A, env.ADMIN_PASSWORD)).status, 401, 'ancien secret partagé : sans effet');
+  const okB = await login(SITE_B, 'resp-b@club.example');
   assert.equal(okB.status, 302);
   const cookieB = okB.headers.getSetCookie().find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
-  assert.deepEqual(await isAuthed(req(`${SITE_B}/admin/inscriptions`, { cookie: cookieB }), env), { organizationId: ORG_B });
-  assert.equal((await login(SITE_A, 'mot-de-passe-de-B')).status, 401, 'mot de passe B sur le domaine A');
+  assert.equal((await isAuthed(req(`${SITE_B}/admin/inscriptions`, { cookie: cookieB }), env)).organizationId, ORG_B);
+  assert.equal((await login(SITE_A, 'resp-b@club.example')).status, 401, 'compte B sur le domaine A');
 });
 
 test('réglages KV : fermer les inscriptions de A ne ferme pas celles de B', async () => {

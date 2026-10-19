@@ -7,6 +7,7 @@ import { COOKIE_NAME, createSession } from '../functions/_shared/admin-auth.js';
 import { clearOrganizationCache } from '../functions/_shared/organization.js';
 import { DEMO_ORG_ID } from '../functions/_shared/schema.js';
 import { fixture, seedInscription } from './helpers/inscriptions.mjs';
+import { testUser } from './helpers/accounts.mjs';
 
 test('ageGroup : catégorie du club qui contient la naissance, sinon paire de la FFF', () => {
   const ctx = {
@@ -39,7 +40,7 @@ test('ageGroup : catégorie du club qui contient la naissance, sinon paire de la
 test('liste des inscriptions : pastilles U6 - U7 / U8 - U9, filtre ?age=, catégorie sur la carte et dans le CSV', async () => {
   clearOrganizationCache();
   const env = { ...(await fixture()), ADMIN_PASSWORD: 'x' };
-  const cookie = (await createSession(env, DEMO_ORG_ID)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const cookie = (await createSession(env, DEMO_ORG_ID, await testUser(env, DEMO_ORG_ID))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
   await seedInscription(env.DB, { enfant_prenom: 'Alpha', naissance: '2021-01-01', categorie: 'U6 - U7', email: 'a@example.fr' });
   await seedInscription(env.DB, { enfant_prenom: 'Bravo', naissance: '2020-01-01', categorie: 'U6 - U7', email: 'b@example.fr' });
   await seedInscription(env.DB, { enfant_prenom: 'Charlie', naissance: '2019-01-01', categorie: 'U8 - U9', email: 'c@example.fr' });

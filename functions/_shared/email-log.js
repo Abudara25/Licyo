@@ -20,7 +20,8 @@ export const EMAIL_KINDS = {
   club_paiement: 'Club : mode de paiement changé',
   club_helloasso: 'Club : paiement à rattacher',
   recap: 'Club : récapitulatif du lundi',
-  code_admin: 'Club : code de confirmation',
+  invitation_admin: 'Espace admin : invitation',
+  reinitialisation_admin: 'Espace admin : nouveau mot de passe',
   preinscription: 'Pré-inscription (famille)',
   club_preinscription: 'Club : nouvelle pré-inscription',
   preinscription_ouverture: 'Ouverture du groupe (famille)',
@@ -39,7 +40,7 @@ const RETENTION_DAYS = 400;
 export const ensureEmailLogTable = (db) => ensureSchema(db);
 
 // E-mails internes au club (alertes, récapitulatif, code) : distingués des e-mails envoyés à la famille.
-export const isClubEmailKind = (kind) => kind.startsWith('club_') || kind === 'recap' || kind === 'code_admin';
+export const isClubEmailKind = (kind) => kind.startsWith('club_') || kind === 'recap' || kind.endsWith('_admin');
 
 // E-mails liés aux inscriptions d'une personne (fiche adhérent), les plus récents d'abord. Organisation de la
 // session uniquement : un identifiant d'inscription d'une autre organisation ne renvoie rien.

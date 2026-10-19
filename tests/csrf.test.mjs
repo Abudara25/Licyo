@@ -21,6 +21,7 @@ import * as logout from '../functions/admin/logout.js';
 import * as depot from '../functions/depot/[token].js';
 import { fixture, seedInscription, validData } from './helpers/inscriptions.mjs';
 import { issueFamilyLink } from '../functions/_shared/family-links.js';
+import { testUser, TEST_PASSWORD } from './helpers/accounts.mjs';
 
 const SITE = 'https://clubdemo.licyo.fr';
 const A = DEMO_ORG_ID;
@@ -30,7 +31,7 @@ async function setup() {
   if (!shared) {
     clearOrganizationCache();
     const env = { ...(await fixture()), ADMIN_PASSWORD: randomUUID() };
-    const cookie = (await createSession(env, A)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+    const cookie = (await createSession(env, A, await testUser(env, A))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
     const token = await csrfTokenFor(new Request(SITE, { headers: { Cookie: cookie } }));
     shared = { env, cookie, token };
   }
@@ -83,7 +84,7 @@ test('jeton : dérivé de la session, différent d’une session à l’autre, a
   const { env, cookie, token } = await setup();
   assert.match(token, /^[0-9a-f]{64}$/);
   assert.equal(token.includes(cookie.split('=')[1]), false, 'le jeton ne révèle pas le cookie');
-  const other = (await createSession(env, A)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const other = (await createSession(env, A, await testUser(env, A))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
   assert.notEqual(await csrfTokenFor(new Request(SITE, { headers: { Cookie: other } })), token);
   assert.equal(await csrfTokenFor(new Request(SITE)), null);
 });
@@ -225,9 +226,10 @@ test('modification de la fiche (/admin/inscriptions/:id) : protégée, le champ 
 // Connexion, déconnexion, pages des familles, cookie
 
 test('connexion : même origine sans session = accepté (pas de jeton possible) ; autre origine = refusé', async () => {
-  const env = { ...(await fixture()), ADMIN_PASSWORD: 'mot-de-passe-de-test' };
+  const env = await fixture();
+  await testUser(env, DEMO_ORG_ID, 'owner', { email: 'csrf@club.example' });
   clearOrganizationCache();
-  const login = (headers) => run(adminMiddleware, inscriptions.onRequestPost, adminPost('/admin/inscriptions', { password: 'mot-de-passe-de-test' }, headers), env);
+  const login = (headers) => run(adminMiddleware, inscriptions.onRequestPost, adminPost('/admin/inscriptions', { email: 'csrf@club.example', password: TEST_PASSWORD }, headers), env);
   assert.equal((await login({ Origin: 'https://evil.example' })).status, 403, 'connexion forcée depuis un autre site');
   assert.equal((await login({ Origin: 'null' })).status, 403);
   const ok = await login(SAME);
@@ -236,7 +238,8 @@ test('connexion : même origine sans session = accepté (pas de jeton possible) 
 });
 
 test('page de connexion affichée avec un ancien cookie : le jeton de cet ancien cookie permet quand même de se reconnecter', async () => {
-  const env = { ...(await fixture()), ADMIN_PASSWORD: 'mot-de-passe-de-test' };
+  const env = await fixture();
+  await testUser(env, DEMO_ORG_ID, 'owner', { email: 'csrf@club.example' });
   clearOrganizationCache();
   const stale = `${COOKIE_NAME}=ancien-jeton-expire`;
   const page = await run(adminMiddleware, inscriptions.onRequestGet, new Request(`${SITE}/admin/inscriptions`, { headers: { Cookie: stale } }), env);
@@ -244,7 +247,7 @@ test('page de connexion affichée avec un ancien cookie : le jeton de cet ancien
   assert.match(html, /Connexion/);
   const pageToken = new RegExp(`name="${CSRF_FIELD}" value="([0-9a-f]+)"`).exec(html)?.[1];
   assert.ok(pageToken, 'jeton présent dans le formulaire de connexion');
-  const res = await run(adminMiddleware, inscriptions.onRequestPost, adminPost('/admin/inscriptions', { password: 'mot-de-passe-de-test', [CSRF_FIELD]: pageToken }, { ...SAME, Cookie: stale }), env);
+  const res = await run(adminMiddleware, inscriptions.onRequestPost, adminPost('/admin/inscriptions', { email: 'csrf@club.example', password: TEST_PASSWORD, [CSRF_FIELD]: pageToken }, { ...SAME, Cookie: stale }), env);
   assert.equal(res.status, 302);
 });
 
@@ -256,7 +259,7 @@ test('lectures (GET) jamais bloquées par le contrôle', async () => {
 
 test('déconnexion déclenchée depuis un autre site : redirection sans fermer la session', async () => {
   const env = { ...(await fixture()), ADMIN_PASSWORD: randomUUID() };
-  const cookie = (await createSession(env, A)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const cookie = (await createSession(env, A, await testUser(env, A))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
   const req = (headers) => new Request(`${SITE}/admin/logout`, { headers: { Cookie: cookie, ...headers } });
   const cross = await logout.onRequestGet({ request: req({ 'Sec-Fetch-Site': 'cross-site' }), env });
   assert.equal(cross.status, 302);
@@ -310,7 +313,7 @@ test('dépôt du dossier par la famille (multipart réel, vrai handler) : accept
 
 test('cookie de session : HttpOnly, Secure, SameSite=Lax, Path=/admin, sans Domain', async () => {
   const env = { ...(await fixture()), ADMIN_PASSWORD: randomUUID() };
-  const [session] = await createSession(env, A);
+  const [session] = await createSession(env, A, await testUser(env, A));
   assert.match(session, /^admin_session=[A-Za-z0-9_-]{43}; HttpOnly; Secure; SameSite=Lax; Path=\/admin; Max-Age=1209600$/);
   assert.doesNotMatch(session, /Domain=/i);
 });

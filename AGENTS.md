@@ -27,7 +27,7 @@ npm test        # tests seuls
 ```
 
 Serveur local complet : `npm run build`, puis
-`npx wrangler pages dev dist --d1 DB --kv INSCRIPTION_STATUS --r2 DOSSIERS --binding ADMIN_PASSWORD=<test>`.
+`npx wrangler pages dev dist --d1 DB --kv INSCRIPTION_STATUS --r2 DOSSIERS --binding SETUP_SECRET=<test>`, puis `/admin/premier-acces`.
 
 ## Règles impératives
 

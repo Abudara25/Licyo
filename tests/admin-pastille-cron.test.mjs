@@ -11,6 +11,7 @@ import * as dashboard from '../functions/admin/dashboard.js';
 import * as fiche from '../functions/admin/inscriptions/[id].js';
 import { onRequestPost as cron, recordCronFailure } from '../functions/api/cron.js';
 import { fixture, seedInscription } from './helpers/inscriptions.mjs';
+import { testUser } from './helpers/accounts.mjs';
 
 const A = DEMO_ORG_ID;
 const ORG_B = 'org_test_association';
@@ -22,7 +23,7 @@ async function setup() {
   const env = { ...(await fixture()), ADMIN_PASSWORD: 'x', CRON_SECRET: 'secret-de-test' };
   await env.DB.prepare("INSERT INTO organizations (id, slug, name, type) VALUES (?, 'test-association', 'Test Association', 'cultural_association')").bind(ORG_B).run();
   await getCategoriesConfig(env, A);
-  const cookie = (await createSession(env, A)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const cookie = (await createSession(env, A, await testUser(env, A))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
   return { env, cookie };
 }
 

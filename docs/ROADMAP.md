@@ -88,10 +88,12 @@ Légende : ✅ fait et testé · 🟡 partiel · ⬜ à faire.
 
 | Élément | État |
 |---|---|
-| Comptes nominatifs, invitations, réinitialisation | voir journal |
-| Appartenances à plusieurs clubs | voir journal |
-| Rôles et permissions | voir journal |
-| Journal d'audit, sessions sécurisées | voir journal |
+| Comptes nominatifs, invitations, réinitialisation | ✅ (`accounts.js`, `/admin/utilisateurs`, `/admin/invitation`, `/admin/mot-de-passe-oublie`) |
+| Appartenances à plusieurs clubs | ✅ (un compte, plusieurs appartenances) |
+| Rôles et permissions | ✅ (6 rôles, contrôle par route dans `admin-access.js`) |
+| Journal d'audit, sessions sécurisées | ✅ (`/admin/journal`, sessions liées au compte) |
+| Entraîneur limité à ses équipes | ⬜ (aujourd'hui : consultation de tous les inscrits) |
+| Premier responsable d'un club | 🟡 (`/admin/premier-acces` + `SETUP_SECRET`, en attendant la console) |
 
 ### Phase 4 : CRM de base
 
@@ -126,3 +128,12 @@ Un club d'un autre sport (tennis, padel, judo...), parcours complet sans aucune 
 ## Journal des avancées
 
 Les étapes réalisées sont ajoutées ici, la plus récente en haut.
+
+### 2026-10-20 : comptes nominatifs et rôles (phase 3)
+
+- Fin du mot de passe partagé et du secret `ADMIN_PASSWORD` : connexion par e-mail + mot de passe personnel.
+- Migration 14 (additive) : `users` (comptes, globaux à la plateforme), `organization_memberships` (accès d'un compte à un club, avec un rôle), `user_tokens` (invitation 7 jours, réinitialisation 1 heure, usage unique, empreinte seulement), `admin_audit_log`, `admin_sessions.user_id`.
+- Rôles : Responsable du club, Administrateur, Secrétaire, Trésorier, Entraîneur, Bénévole. Permissions contrôlées pour chaque route par le middleware admin ; liens interdits retirés de la navigation.
+- Pages : Utilisateurs (inviter, changer un rôle, retirer un accès, renvoyer), Journal des actions, Mon compte (nom, mot de passe), Invitation, Mot de passe oublié, Nouveau mot de passe, Premier accès.
+- Garde-fous : un club garde toujours un responsable ; seul un responsable touche aux responsables ; retirer un accès ferme ses sessions ; changer son mot de passe ferme ses autres sessions ; une secrétaire ne peut pas modifier un statut de paiement.
+- Tests : `tests/accounts.test.mjs` (13 scénarios), tests d'authentification réécrits.

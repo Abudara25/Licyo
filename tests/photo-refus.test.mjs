@@ -12,6 +12,7 @@ import { isInscriptionComplete, familyHasActionPending, isPhotoToRedo } from '..
 import { buildPhotoRefusedEmail } from '../functions/_shared/confirmation-email.js';
 import { fixture, seedInscription } from './helpers/inscriptions.mjs';
 import { issueFamilyLink } from '../functions/_shared/family-links.js';
+import { testUser } from './helpers/accounts.mjs';
 
 const A = DEMO_ORG_ID;
 const HOST = 'https://clubdemo.licyo.fr';
@@ -19,7 +20,7 @@ const HOST = 'https://clubdemo.licyo.fr';
 async function setup() {
   clearOrganizationCache();
   const env = { ...(await fixture()), ADMIN_PASSWORD: 'x', BREVO_API_KEY: 'cle-de-test' };
-  const cookie = (await createSession(env, A)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const cookie = (await createSession(env, A, await testUser(env, A))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
   const row = await seedInscription(env.DB, {
     photo_key: 'photos/x', photo_content_type: 'image/jpeg', photo_uploaded_at: '2026-10-01 10:00:00',
     dossier_key: 'dossiers/x', dossier_uploaded_at: '2026-10-01 10:00:00', dossier_status: 'valide', paye: 1,

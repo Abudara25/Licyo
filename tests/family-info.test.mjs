@@ -9,6 +9,7 @@ import { DEMO_ORG_ID } from '../functions/_shared/schema.js';
 import { getFamilyInfo, normalizeWhatsappUrl } from '../functions/_shared/settings-kv.js';
 import { sendFollowUpEmail } from '../functions/_shared/confirmation-email.js';
 import { fixture, seedInscription } from './helpers/inscriptions.mjs';
+import { testUser } from './helpers/accounts.mjs';
 
 const A = DEMO_ORG_ID;
 const HOST = 'https://clubdemo.licyo.fr';
@@ -17,7 +18,7 @@ const LINK = 'https://chat.whatsapp.com/AbCdEf123456GhIjKl7890';
 async function setup() {
   clearOrganizationCache();
   const env = { ...(await fixture()), ADMIN_PASSWORD: 'x', BREVO_API_KEY: 'cle-de-test' };
-  const cookie = (await createSession(env, A)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const cookie = (await createSession(env, A, await testUser(env, A))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
   return { env, cookie };
 }
 

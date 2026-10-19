@@ -7,6 +7,7 @@ import { getPublicData, getAdminPublicData } from '../functions/_shared/public-d
 import { setCategoriesConfig } from '../functions/_shared/settings-kv.js';
 import * as categories from '../functions/admin/categories.js';
 import { fixture } from './helpers/inscriptions.mjs';
+import { testUser } from './helpers/accounts.mjs';
 
 const A = DEMO_ORG_ID;
 const B = 'org_test_association';
@@ -16,7 +17,7 @@ const setup = () => (shared ??= createSetup());
 async function createSetup() {
   const env = { ...(await fixture()), ADMIN_PASSWORD: 'x' };
   await env.DB.prepare("INSERT INTO organizations (id, slug, name) VALUES (?, 'b', 'B')").bind(B).run();
-  const cookie = (await createSession(env, A)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const cookie = (await createSession(env, A, await testUser(env, A))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
   const post = async (fields) => {
     const form = new FormData();
     for (const [k, v] of Object.entries(fields)) form.set(k, String(v));

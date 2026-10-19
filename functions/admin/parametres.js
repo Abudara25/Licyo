@@ -1,24 +1,12 @@
-// Réglages de l'espace admin : l'adresse qui reçoit les e-mails du site (par défaut
-// contact@clubdemo.licyo.fr, voir _shared/settings-kv.js), les automatisations (_shared/automations.js)
-// et le mot de passe (par défaut le secret Cloudflare ADMIN_PASSWORD, remplaçable ici — voir
-// _shared/admin-auth.js).
-//
-// Changement de mot de passe en 2 étapes (double vérification par e-mail) : après validation du
-// mot de passe actuel + nouveau mot de passe, un code à 6 chiffres est envoyé par e-mail (voir
-// _shared/confirmation-email.js) et stocké 15 min dans le KV (_shared/settings-kv.js). Le nouveau
-// mot de passe n'est appliqué qu'après saisie de ce code — protège contre un changement fait
-// depuis une session compromise (cookie volé) sans que le vrai responsable en soit informé.
+// Réglages du club : l'adresse qui reçoit les e-mails du site (voir _shared/settings-kv.js), les infos envoyées aux
+// familles, les automatisations (_shared/automations.js) et la durée de conservation. Depuis les comptes nominatifs
+// (phase 3, 2026-10-20), il n'y a plus de mot de passe partagé ici : chacun gère le sien dans « Mon compte »
+// (/admin/compte) et les accès se gèrent dans « Utilisateurs » (/admin/utilisateurs).
 import { retentionDue, RETENTION_YEARS } from '../_shared/retention.js';
 import {
   isAuthed,
   loginPage,
   escapeHtml,
-  verifyAdminPassword,
-  AdminAuthUnavailableError,
-  setAdminPasswordHash,
-  createSession,
-  revokeAllSessions,
-  withCookies,
   adminHead,
   adminShell,
   adminScripts,
@@ -28,13 +16,9 @@ import {
   statusTag,
   formatDateFr,
 } from '../_shared/admin-auth.js';
-import { hashPassword, timingSafeEqual, hitRateLimit, clearRateLimit } from '../_shared/security.js';
 import {
   getNotificationEmail,
   setNotificationEmail,
-  setPendingPasswordChange,
-  getPendingPasswordChange,
-  clearPendingPasswordChange,
   getAutomationsConfig,
   setAutomationsConfig,
   getCronState,
@@ -43,7 +27,7 @@ import {
   setFamilyInfo,
   normalizeWhatsappUrl,
 } from '../_shared/settings-kv.js';
-import { sendPasswordChangeCode, sendWeeklySummary, mailConfigured } from '../_shared/confirmation-email.js';
+import { sendWeeklySummary, mailConfigured } from '../_shared/confirmation-email.js';
 import { runReminders, buildWeeklySummary } from '../_shared/automations.js';
 import { helloAssoCredentials } from '../_shared/integrations.js';
 
@@ -169,51 +153,14 @@ function retentionSection(due) {
   </section>`;
 }
 
-function page({ notificationEmail, securityError, passwordOk, emailError, emailOk, awaitingCode, auto, badges, family, due = [] }) {
-  const passwordSection = awaitingCode
-    ? `${flash('info', 'Un code à 6 chiffres a été envoyé par e-mail. Saisissez-le pour confirmer le changement (valable 15 min).')}
-       ${securityError ? flash('error', securityError) : ''}
-       <form method="POST">
-         <input type="hidden" name="action" value="password-confirm">
-         <div class="form-field">
-           <label for="confirmation-code">Code reçu par e-mail</label>
-           <input type="text" id="confirmation-code" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required autofocus>
-         </div>
-         <div class="adm-form-actions"><button type="submit" class="adm-btn adm-btn-primary">${icon('check')}Confirmer le changement</button></div>
-       </form>
-       <form method="POST" style="margin-top:10px;">
-         <input type="hidden" name="action" value="password-cancel">
-         <button type="submit" class="adm-btn adm-btn-sm adm-btn-ghost">Annuler</button>
-       </form>`
-    : `${passwordOk ? flash('ok', 'Mot de passe mis à jour.') : ''}
-       ${securityError ? flash('error', securityError) : ''}
-       <form method="POST">
-         <input type="hidden" name="action" value="password">
-         <div class="form-field">
-           <label for="current-password">Mot de passe actuel</label>
-           <input type="password" id="current-password" name="currentPassword" autocomplete="current-password" required>
-         </div>
-         <div class="form-row">
-           <div class="form-field">
-             <label for="new-password">Nouveau mot de passe</label>
-             <input type="password" id="new-password" name="newPassword" autocomplete="new-password" required minlength="8">
-           </div>
-           <div class="form-field">
-             <label for="confirm-password">Confirmer le nouveau mot de passe</label>
-             <input type="password" id="confirm-password" name="confirmPassword" autocomplete="new-password" required minlength="8">
-           </div>
-         </div>
-         <p class="adm-help">8 caractères minimum. Un code de confirmation sera envoyé à l'adresse de notification ci-dessus.</p>
-         <div class="adm-form-actions"><button type="submit" class="adm-btn adm-btn-primary">${icon('lock')}Changer le mot de passe</button></div>
-       </form>`;
-
+function page({ notificationEmail, emailError, emailOk, auto, badges, family, due = [] }) {
   return `${adminHead('Paramètres')}
 ${adminShell({
   active: 'parametres',
   badges,
   eyebrow: 'Espace admin',
   title: 'Paramètres',
-  subtitle: "E-mails du site, automatisations et mot de passe de l'espace admin.",
+  subtitle: 'E-mails du site, automatisations et conservation des données.',
 })}
 <main id="adm-main" class="adm-wrap adm-main adm-main-narrow">
   <section class="adm-surface">
@@ -238,8 +185,8 @@ ${adminShell({
   ${retentionSection(due)}
 
   <section class="adm-surface">
-    <h2 class="adm-h2" style="margin-bottom:16px;">${icon('lock')}Mot de passe admin</h2>
-    ${passwordSection}
+    <h2 class="adm-h2">${icon('lock')}Accès à l’espace admin</h2>
+    <p class="adm-help" style="margin-top:8px;">Chaque responsable a son propre compte. Invitez une personne, changez son rôle ou retirez son accès dans <a class="adm-link" href="/admin/utilisateurs">Utilisateurs</a> ; changez votre mot de passe dans <a class="adm-link" href="/admin/compte">Mon compte</a>.</p>
   </section>
 </main>
 ${adminScripts('admin-nav')}
@@ -285,8 +232,7 @@ export async function onRequestGet({ request, env }) {
     return new Response(loginPage(), { headers: { 'Content-Type': 'text/html;charset=UTF-8' } });
   }
   const notificationEmail = await getNotificationEmail(env, admin.organizationId);
-  const pending = await getPendingPasswordChange(env, admin.organizationId);
-  return render(request, env, admin.organizationId, { notificationEmail, awaitingCode: !!pending });
+  return render(request, env, admin.organizationId, { notificationEmail });
 }
 
 export async function onRequestPost({ request, env }) {
@@ -339,83 +285,6 @@ export async function onRequestPost({ request, env }) {
   if (action === 'send-summary') {
     const ok = await sendWeeklySummary(env, siteUrl, await buildWeeklySummary(env, admin.organizationId), 'manuel');
     return render(request, env, admin.organizationId, { notificationEmail }, ok ? { message: 'Récapitulatif envoyé.' } : { error: 'Échec de l’envoi du récapitulatif (vérifiez le service d’envoi et les adresses du club).' });
-  }
-
-  if (action === 'password') {
-    const currentPassword = form.get('currentPassword');
-    const newPassword = form.get('newPassword');
-    const confirmPassword = form.get('confirmPassword');
-    let currentOk;
-    try {
-      currentOk = await verifyAdminPassword(env, org, String(currentPassword || ''));
-    } catch (error) {
-      if (!(error instanceof AdminAuthUnavailableError)) throw error;
-      return render(request, env, admin.organizationId, { notificationEmail, securityError: 'Vérification impossible pour le moment (stockage indisponible). Réessayez dans un instant.' }, { status: 503 });
-    }
-    if (!currentOk) {
-      return render(request, env, admin.organizationId, { notificationEmail, securityError: 'Mot de passe actuel incorrect.' }, { status: 400 });
-    }
-    if (!newPassword || newPassword.length < 8) {
-      return render(request, env, admin.organizationId, { notificationEmail, securityError: 'Le nouveau mot de passe doit faire au moins 8 caractères.' }, { status: 400 });
-    }
-    if (newPassword !== confirmPassword) {
-      return render(request, env, admin.organizationId, { notificationEmail, securityError: 'Les deux mots de passe ne correspondent pas.' }, { status: 400 });
-    }
-
-    // Tirage cryptographique (pas Math.random, prévisible) : ce code protège un changement de mot de passe.
-    const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000));
-    const sent = await sendPasswordChangeCode(env, code, siteUrl, admin.organizationId);
-    if (!sent) {
-      return render(
-        request,
-        env,
-        admin.organizationId,
-        {
-          notificationEmail,
-          securityError: "Échec de l'envoi du code de confirmation (vérifiez que l'adresse de notification est valide et le service d'envoi configuré). Le mot de passe n'a pas été changé.",
-        },
-        { status: 500 }
-      );
-    }
-    await setPendingPasswordChange(env, org, { code, newPasswordHash: await hashPassword(newPassword) });
-    return render(request, env, admin.organizationId, { notificationEmail, awaitingCode: true });
-  }
-
-  if (action === 'password-confirm') {
-    const pending = await getPendingPasswordChange(env, org);
-    const submittedCode = String(form.get('code') || '').trim();
-
-    if (!pending) {
-      return render(request, env, admin.organizationId, { notificationEmail, securityError: 'Code expiré, recommencez.' }, { status: 400 });
-    }
-    if (!timingSafeEqual(submittedCode, pending.code)) {
-      // 5 essais par demande : au 5e code faux, la demande est annulée.
-      const { allowed } = await hitRateLimit(env.DB, `password-code:${org}`, { limit: 4, windowSeconds: 15 * 60 }).catch(() => ({ allowed: true }));
-      if (!allowed) {
-        await clearPendingPasswordChange(env, org);
-        await clearRateLimit(env.DB, `password-code:${org}`).catch(() => {});
-        return render(request, env, admin.organizationId, { notificationEmail, securityError: 'Trop d’essais : la demande est annulée, recommencez.' }, { status: 400 });
-      }
-      return render(request, env, admin.organizationId, { notificationEmail, securityError: 'Code incorrect.', awaitingCode: true }, { status: 400 });
-    }
-
-    // newPassword : demande en attente créée avant le hachage (au plus 15 minutes d'ancienneté).
-    const passwordHash = pending.newPasswordHash || (pending.newPassword ? await hashPassword(pending.newPassword) : null);
-    if (!passwordHash) {
-      return render(request, env, admin.organizationId, { notificationEmail, securityError: 'Code expiré, recommencez.' }, { status: 400 });
-    }
-    await setAdminPasswordHash(env, org, passwordHash);
-    await clearPendingPasswordChange(env, org);
-    await clearRateLimit(env.DB, `password-code:${org}`).catch(() => {});
-    // Toutes les sessions sont fermées (un éventuel cookie volé ne sert plus), puis une nouvelle est
-    // ouverte pour la personne qui vient de changer le mot de passe.
-    await revokeAllSessions(env, admin.organizationId);
-    return withCookies(await render(request, env, admin.organizationId, { notificationEmail, passwordOk: true }), await createSession(env, admin.organizationId));
-  }
-
-  if (action === 'password-cancel') {
-    await clearPendingPasswordChange(env, org);
-    return render(request, env, admin.organizationId, { notificationEmail });
   }
 
   return render(request, env, admin.organizationId, { notificationEmail });

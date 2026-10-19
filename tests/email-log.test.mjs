@@ -5,6 +5,7 @@ import { COOKIE_NAME, createSession } from '../functions/_shared/admin-auth.js';
 import { sendReminderEmail, sendFollowUpEmail } from '../functions/_shared/confirmation-email.js';
 import { onRequestGet as eventsGet } from '../functions/admin/events.js';
 import { fixture, seedInscription } from './helpers/inscriptions.mjs';
+import { testUser } from './helpers/accounts.mjs';
 
 test('chaque e-mail envoyé est inscrit au journal, succès comme échec, et visible dans /admin/events', async (t) => {
   const env = { ...(await fixture()), BREVO_API_KEY: 'test', ADMIN_PASSWORD: 'x' };
@@ -33,7 +34,7 @@ test('chaque e-mail envoyé est inscrit au journal, succès comme échec, et vis
   assert.equal(results[0].message_id, '<abc@brevo>');
   assert.equal(results[1].error, 'Quota dépassé');
 
-  const cookie = (await createSession(env, DEMO_ORG_ID)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const cookie = (await createSession(env, DEMO_ORG_ID, await testUser(env, DEMO_ORG_ID))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
   const html = await (
     await eventsGet({ request: new Request(`https://clubdemo.licyo.fr/admin/events?inscription=${row.id}`, { headers: { Cookie: cookie } }), env })
   ).text();

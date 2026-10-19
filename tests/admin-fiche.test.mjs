@@ -5,13 +5,14 @@ import { randomUUID } from 'node:crypto';
 import { onRequestGet, onRequestPost } from '../functions/admin/inscriptions/[id].js';
 import { COOKIE_NAME, createSession } from '../functions/_shared/admin-auth.js';
 import { fixture, seedInscription, validData } from './helpers/inscriptions.mjs';
+import { testUser } from './helpers/accounts.mjs';
 
 // Un seul environnement pour tout le fichier : les tables de session sont créées une fois par module.
 let shared;
 async function authedEnv() {
   if (!shared) {
     const env = { ...(await fixture()), ADMIN_PASSWORD: randomUUID() };
-    const cookie = (await createSession(env, DEMO_ORG_ID)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+    const cookie = (await createSession(env, DEMO_ORG_ID, await testUser(env, DEMO_ORG_ID))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
     shared = { env, cookie };
   }
   return shared;

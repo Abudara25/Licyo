@@ -11,6 +11,7 @@ import { buildPreinscriptionConfirmation, buildPreinscriptionGroupOpened } from 
 import { openPreinscriptionGroupIfFull } from '../functions/_shared/preinscription-opening.js';
 import { getCategoriesConfig, setCategoriesConfig } from '../functions/_shared/settings-kv.js';
 import { fixture } from './helpers/inscriptions.mjs';
+import { testUser } from './helpers/accounts.mjs';
 
 const A = DEMO_ORG_ID;
 const B = 'org_exemple_test';
@@ -148,7 +149,7 @@ test('admin : compteur, liste échappée, CSV, suppression, réglages ; isolé p
   const env = await setup();
   await post(env, child(1, { enfantPrenom: '<script>x</script>', commentaire: '=HYPERLINK("x")' }));
   await post(env, child(2));
-  const cookie = async (org) => (await createSession(env, org)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const cookie = async (org) => (await createSession(env, org, await testUser(env, org))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
   const cookieA = await cookie(A);
   const get = async (c, query = '') => admin.onRequestGet({ request: new Request(`https://${HOST}/admin/preinscriptions${query}`, { headers: { Cookie: c } }), env });
 
@@ -200,7 +201,7 @@ test('lieu de naissance : obligatoire, borné, naissance à l’étranger accept
   const row = await env.DB.prepare('SELECT ville_naissance, pays_naissance FROM preinscriptions').first();
   assert.deepEqual({ ...row }, { ville_naissance: 'Casablanca', pays_naissance: 'Maroc' });
 
-  const cookie = (await createSession(env, A)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const cookie = (await createSession(env, A, await testUser(env, A))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
   const res = await admin.onRequestGet({ request: new Request(`https://${HOST}/admin/preinscriptions?format=csv`, { headers: { Cookie: cookie } }), env });
   const csv = await res.text();
   assert.match(csv, /"Ville de naissance";"Pays de naissance"/);
@@ -218,7 +219,7 @@ test('anciennes pré-inscriptions (table sans les colonnes) : colonnes ajoutées
   await env.DB.prepare(`INSERT INTO preinscriptions (organization_id, groupe, enfant_prenom, enfant_nom, naissance, parent_prenom, parent_nom, email, telephone, dedup_key)
     VALUES (?, 'U10', 'Ancien', 'Dossier', '2017-01-02', 'P', 'D', 'a@example.fr', '0600000000', 'ancien|dossier|2017-01-02')`).bind(A).run();
 
-  const cookie = (await createSession(env, A)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const cookie = (await createSession(env, A, await testUser(env, A))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
   const page = await (await admin.onRequestGet({ request: new Request(`https://${HOST}/admin/preinscriptions`, { headers: { Cookie: cookie } }), env })).text();
   assert.match(page, /Ancien Dossier/);
   assert.equal((page.match(/À compléter<\/span>/g) || []).length, 2, 'lieu de naissance et tenue à compléter');
@@ -263,7 +264,7 @@ test('second responsable légal facultatif : contrôlé, stocké, affiché, expo
   assert.deepEqual(family.to.map((r) => r.email), ['p3@example.fr', 'sam@example.fr']);
   assert.match(family.textContent, /^Bonjour Parent et Sam,/);
 
-  const cookie = (await createSession(env, A)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const cookie = (await createSession(env, A, await testUser(env, A))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
   const page = await (await admin.onRequestGet({ request: new Request(`https://${HOST}/admin/preinscriptions`, { headers: { Cookie: cookie } }), env })).text();
   assert.ok(page.includes('Sam &lt;b&gt;Test&lt;/b&gt;') && page.includes('2e responsable') && !page.includes('<b>Test</b>'));
   assert.match(page, /href="\/admin\/email\?groupe=preinscriptions"/);
@@ -289,7 +290,7 @@ test('admin : transfert d’une inscription vers la pré-inscription (copie, cor
   const transfer = await import('../functions/admin/inscriptions/[id]/preinscription.js');
   const fiche = await import('../functions/admin/inscriptions/[id].js');
   const env = await setup();
-  const cookie = (await createSession(env, A)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const cookie = (await createSession(env, A, await testUser(env, A))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
   const run = (id) => transfer.onRequestPost({ request: new Request(`https://${HOST}/admin/inscriptions/${id}/preinscription`, { method: 'POST', headers: { Cookie: cookie } }), env, params: { id: String(id) }, waitUntil: () => {} });
   const page = async (id) => (await fiche.onRequestGet({ request: new Request(`https://${HOST}/admin/inscriptions/${id}`, { headers: { Cookie: cookie } }), env, params: { id: String(id) } })).text();
 
@@ -332,7 +333,7 @@ test('taille de tenue : obligatoire, liste fermée, stockée, exportée, reprise
   assert.equal((await post(env, child(1, { tailleMaillot: 'XXL' }))).status, 400);
   assert.equal((await post(env, child(1, { tailleMaillot: '12 ans' }))).status, 200);
   assert.equal((await env.DB.prepare('SELECT taille_maillot FROM preinscriptions').first()).taille_maillot, '12 ans');
-  const cookie = (await createSession(env, A)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const cookie = (await createSession(env, A, await testUser(env, A))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
   const csv = await (await admin.onRequestGet({ request: new Request(`https://${HOST}/admin/preinscriptions?format=csv`, { headers: { Cookie: cookie } }), env })).text();
   assert.match(csv, /"Pays de naissance";"Taille de tenue"/);
   assert.match(csv, /"France";"12 ans"/);
@@ -343,7 +344,7 @@ test('doublon inscription + pré-inscription : refusé à la saisie, signalé, e
   const transfer = await import('../functions/admin/inscriptions/[id]/preinscription.js');
   const fiche = await import('../functions/admin/inscriptions/[id].js');
   const env = await setup();
-  const cookie = (await createSession(env, A)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const cookie = (await createSession(env, A, await testUser(env, A))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
   const page = async (id) => (await fiche.onRequestGet({ request: new Request(`https://${HOST}/admin/inscriptions/${id}`, { headers: { Cookie: cookie } }), env, params: { id: String(id) } })).text();
   const u10Page = async () => (await admin.onRequestGet({ request: new Request(`https://${HOST}/admin/preinscriptions`, { headers: { Cookie: cookie } }), env })).text();
 

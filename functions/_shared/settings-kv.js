@@ -74,39 +74,6 @@ export async function setNotificationEmail(env, organizationId, value) {
   await writeSetting(env, organizationId, 'notification_email', value);
 }
 
-// Double vérification par e-mail avant qu'un changement de mot de passe admin ne prenne effet
-// (functions/admin/parametres.js) : le nouveau mot de passe n'est appliqué qu'après saisie d'un code à
-// 6 chiffres reçu par e-mail. Expire après 15 min (expirationTtl KV).
-const PENDING_PASSWORD_TTL_SECONDS = 15 * 60;
-
-// newPasswordHash : empreinte PBKDF2 (voir _shared/security.js) — le mot de passe n'est jamais stocké en clair.
-export async function setPendingPasswordChange(env, organizationId, { code, newPasswordHash }) {
-  await writeSetting(env, organizationId, 'pending_password_change', JSON.stringify({ code, newPasswordHash }), {
-    expirationTtl: PENDING_PASSWORD_TTL_SECONDS,
-  });
-}
-
-export async function getPendingPasswordChange(env, organizationId) {
-  requireOrganization(organizationId);
-  return readJson(env, organizationId, 'pending_password_change');
-}
-
-export async function clearPendingPasswordChange(env, organizationId) {
-  await deleteSetting(env, organizationId, 'pending_password_change');
-}
-
-// Mot de passe admin de l'organisation (empreinte PBKDF2). Pour Sportville seulement, le secret
-// Cloudflare ADMIN_PASSWORD reste la valeur de départ tant qu'aucun mot de passe n'a été changé depuis
-// /admin/parametres (voir verifyAdminPassword dans admin-auth.js).
-export async function getAdminPasswordHash(env, organizationId) {
-  requireOrganization(organizationId);
-  return readSetting(env, organizationId, 'admin_password');
-}
-
-export async function setAdminPasswordHash(env, organizationId, passwordHash) {
-  await writeSetting(env, organizationId, 'admin_password', passwordHash);
-}
-
 // ---------------------------------------------------------------------------------------------
 // Catégories d'âge + saison + tarif (/admin/categories). DEFAULT_CATEGORIES_CONFIG reprend les valeurs
 // réelles de Sportville pour la saison 2026-2027 : repli tant que /admin/categories n'a jamais été

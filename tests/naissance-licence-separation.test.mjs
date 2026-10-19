@@ -16,12 +16,13 @@ import { onRequestPost as naissancePost } from '../functions/depot/[token]/naiss
 import { sendReminderEmail } from '../functions/_shared/confirmation-email.js';
 import { fixture, seedInscription, validData } from './helpers/inscriptions.mjs';
 import { issueFamilyLink } from '../functions/_shared/family-links.js';
+import { testUser } from './helpers/accounts.mjs';
 
 const COMPLETE = { paye: 1, dossier_uploaded_at: '2026-09-10 10:00:00', dossier_key: 'k', dossier_status: 'valide', photo_uploaded_at: '2026-09-10 10:00:00', photo_key: 'p', ville_naissance: 'Argenteuil', pays_naissance: 'France' };
 
 async function authedEnv() {
   const env = { ...(await fixture()), ADMIN_PASSWORD: randomUUID() };
-  const cookie = (await createSession(env, DEMO_ORG_ID)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const cookie = (await createSession(env, DEMO_ORG_ID, await testUser(env, DEMO_ORG_ID))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
   return { env, cookie };
 }
 const get = (handler, env, cookie, path, params = {}) =>

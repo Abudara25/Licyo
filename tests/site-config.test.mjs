@@ -68,7 +68,7 @@ test('migrations 11 et 12 : table site_configs et marqueur d’initialisation, r
   const env = await setup({ withB: false });
   await seedInscription(env.DB);
   const { v } = await env.DB.prepare('SELECT MAX(version) AS v FROM schema_migrations').first();
-  assert.equal(v, 13);
+  assert.equal(v, MIGRATIONS.at(-1).version);
   assert.deepEqual(MIGRATIONS.filter((m) => m.version === 11 || m.version === 12).map((m) => m.name), ['site_configs', 'site_config_initialized']);
   assert.equal(await row(env, A), null, 'aucun remplissage par la migration elle-même');
   await readSiteConfig(env, A);

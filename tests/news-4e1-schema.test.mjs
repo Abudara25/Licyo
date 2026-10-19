@@ -84,14 +84,13 @@ test('T1 — migration 13 sur une base en 12 : tables, 3 index, 30 triggers, une
   const env = await setupNews();
   await toVersion12(env);
   await seedInscription(env.DB);
-  assert.equal((await first(env, 'SELECT MAX(version) AS v FROM schema_migrations')).v, 12);
+  assert.equal((await first(env, 'SELECT COUNT(*) AS n FROM schema_migrations WHERE version = 13')).n, 0, 'migration 13 retirée (base « en 12 », migrations suivantes conservées)');
   const before = await dumpTables(env);
 
   resetSchemaCacheForTests();
   await ensureSchema(env.DB);
-  assert.equal((await first(env, 'SELECT MAX(version) AS v FROM schema_migrations')).v, 13);
-  assert.equal(MIGRATIONS.at(-1).version, 13);
-  assert.equal(MIGRATIONS.at(-1).name, 'news_articles');
+  assert.equal((await first(env, 'SELECT COUNT(*) AS n FROM schema_migrations WHERE version = 13')).n, 1);
+  assert.equal(MIGRATIONS.find((m) => m.version === 13).name, 'news_articles');
   const names = async (type) => (await all(env, 'SELECT name FROM sqlite_master WHERE type = ? AND name NOT LIKE ? ORDER BY name', type, 'sqlite_%')).map((r) => r.name);
   assert.ok((await names('table')).includes('articles') && (await names('table')).includes('organization_news_state'));
   const named = (await names('index')).filter((n) => n.startsWith('idx_articles_'));

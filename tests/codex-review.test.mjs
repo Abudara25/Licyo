@@ -1,10 +1,10 @@
 // Correctifs de la revue Codex (2026-10-08) :
 // 1. inscriptions fermées : l'API refuse un envoi direct, sauf réinscription par lien personnel (même enfant) ;
-// 2. KV illisible : la connexion admin est refusée, le secret historique ADMIN_PASSWORD n'est jamais réactivé.
+// 2. Base illisible : la connexion admin est refusée (503), le secret historique ADMIN_PASSWORD n'ouvre jamais rien.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { onRequestPost } from '../functions/api/inscriptions.js';
-import { verifyAdminPassword, AdminAuthUnavailableError, setAdminPasswordHash, handleLogin } from '../functions/_shared/admin-auth.js';
+import { handleLogin } from '../functions/_shared/admin-auth.js';
 import { hashPassword } from '../functions/_shared/security.js';
 import { setInscriptionStatus, getCategoriesConfig, setCategoriesConfig } from '../functions/_shared/settings-kv.js';
 import { DEMO_ORG_ID } from '../functions/_shared/schema.js';
@@ -62,30 +62,19 @@ test('fermé : la réinscription par lien personnel reste possible, pour le mêm
   assert.equal(await count(env), before + 1);
 });
 
-test('KV illisible : le secret historique ne rouvre jamais l’accès, même s’il est correct', async () => {
+test('base indisponible à la connexion : 503 « réessayez », aucune session, et l’ancien secret partagé n’ouvre jamais rien', async () => {
   const env = await fixture();
   env.ADMIN_PASSWORD = 'ancien-secret-historique';
-  // Mot de passe changé depuis Paramètres : seul le nouveau est valable.
-  await setAdminPasswordHash(env, A, await hashPassword('nouveau-mot-de-passe'));
-  assert.equal(await verifyAdminPassword(env, A, 'ancien-secret-historique'), false);
-  assert.equal(await verifyAdminPassword(env, A, 'nouveau-mot-de-passe'), true);
-  // Panne du KV : aucune des deux valeurs n'ouvre l'accès.
-  const broken = { ...env, INSCRIPTION_STATUS: { get: async () => { throw new Error('KV indisponible'); }, put: async () => {}, delete: async () => {} } };
-  await assert.rejects(() => verifyAdminPassword(broken, A, 'ancien-secret-historique'), AdminAuthUnavailableError);
-  await assert.rejects(() => verifyAdminPassword(broken, A, 'nouveau-mot-de-passe'), AdminAuthUnavailableError);
-  // Écran de connexion : 503 « réessayez », pas « mot de passe incorrect », et aucune session.
   clearOrganizationCache();
   const form = new FormData();
+  form.set('email', 'responsable@club.example');
   form.set('password', 'ancien-secret-historique');
-  const response = await handleLogin(new Request('https://clubdemo.licyo.fr/admin/inscriptions', { method: 'POST', headers: { 'CF-Connecting-IP': '203.0.113.9' } }), broken, form);
+  const request = () => new Request('https://clubdemo.licyo.fr/admin/inscriptions', { method: 'POST', headers: { 'CF-Connecting-IP': '203.0.113.9' } });
+  const refused = await handleLogin(request(), env, form);
+  assert.equal(refused.status, 401, 'le secret historique ne vaut plus rien');
+  const broken = { ...env, DB: { ...env.DB, prepare: (sql) => (/FROM users/.test(sql) ? { bind: () => ({ first: async () => { throw new Error('D1 indisponible'); } }) } : env.DB.prepare(sql)), batch: env.DB.batch.bind(env.DB) } };
+  const response = await handleLogin(request(), broken, form);
   assert.equal(response.status, 503);
   assert.equal(response.headers.get('Set-Cookie'), null);
-  assert.match(await response.text(), /stockage indisponible/);
-});
-
-test('KV lisible et aucun mot de passe enregistré : le secret historique reste valable (Sportville seulement)', async () => {
-  const env = await fixture();
-  env.ADMIN_PASSWORD = 'secret-initial';
-  assert.equal(await verifyAdminPassword(env, A, 'secret-initial'), true);
-  assert.equal(await verifyAdminPassword(env, 'org_autre', 'secret-initial'), false);
+  assert.match(await response.text(), /indisponible/);
 });

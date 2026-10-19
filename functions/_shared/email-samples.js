@@ -8,7 +8,8 @@ import {
   sendAdminNotification,
   sendReminderEmail,
   sendReinscriptionEmail,
-  sendPasswordChangeCode,
+  sendAdminInvitation,
+  sendAdminPasswordReset,
   sendFollowUpEmail,
   sendClubUploadAlert,
   sendPhotoRefusedEmail,
@@ -144,7 +145,8 @@ export async function sendEmailSamples(env, organizationId, siteUrl, to) {
       () =>
         sendContactMessage(e, { nom: 'Camille Exemple', email: to, sujet: 'Autre demande', message: 'Bonjour,\n\nÀ quelle heure ouvre le stade le jeudi ?\n\nMerci !' }, { siteUrl, organizationId }),
     ],
-    ['Club : code de confirmation', () => sendPasswordChangeCode(e, '000000', siteUrl, organizationId)],
+    ['Espace admin : invitation', () => sendAdminInvitation(e, { to, roleLabel: 'Secrétaire', inviterName: 'Camille Exemple', link: `${siteUrl}/admin/invitation/exemple`, siteUrl, organizationId })],
+    ['Espace admin : nouveau mot de passe', () => sendAdminPasswordReset(e, { to, link: `${siteUrl}/admin/reinitialiser/exemple`, siteUrl, organizationId })],
   ];
   const results = [];
   for (const [label, send] of samples) {

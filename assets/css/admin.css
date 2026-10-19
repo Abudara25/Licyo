@@ -951,3 +951,46 @@ dd .adm-link, .adm-kv .adm-link, .adm-prein-line a { display: inline-flex; align
 .adm-followup.is-sending { opacity: .6; pointer-events: none; }
 @media (max-width: 599px) { .adm-followup { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 999px) { .adm-member-followup { order: 2; } }
+
+/* Compte connecté (phase 3, comptes nominatifs) : initiales dans la barre du haut, avant « Déconnexion » ; nom et rôle
+   visibles seulement sur grand écran (la barre des onglets est déjà pleine en dessous). */
+.adm-account {
+  display: inline-flex; align-items: center; gap: 10px; min-height: 44px; margin-left: auto; flex-shrink: 0;
+  border-radius: 999px; color: var(--white); padding: 0 4px 0 0;
+}
+.adm-account + .adm-logout { margin-left: 6px; }
+.adm-account:hover .adm-account-avatar { box-shadow: 0 0 0 3px rgba(255, 255, 255, .25); }
+.adm-account-avatar {
+  display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
+  background: var(--gold-400); color: var(--maroon-950); font-weight: 700; font-size: .85rem; letter-spacing: .02em;
+}
+.adm-account-text { display: none; line-height: 1.15; }
+.adm-account-text strong { display: block; font-size: .85rem; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm-account-text small { display: block; font-size: .72rem; color: rgba(255, 255, 255, .7); }
+@media (min-width: 1500px) { .adm-account-text { display: block; } }
+
+/* Pages Utilisateurs et Mon compte. */
+.adm-login-links { margin: 14px 0 0; text-align: center; font-size: .9rem; }
+.adm-login-links a { color: var(--maroon-800); text-decoration: underline; }
+.adm-users { display: grid; gap: 10px; margin-top: 14px; }
+.adm-user-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 16px; align-items: center;
+  padding: 14px 16px; border: 1px solid var(--cream-200); border-radius: 12px; background: var(--white);
+}
+.adm-user-row h3 { margin: 0; font-family: inherit; font-size: 1rem; text-transform: none; letter-spacing: 0; }
+.adm-user-row p { margin: 2px 0 0; color: var(--ink-700); font-size: .88rem; overflow-wrap: anywhere; }
+.adm-user-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.adm-user-actions form { display: flex; gap: 8px; align-items: center; margin: 0; }
+.adm-user-actions select { min-height: 44px; font-size: 16px; }
+.adm-roles { display: grid; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+.adm-roles li { font-size: .9rem; color: var(--ink-700); }
+.adm-roles strong { color: var(--ink-900); }
+.adm-audit { width: 100%; border-collapse: collapse; font-size: .88rem; margin-top: 12px; }
+.adm-audit th, .adm-audit td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--cream-200); vertical-align: top; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .adm-user-row { grid-template-columns: minmax(0, 1fr); }
+  .adm-user-actions { justify-content: flex-start; }
+  .adm-audit thead { display: none; }
+  .adm-audit tr { display: block; padding: 8px 0; border-bottom: 1px solid var(--cream-200); }
+  .adm-audit td { display: block; border: 0; padding: 2px 0; }
+}

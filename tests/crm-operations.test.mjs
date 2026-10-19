@@ -10,6 +10,7 @@ import * as members from '../functions/admin/adherents.js';
 import { SYNC_LIMIT } from '../functions/admin/adherents.js';
 import { onRequestPost as cron } from '../functions/api/cron.js';
 import { fixture, seedInscription } from './helpers/inscriptions.mjs';
+import { testUser } from './helpers/accounts.mjs';
 
 const A = DEMO_ORG_ID;
 const child = (n) => ({
@@ -21,7 +22,7 @@ async function setup() {
   clearOrganizationCache();
   const env = { ...(await fixture()), ADMIN_PASSWORD: 'x', CRON_SECRET: 'secret-de-test' };
   await getCategoriesConfig(env, A);
-  const cookie = (await createSession(env, A)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const cookie = (await createSession(env, A, await testUser(env, A))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
   return { env, cookie };
 }
 const cronRequest = () => new Request('https://clubdemo.licyo.fr/api/cron', { method: 'POST', headers: { Authorization: 'Bearer secret-de-test' } });

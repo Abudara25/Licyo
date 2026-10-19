@@ -8,6 +8,7 @@ import { getCategoriesConfig } from '../functions/_shared/settings-kv.js';
 import { clearOrganizationCache } from '../functions/_shared/organization.js';
 import * as page from '../functions/admin/email.js';
 import { fixture, seedInscription } from './helpers/inscriptions.mjs';
+import { testUser } from './helpers/accounts.mjs';
 
 const A = DEMO_ORG_ID;
 const ORG_B = 'org_test_association';
@@ -19,7 +20,7 @@ async function setup(t) {
   const env = { ...(await fixture()), ADMIN_PASSWORD: 'x', BREVO_API_KEY: 'cle-de-test' };
   await env.DB.prepare("INSERT INTO organizations (id, slug, name, type) VALUES (?, 'test-association', 'Test Association', 'cultural_association')").bind(ORG_B).run();
   await getCategoriesConfig(env, A);
-  const cookie = (await createSession(env, A)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const cookie = (await createSession(env, A, await testUser(env, A))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
   const sent = [];
   t.mock.method(globalThis, 'fetch', async (url, init) => {
     sent.push(JSON.parse(init.body));
@@ -163,7 +164,7 @@ test('cartes des listes : « Appeler » (mobile) et « E-mail » à la famille v
   const archived = await env.DB.prepare("SELECT id FROM inscriptions WHERE organization_id = ? AND archived_at IS NOT NULL").bind(A).first();
   const list = await import('../functions/admin/inscriptions.js');
   const { COOKIE_NAME: C, createSession: cs } = await import('../functions/_shared/admin-auth.js');
-  const cookie = (await cs(env, A)).find((c) => c.startsWith(`${C}=`)).split(';')[0];
+  const cookie = (await cs(env, A, await testUser(env, A))).find((c) => c.startsWith(`${C}=`)).split(';')[0];
   const page = (qs) => list.onRequestGet({ request: new Request(`${SITE}/admin/inscriptions${qs}`, { headers: { Cookie: cookie } }), env }).then((r) => r.text());
   assert.ok((await page('')).includes(`href="/admin/email?inscription=${leo.id}"`));
   assert.doesNotMatch(await page('?view=archive'), new RegExp(`/admin/email\?inscription=${archived.id}"`));

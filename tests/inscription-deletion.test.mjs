@@ -6,13 +6,14 @@ import { onRequestPost as listPost } from '../functions/admin/inscriptions.js';
 import { logEmail } from '../functions/_shared/email-log.js';
 import { fixture, seedInscription } from './helpers/inscriptions.mjs';
 import { createR2 } from './helpers/d1.mjs';
+import { testUser } from './helpers/accounts.mjs';
 
 // Une seule base pour le fichier : la table des sessions admin n'est créée qu'une fois par module.
 let shared;
 const setup = () => (shared ??= createSetup());
 async function createSetup() {
   const env = { ...(await fixture()), ADMIN_PASSWORD: 'x', DOSSIERS: createR2(), DOSSIERS_BACKUP: createR2() };
-  const cookie = (await createSession(env, DEMO_ORG_ID)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const cookie = (await createSession(env, DEMO_ORG_ID, await testUser(env, DEMO_ORG_ID))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
   const post = (fields, overrides = {}) => {
     const form = new FormData();
     Object.entries(fields).forEach(([k, v]) => form.set(k, v));

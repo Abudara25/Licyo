@@ -6,6 +6,7 @@ import { DEMO_ORG_ID } from '../functions/_shared/schema.js';
 import * as sessionPage from '../functions/admin/session.js';
 import * as logout from '../functions/admin/logout.js';
 import { fixture } from './helpers/inscriptions.mjs';
+import { testUser } from './helpers/accounts.mjs';
 
 const A = DEMO_ORG_ID;
 const SITE = 'https://clubdemo.licyo.fr';
@@ -13,7 +14,7 @@ const nowS = () => Math.floor(Date.now() / 1000);
 
 async function setup() {
   const env = await fixture();
-  const cookie = (await createSession(env, A)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const cookie = (await createSession(env, A, await testUser(env, A))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
   const req = (path = '/admin/dashboard', headers = {}) => new Request(`${SITE}${path}`, { headers: { Cookie: cookie, ...headers } });
   const expiresAt = async () => (await env.DB.prepare('SELECT expires_at FROM admin_sessions').first()).expires_at;
   const setTimes = (created, expires) => env.DB.prepare('UPDATE admin_sessions SET created_at = ?, expires_at = ?').bind(created, expires).run();
@@ -23,7 +24,7 @@ async function setup() {
 test('une nouvelle session expire après 30 minutes sans activité', async () => {
   const { env, req, expiresAt, setTimes } = await setup();
   assert.ok(Math.abs((await expiresAt()) - (nowS() + SESSION_IDLE_SECONDS)) <= 2);
-  assert.deepEqual(await isAuthed(req(), env), { organizationId: A });
+  assert.equal((await isAuthed(req(), env))?.organizationId, A);
   await setTimes(nowS() - 3600, nowS() - 1);
   assert.equal(await isAuthed(req(), env), null, 'inactive depuis plus de 30 min : refusée');
 });

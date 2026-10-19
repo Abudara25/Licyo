@@ -10,6 +10,7 @@ import * as members from '../functions/admin/adherents.js';
 import * as memberPage from '../functions/admin/adherents/[id].js';
 import * as contactPage from '../functions/admin/contacts/[id].js';
 import { fixture, seedInscription } from './helpers/inscriptions.mjs';
+import { testUser } from './helpers/accounts.mjs';
 
 const A = DEMO_ORG_ID;
 const B = 'org_asso_b';
@@ -18,7 +19,7 @@ async function setup() {
   const env = { ...(await fixture()), ADMIN_PASSWORD: 'x' };
   await env.DB.prepare("INSERT INTO organizations (id, slug, name) VALUES (?, 'b', 'B')").bind(B).run();
   await getCategoriesConfig(env, A);
-  const cookieFor = async (org) => (await createSession(env, org)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
+  const cookieFor = async (org) => (await createSession(env, org, await testUser(env, org))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
   const cookies = { A: await cookieFor(A), B: await cookieFor(B) };
   return { env, cookies };
 }
@@ -52,12 +53,12 @@ test('la liste affiche personne, période, groupe, statut et état du dossier lu
   await seedInscription(env.DB, child(1, { numero_licence: '2547896321' }));
   await seedInscription(env.DB, child(2, { categorie: 'U6 - U7', naissance: '2020-01-01' }));
   await backfillOrganization(env, A, { dryRun: false });
-  const res = await members.onRequestGet({ request: new Request('https://clubdemo.licyo.fr/admin/adherents', { headers: { Cookie: (await createSession(env, A)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0] } }), env });
+  const res = await members.onRequestGet({ request: new Request('https://clubdemo.licyo.fr/admin/adherents', { headers: { Cookie: (await createSession(env, A, await testUser(env, A))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0] } }), env });
   const html = await res.text();
   assert.equal(res.status, 200);
   assert.deepEqual(names(html).sort(), ['Enfant1 Fictif1', 'Enfant2 Fictif2']);
   assert.match(html, /<p><strong>U8 - U9<\/strong> · né\(e\) le 04\/03\/2018<\/p>/, 'catégorie non répétée');
-  const filtered = await (await members.onRequestGet({ request: new Request(`https://clubdemo.licyo.fr/admin/adherents?age=${encodeURIComponent('U6 - U7')}`, { headers: { Cookie: (await createSession(env, A)).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0] } }), env })).text();
+  const filtered = await (await members.onRequestGet({ request: new Request(`https://clubdemo.licyo.fr/admin/adherents?age=${encodeURIComponent('U6 - U7')}`, { headers: { Cookie: (await createSession(env, A, await testUser(env, A))).find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0] } }), env })).text();
   assert.deepEqual(names(filtered), ['Enfant2 Fictif2'], 'filtre par catégorie regroupée');
   assert.match(html, /Adhésion <small>· 2026-2027<\/small>/);
   assert.match(html, /Validé/, 'dossier validé (source : inscription)');

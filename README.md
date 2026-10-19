@@ -12,7 +12,7 @@ npm run check   # vérifie les fichiers générés et lance tous les tests
 ```
 
 Serveur local : `npm run build`, puis
-`npx wrangler pages dev dist --d1 DB --kv INSCRIPTION_STATUS --r2 DOSSIERS --binding ADMIN_PASSWORD=<test>`.
+`npx wrangler pages dev dist --d1 DB --kv INSCRIPTION_STATUS --r2 DOSSIERS --binding SETUP_SECRET=<test>`, puis `/admin/premier-acces`.
 
 ## Organisation du code
 
