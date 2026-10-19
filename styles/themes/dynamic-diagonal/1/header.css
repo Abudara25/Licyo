@@ -1,0 +1,106 @@
+/* ---------- Header ---------- */
+/* Même habillage que la barre de l'espace admin (.adm-topnav, assets/css/admin.css) : dégradé
+   bordeaux, halo or, rayures fines, onglets en pastille. Les rayures sont sur ::before (jamais de
+   backdrop-filter/transform sur .site-header : il contient .main-nav en position fixe, voir CLAUDE.md). */
+.site-header {
+  position: sticky; top: 0; z-index: 500;
+  height: var(--header-h);
+  display: flex; align-items: center;
+  color: var(--color-on-dark-strong);
+  background:
+    radial-gradient(circle at 12% -120%, rgba(var(--dd-pattern-rgb), .28), transparent 45%),
+    linear-gradient(135deg, var(--color-primary), var(--color-primary-deep));
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+  box-shadow: 0 6px 18px rgba(var(--color-primary-deep-rgb), .18);
+  transition: box-shadow .3s var(--ease), height .3s var(--ease);
+}
+/* Header collant : tout défilement vers un élément (ancre, scrollIntoView, focus, champ invalide signalé) s'arrête
+   sous lui, au lieu de passer derrière (barre d'étapes et premiers libellés du formulaire d'inscription masqués). */
+html { scroll-padding-top: calc(var(--header-h) + 16px); }
+.site-header::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(135deg, rgba(255, 255, 255, .04) 0 2px, transparent 2px 26px);
+}
+.site-header.is-scrolled { box-shadow: var(--shadow-md); height: 68px; }
+.site-header .container {
+  position: relative;
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+}
+.brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.brand img { width: 44px; height: 44px; }
+.brand-name {
+  font-family: var(--font-display);
+  color: var(--color-on-dark-strong);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.brand-name strong { display: block; font-size: 1.05rem; letter-spacing: .03em; text-transform: uppercase; color: var(--color-on-dark-strong); }
+.brand-name span { display: block; font-family: var(--font-body); font-size: .66rem; letter-spacing: .12em; color: var(--color-accent-pale); text-transform: uppercase; }
+
+/* "li a" et non "a" : le bouton .nav-cta du menu mobile est aussi un lien de .main-nav, il doit
+   garder ses propres couleurs/marges de .btn-primary. */
+.main-nav ul { display: flex; gap: 2px; }
+.main-nav li a {
+  display: flex; align-items: center;
+  min-height: 44px; padding-inline: 16px;
+  border-radius: 999px;
+  font-size: .92rem;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, .78);
+  transition: background-color .2s var(--ease), color .2s var(--ease);
+}
+.main-nav li a:hover { background: rgba(255, 255, 255, .08); color: var(--color-on-dark-strong); }
+.main-nav li a[aria-current="page"] {
+  background: rgba(255, 255, 255, .15); color: var(--color-on-dark-strong); font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--color-accent-light);
+}
+.header-actions { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+
+.burger {
+  display: none;
+  width: 44px; height: 44px;
+  border: none; background: rgba(255, 255, 255, .1);
+  border-radius: 50%;
+  position: relative; cursor: pointer;
+  transition: background-color .2s var(--ease);
+}
+.burger:hover { background: rgba(255, 255, 255, .2); }
+.burger span {
+  position: absolute; left: 12px; right: 12px; height: 2px; border-radius: 2px; background: var(--color-surface);
+  transition: transform .25s var(--ease), opacity .25s var(--ease);
+}
+.burger span:nth-child(1) { top: 15px; }
+.burger span:nth-child(2) { top: 21px; }
+.burger span:nth-child(3) { top: 27px; }
+.burger.is-active span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+.burger.is-active span:nth-child(2) { opacity: 0; }
+.burger.is-active span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+
+@media (max-width: 1100px) and (min-width: 881px) {
+  .brand-name span { display: none; }
+  .main-nav li a { padding-inline: 11px; font-size: .88rem; }
+  .site-header .container { gap: 12px; }
+}
+@media (max-width: 880px) {
+  .burger { display: block; }
+  .main-nav {
+    position: fixed; inset: var(--header-h) 0 0 0;
+    background: linear-gradient(160deg, var(--color-primary-strong), var(--color-primary-deep));
+    transform: translateX(100%);
+    transition: transform .3s var(--ease);
+    overflow-y: auto;
+  }
+  .main-nav.is-open { transform: translateX(0); }
+  .main-nav ul { flex-direction: column; padding: 24px; gap: 4px; }
+  .main-nav li a { min-height: 52px; padding-inline: 18px; border-radius: var(--radius-md); font-size: 1rem; }
+  .main-nav li a[aria-current="page"] { box-shadow: inset 3px 0 0 var(--color-accent-light); }
+  /* .adhesion-cta (pas .btn-primary) : ce lien change de classe de couleur en JS quand les
+     inscriptions sont fermées (voir initAdhesionCtaStatus() dans main.js) — cibler la couleur
+     l'aurait laissé visible en double (header + menu mobile) une fois cette classe retirée. */
+  .header-actions .adhesion-cta { display: none; }
+  .main-nav .nav-cta { display: flex; margin: 8px 24px 24px; }
+}
+@media (min-width: 881px) {
+  .main-nav .nav-cta { display: none; }
+}
+

@@ -1,0 +1,58 @@
+{
+  "articles": [
+    {
+      "title": "Bienvenue sur le nouveau site du Club Démo",
+      "date": "2026-09-03",
+      "category": "club",
+      "slug": "bienvenue-nouveau-site",
+      "excerpt": "Le Club Démo lance son tout nouveau site internet, avec un espace d'inscription en ligne pour la saison 2026-2027.",
+      "body": "Nous sommes heureux de vous présenter le nouveau site du Club Démo.\n\nVous y trouverez toutes les informations sur le club, les entraînements, et surtout un formulaire pour inscrire votre enfant en quelques clics.\n\nÀ très bientôt au Stade municipal !",
+      "image": "/assets/images/actualites/banniere-club.webp"
+    },
+    {
+      "title": "Le club recherche des bénévoles",
+      "date": "2026-09-07",
+      "category": "benevolat",
+      "slug": "recherche-benevoles",
+      "excerpt": "Le Club Démo, club 100% associatif, lance un appel pour renforcer son équipe de bénévoles avant le début de la saison 2026-2027.",
+      "body": "Le Club Démo est un club 100% associatif, porté depuis sa création en 2020 par l'énergie de ses bénévoles.\n\nPour bien démarrer cette première saison structurée, nous recherchons des personnes motivées pour nous accompagner : encadrement lors des entraînements, aide à l'organisation, communication, ou simple coup de main ponctuel selon vos disponibilités.\n\nAucune expérience particulière n'est requise, seulement l'envie de participer à la vie du club et de contribuer à une belle aventure collective.\n\nIntéressé(e) ? Écrivez-nous à contact@clubdemo.licyo.fr, nous serons ravis d'échanger avec vous.",
+      "image": ""
+    },
+    {
+      "title": "Entraînements du jeudi : rejoignez-nous sur le terrain !",
+      "date": "2026-09-18",
+      "category": "club",
+      "slug": "reprise-entrainements-inscriptions-ouvertes",
+      "excerpt": "Retour en images sur la séance de la semaine ! Les entraînements ont bien repris tous les jeudis de 17h à 18h, et il reste encore des places. Venez faire un essai ou inscrivez-vous directement en ligne.",
+      "body": "Retour en images sur la séance de cette semaine ! Au programme : travail technique, ateliers avec cônes et premiers petits matchs, le tout avec beaucoup d’énergie et le sourire malgré le ciel gris.\n\nBonne nouvelle : il reste encore de la place pour nous rejoindre !\n\nLes séances se déroulent tous les jeudis de 17h à 18h et les inscriptions sont toujours ouvertes pour cette saison. La démarche est très simple, tout se fait directement en ligne sur notre site web.\n\nVenez nous voir jeudi prochain au bord du terrain ou écrivez-nous en message privé pour plus d'infos. On vous attend !",
+      "image": "/assets/images/actualites/WhatsApp Image 2026-09-18 at 08.21.47.jpg"
+    },
+    {
+      "title": "Découvrez les principales règles du football U6 U7",
+      "date": "2026-09-28",
+      "category": "club",
+      "slug": "regle-foot-u6-u7",
+      "excerpt": "Le football chez les plus jeunes possède des règles adaptées afin de favoriser le plaisir de jouer, l’apprentissage et la progression de chaque enfant.\nAu Club Démo, nos catégories U6 à U7 évoluent sur des formats de jeu adaptés à leur âge.",
+      "body": "⚽ Les règles pour les U6 – U7\nQuelques règles importantes à retenir :\n- ⏱️ Temps de pratique : environ 50 minutes\n- ⚽ Ballon : taille 3 ou 4\n- 🥅 Buts adaptés aux jeunes joueurs\n- 🚫 Pas de hors-jeu\n- 🚫 Jeu de tête interdit\n- 🚫 Tacle interdit\n- 🔄 Remplacements illimités\n- 🟨 Aucun classement\n- 🤝 Le fair-play et le plaisir de jouer sont prioritaires\nLe gardien peut prendre le ballon à la main dans sa surface de réparation et les différentes remises en jeu sont adaptées afin de faciliter l’apprentissage.\nRetrouvez ci-dessous le résumé complet des règles FFF pour le football à 3 et à 4 :",
+      "image": "/assets/images/actualites/WhatsApp Image 2026-09-27 at 210.42.04.jpeg"
+    },
+    {
+      "title": "Découvrez les principales règles du football U8 U9",
+      "date": "2026-09-28",
+      "category": "club",
+      "slug": "regle-foot-u8-u9",
+      "excerpt": "Le football chez les plus jeunes possède des règles adaptées afin de favoriser le plaisir de jouer, l’apprentissage et la progression de chaque enfant.\nAu Club Démo, nos catégories U8 à U9 évoluent sur des formats de jeu adaptés à leur âge.",
+      "body": "⚽ Les règles pour les U8 – U9\n- ⏱️ Durée de pratique : environ 60 minutes\n- 👥 5 joueurs sur le terrain\n- 🔄 Jusqu’à 2 remplaçants\n- ⚽ Ballon : taille 3 ou 4\n- 🚫 Pas de hors-jeu\n- ✅ Tacle autorisé\n- 🚫 Jeu de tête interdit\n- 🟨 Pas de classement\n- 🤝 Respect, fair-play et encouragements avant tout\nLe terrain et les buts restent adaptés à l’âge des joueurs afin de permettre davantage de touches de balle et de favoriser leur progression.\nVoici le résumé complet des règles FFF pour le football à 5 :",
+      "image": "/assets/images/actualites/WhatsApp Image 2026-09-27 at 20.42.04.jpeg"
+    },
+    {
+      "title": "Et si l’aventure continuait en U10 au Club Démo ?",
+      "date": "2026-10-08",
+      "category": "club",
+      "slug": "projet-u10-club-demo",
+      "excerpt": "Le Club Démo étudie la création d’un groupe U10. Votre enfant aimerait nous rejoindre ? Faites-nous connaître votre intérêt pour nous aider à construire la suite.",
+      "body": "Grandir, oui, mais en gardant ce qui nous rassemble : le plaisir de jouer, l’envie de progresser et la bienveillance. Au Club Démo, nous voulons que chaque enfant prenne confiance, trouve sa place dans le groupe et soit heureux de venir jouer au football.\n\nAujourd’hui, nous étudions la possibilité d’accueillir une catégorie U10, pour les filles et les garçons nés en 2017. Avant d’aller plus loin, nous avons besoin de savoir combien de familles seraient intéressées. Votre retour nous aidera à évaluer la demande et à préparer un accueil adapté aux enfants.\n\nL’ouverture n’est pas encore officiellement confirmée. Elle dépendra du nombre d’enfants intéressés et de notre capacité à les accueillir dans de bonnes conditions. Nous préférons avancer avec vous, étape par étape.\n\nVotre enfant serait intéressé ? Faites-le-nous savoir !\n\nRendez-vous sur clubdemo.licyo.fr, dans la rubrique « Pré-inscription U10 », ou directement à cette adresse : https://clubdemo.licyo.fr/pre-inscription-u10\n\nLe formulaire est gratuit et sans engagement. Il nous permet de recenser les familles intéressées et de vous recontacter au sujet du projet. Cette démarche ne constitue pas une inscription définitive et ne garantit pas l’ouverture du groupe.\n\nUne question ? Écrivez-nous à contact@clubdemo.licyo.fr ou retrouvez nos coordonnées sur la page Contact du site.\n\nSelon la demande des familles et le développement du club, d’autres catégories pourront aussi être envisagées par la suite. Pour l’instant, construisons ensemble cette prochaine étape : nous serons heureux de connaître vos envies et celles de vos enfants.",
+      "image": "/assets/images/actualites/Image ChatGPT 8 oct. 2026, 15_23_45.png"
+    }
+  ]
+}

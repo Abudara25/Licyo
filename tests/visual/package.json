@@ -1,0 +1,14 @@
+{
+  "name": "licyo-visual-tests",
+  "private": true,
+  "type": "module",
+  "description": "Tests visuels (Playwright). Dépendances isolées ici : le package.json racine reste sans dépendance, car Cloudflare Pages publie la racine telle quelle.",
+  "scripts": {
+    "visual": "playwright test",
+    "visual:baseline": "playwright test --update-snapshots",
+    "platform": "playwright test -c platform-prototype.config.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}

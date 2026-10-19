@@ -1,0 +1,6 @@
+/* Badge "document reçu / en attente" — page publique de suivi d'inscription (functions/depot/[token].js).
+   Les styles de l'espace admin sont dans assets/css/admin.css, chargé uniquement par /admin/*. */
+.insc-dossier-badge { font-size: .66rem; font-weight: 700; padding: 4px 9px; border-radius: 999px; white-space: nowrap; text-transform: uppercase; letter-spacing: .03em; flex-shrink: 0; }
+.insc-dossier-ok { background: var(--color-accent-soft); color: var(--color-primary-dark); }
+.insc-dossier-missing { background: var(--color-bg-alt); color: var(--color-text-muted); }
+

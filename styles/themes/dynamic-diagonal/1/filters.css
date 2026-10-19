@@ -1,0 +1,11 @@
+/* ---------- Filters (actualités) ---------- */
+.filters { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 40px; } /* centrés comme .news-grid */
+.filter-btn {
+  font-size: .9rem; font-weight: 600;
+  padding: 9px 18px; min-height: 44px; border-radius: 999px; border: 1.5px solid var(--color-bg-alt);
+  background: var(--color-surface); color: var(--color-text-muted); cursor: pointer;
+  transition: all .2s var(--ease);
+}
+.filter-btn:hover { border-color: var(--color-accent-light); color: var(--color-primary); }
+.filter-btn.is-active { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-on-dark-strong); }
+

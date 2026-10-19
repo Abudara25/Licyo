@@ -1,0 +1,79 @@
+# Tests visuels du site public sous Linux (phases 4B.1 et 4B.2). Séparé de `check`.
+# Les captures dépendent du système (polices, anticrénelage) : la référence Linux est produite ICI et conservée
+# comme artefact (`visual-baseline-linux`, 90 jours), jamais comparée à la référence Windows d'un poste.
+# - main (push ou exécution manuelle) : SEUL endroit où la référence officielle est générée, vérifiée, publiée ;
+# - branche ou PR : comparaison à la dernière référence de main ; si elle est absente ou expirée, ÉCHEC
+#   (tests/visual/fetch-main-baseline.sh). Une branche ne fabrique jamais sa propre référence.
+# Les captures ne montrent que le site public avec des articles fictifs (tests/visual/fixtures) : aucune donnée réelle.
+name: visual
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, 'feat/**', 'fix/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  visual:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: tests/visual
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: tests/visual/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - name: Générer la référence officielle (main uniquement)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "VISUAL_BASELINE=main (générée par cette exécution)" >> "$GITHUB_ENV"
+          npx playwright test screenshots.spec.mjs --update-snapshots
+
+      - name: Télécharger la référence de main (branches et PR ; échec si absente)
+        if: github.ref != 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash fetch-main-baseline.sh
+
+      - name: Comparer (captures à tolérance nulle, styles calculés, tokens, décorations, points de rupture)
+        run: |
+          echo "Référence : ${VISUAL_BASELINE}"
+          npx playwright test
+
+      - name: Stabilité (captures répétées 3 fois, tolérance nulle)
+        run: npx playwright test screenshots.spec.mjs --repeat-each 3
+
+      - name: Publier la référence officielle (main uniquement, si tout est vert)
+        if: github.ref == 'refs/heads/main' && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-baseline-linux
+          path: tests/visual/.baseline/linux/
+          retention-days: 90
+          if-no-files-found: error
+          include-hidden-files: true
+
+      - name: Rapport en cas d'échec
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-report
+          path: |
+            tests/visual/.report/
+            tests/visual/.results/
+          retention-days: 14
+          # .report et .results commencent par un point : ignorés par défaut par upload-artifact.
+          include-hidden-files: true
+          if-no-files-found: ignore

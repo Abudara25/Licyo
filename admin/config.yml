@@ -1,0 +1,46 @@
+backend:
+  name: github
+  repo: Abudara25/Licyo
+  branch: main
+  base_url: https://clubdemo.licyo.fr
+
+media_folder: assets/images/actualites
+public_folder: /assets/images/actualites
+
+collections:
+  - name: articles
+    label: Actualités
+    files:
+      - file: content/articles.json
+        name: articles
+        label: Articles
+        fields:
+          - label: Articles
+            name: articles
+            widget: list
+            summary: "{{fields.date}} — {{fields.title}}"
+            fields:
+              - { label: "Titre", name: "title", widget: "string" }
+              - { label: "Date", name: "date", widget: "datetime", format: "YYYY-MM-DD", picker_utc: true }
+              - label: "Catégorie"
+                name: "category"
+                widget: "select"
+                options:
+                  - { label: "Club", value: "club" }
+                  - { label: "Inscriptions", value: "inscriptions" }
+                  - { label: "Bénévolat", value: "benevolat" }
+                  - { label: "Événement", value: "evenement" }
+                  - { label: "Partenariat", value: "partenariat" }
+              - label: "Slug (identifiant dans l'URL)"
+                name: "slug"
+                widget: "string"
+                hint: "Sans espace ni accent, ex: ouverture-des-inscriptions"
+                pattern: ["^[a-z0-9]+(-[a-z0-9]+)*$", "Lettres minuscules, chiffres et tirets uniquement"]
+              - label: "Résumé (affiché sur la carte)"
+                name: "excerpt"
+                widget: "text"
+              - label: "Texte complet (affiché sur la page de l'article)"
+                name: "body"
+                widget: "text"
+                hint: "Un paragraphe par ligne vide."
+              - { label: "Photo (optionnelle)", name: "image", widget: "image", required: false }

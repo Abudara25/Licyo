@@ -1,0 +1,47 @@
+/* ---------- Palette : Club Démo (source : legacy) ---------- */
+/* Primitives d'identité, valeurs historiques du blason (bordeaux / or / crème / rouge croix), conservées telles
+   quelles : jamais recalculées. Une autre organisation fournira sa propre palette avec les mêmes noms. */
+:root {
+  --brand-primary-950: #3a0f10;
+  --brand-primary-900: #4f1414;
+  --brand-primary-800: #6c1a1a;
+  --brand-primary-700: #801818;   /* bordeaux principal du blason */
+  --brand-primary-600: #952222;
+
+  --brand-accent-800: #a55a18;    /* version texte de l'or : contraste WCAG AA (4.5:1) sur blanc et sur accent-100 */
+  --brand-accent-600: #d08830;
+  --brand-accent-500: #f0a030;    /* or principal du blason */
+  --brand-accent-400: #f4b658;
+  --brand-accent-300: #f8d28e;
+  --brand-accent-100: #fdf0da;
+
+  --brand-danger-600: #c02828;    /* rouge de la croix */
+  --brand-danger-500: #d63a3a;
+
+  --brand-neutral-100: #fbf7ee;
+  --brand-neutral-200: #f3ecd8;   /* crème du blason */
+
+  --brand-ink-900: #201412;
+  --brand-ink-700: #4a3a36;
+  --brand-white: #ffffff;
+
+  /* Canaux RGB (séparés par des virgules) des couleurs utilisées avec une transparence, toujours écrits
+     rgba(var(--x-rgb), alpha) : après substitution, c'est exactement l'ancienne syntaxe rgba(r, g, b, a).
+     Pas de rgb(r g b / a) : une couleur en syntaxe moderne fait interpoler les dégradés en oklab au lieu de
+     sRGB (rayures et voiles visiblement différents, constaté en phase 4C). Pas de color-mix non plus. */
+  --brand-primary-950-rgb: 58, 15, 16;
+  --brand-primary-900-rgb: 79, 20, 20;
+  --brand-primary-700-rgb: 128, 24, 24;
+  --brand-accent-600-rgb: 208, 136, 48;
+  --brand-accent-500-rgb: 240, 160, 48;
+  --brand-neutral-100-rgb: 251, 247, 238;
+  --brand-ink-900-rgb: 32, 20, 18;
+
+  /* États (couleurs fonctionnelles, pas d'identité) */
+  --status-success-bg: #e3f3e3;
+  --status-success: #1c7a30;
+  --status-danger-bg: #fbe2e2;
+  --status-alert-bg: #fbe9e7;
+  --status-alert: #b3261e;
+}
+

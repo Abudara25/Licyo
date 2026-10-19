@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Blason générique du club de démonstration Licyo (à remplacer par celui du club). -->
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+<path fill="#dba52c" d="M512 82 L942 186 L942 545 L512 942 L82 545 L82 186 Z"/>
+<path fill="#4f1414" d="M512 128 L896 222 L896 545 L512 896 L128 545 L128 222 Z"/>
+<text x="512" y="560" text-anchor="middle" font-family="Oswald, Arial, sans-serif" font-weight="700" font-size="300" fill="#f7f0e1">CD</text>
+</svg>

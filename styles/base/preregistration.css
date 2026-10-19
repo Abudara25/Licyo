@@ -1,0 +1,12 @@
+/* Pré-inscription (renderer/preregistration.js, assets/js/preinscription.js) : un seul bloc visible selon l'état. */
+.prein-full, .prein-closed, .prein-opened { display: none; }
+.prein-status[data-state="full"] .prein-open, .prein-status[data-state="closed"] .prein-open, .prein-status[data-state="opened"] .prein-open { display: none; }
+.prein-status[data-state="full"] .prein-full, .prein-status[data-state="closed"] .prein-closed, .prein-status[data-state="opened"] .prein-opened { display: block; }
+.prein-progress { height: 10px; margin: -8px 0 20px; overflow: hidden; border-radius: 999px; background: var(--color-bg-alt); }
+.prein-progress span { display: block; height: 100%; border-radius: inherit; background: var(--color-accent); transition: width .6s ease; }
+#preinscription-form > .btn { margin-top: 8px; }
+/* Âge hors du groupe : message + lien vers la bonne inscription ou vers Contact. */
+.prein-age { display: grid; gap: 12px; }
+.prein-age p { margin: 0; }
+.prein-age .btn { justify-self: start; }
+@media (max-width: 600px) { .prein-age .btn { justify-self: stretch; } }

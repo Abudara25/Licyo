@@ -1,0 +1,11 @@
+/* ---------- Toggle ouverture/fermeture/réinscription prioritaire des inscriptions ---------- */
+/* 3 états mutuellement exclusifs (voir data-status posé par assets/js/inscription.js) : par défaut
+   "open" tant que le JS n'a pas répondu (voir inscription.html). "priority" = statut brut "closed"
+   mais une date limite de réinscription prioritaire (/admin/categories) n'est pas encore atteinte. */
+.inscription-status[data-status="open"] .inscription-closed,
+.inscription-status[data-status="open"] .inscription-priority { display: none; }
+.inscription-status[data-status="closed"] .inscription-open,
+.inscription-status[data-status="closed"] .inscription-priority { display: none; }
+.inscription-status[data-status="priority"] .inscription-open,
+.inscription-status[data-status="priority"] .inscription-closed { display: none; }
+

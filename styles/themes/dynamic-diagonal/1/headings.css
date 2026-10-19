@@ -1,0 +1,18 @@
+/* Oswald en capitales pour les grands titres uniquement : au-delà de quelques mots (titres de cartes,
+   questions de FAQ, étapes), il se lit mal — ces titres-là passent en Inter. */
+h1, h2, h3, h4 {
+  line-height: 1.15;
+  margin: 0 0 .5em;
+  color: var(--color-primary);
+  text-wrap: pretty;
+}
+h1, h2 {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: .02em;
+}
+h3, h4 {
+  font-family: var(--font-body);
+  font-weight: 700;
+  line-height: 1.3;
+}

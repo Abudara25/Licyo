@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Console Platform (aperçu)</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles/tokens.css">
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/layout.css">
+  <link rel="stylesheet" href="styles/components.css">
+  <link rel="stylesheet" href="styles/pages.css">
+  <script type="module" src="src/main.js"></script>
+</head>
+<body>
+  <!-- Prototype visuel de la future console Platform : données fictives, aucune session, aucune API.
+       Le nom du produit (nom de travail provisoire) est défini dans src/config/brand.js et injecté au rendu. -->
+  <a class="skip-link" href="#main-content">Aller au contenu</a>
+  <div class="app">
+    <div id="sidebar-slot" class="sidebar-slot"></div>
+    <div class="main-col">
+      <div id="topbar-slot"></div>
+      <main id="main-content" class="content" tabindex="-1"></main>
+    </div>
+  </div>
+  <div id="modal-root"></div>
+  <div id="toasts" class="toasts" role="status" aria-live="polite" aria-atomic="false"></div>
+  <noscript>Ce prototype nécessite JavaScript.</noscript>
+</body>
+</html>

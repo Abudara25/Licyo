@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inscription — Club Démo (École de foot U6-U9)</title>
+<meta name="description" content="Inscrivez votre enfant au Club Démo (U6-U9) : générez votre dossier d'inscription et réglez l'adhésion en ligne. Pass'Sport accepté (50 € de réduction).">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://clubdemo.licyo.fr/inscription">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Inscription — Club Démo">
+<meta property="og:description" content="Inscrivez votre enfant au Club Démo (U6-U9) : générez votre dossier d'inscription et réglez l'adhésion en ligne.">
+<meta property="og:image" content="https://clubdemo.licyo.fr/assets/images/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:url" content="https://clubdemo.licyo.fr/inscription">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://clubdemo.licyo.fr/assets/images/og-image.jpg">
+<link rel="icon" href="assets/images/favicon.ico">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="assets/images/apple-touch-icon.png">
+<meta name="theme-color" content="#4f1414">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Club Démo">
+<link rel="preload" href="assets/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/oswald.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/styles.css?v=03b73c8724">
+</head>
+<body>
+<a href="#main" class="skip-link">Aller au contenu</a>
+
+<header class="site-header">
+  <div class="container">
+    <a href="/" class="brand">
+      <img src="assets/images/logo-96.webp" alt="Blason du Club Démo" width="48" height="48">
+      <span class="brand-name"><strong>Club Démo</strong><span>Club de démonstration</span></span>
+    </a>
+    <nav class="main-nav" id="main-nav" aria-label="Navigation principale">
+      <ul>
+        <li><a href="/">Accueil</a></li>
+        <li><a href="/actualites">Actualités</a></li>
+        <li><a href="/equipe">Le Club</a></li>
+        <li><a href="/entrainements">Entraînements</a></li>
+        <li><a href="/partenaires">Partenaires</a></li>
+        <li><a href="/contact">Contact</a></li>
+      </ul>
+      <a href="/inscription" class="btn btn-primary btn-sm nav-cta adhesion-cta">Inscription</a>
+    </nav>
+    <div class="header-actions">
+      <a href="/inscription" class="btn btn-primary btn-sm adhesion-cta">Inscription</a>
+      <button class="burger" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="main-nav">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <div class="page-header">
+    <div class="container">
+      <span class="eyebrow">Rejoignez le club</span>
+      <h1>Inscrire mon enfant</h1>
+      <p>Saison <span data-saison-text>2026-2027</span> : trois étapes pour préparer le dossier de votre enfant, puis vous le finalisez depuis votre espace famille.</p>
+      <a href="#formulaire" class="btn btn-primary page-header-action">Remplir le formulaire</a>
+    </div>
+  </div>
+
+  <!-- Pré-inscription U10 -->
+  <section class="bg-cream section-tight">
+    <div class="container">
+      <div class="cta-banner cta-banner--compact" data-reveal>
+        <div>
+          <h3>Nouveau : futur groupe U10</h3>
+          <p>Votre enfant est né en 2017 ? Pré-inscrivez-le, gratuitement et sans engagement : le groupe ouvrira dès qu'il y aura assez d'enfants (15 places).</p>
+        </div>
+        <a href="/pre-inscription-u10" class="btn btn-dark">Pré-inscrire mon enfant</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-surface" id="adhesion">
+    <div class="container insc-layout">
+
+      <div class="insc-main" id="formulaire" data-reveal>
+        <span class="eyebrow">Inscription</span>
+        <h2 class="section-title">Le formulaire</h2>
+
+        <div class="inscription-status" data-status="open" id="inscription-status">
+
+          <div class="inscription-open">
+            <p class="section-sub">Environ 3 minutes. Places limitées cette saison : inscrivez votre enfant dès maintenant pour lui garantir une place.</p>
+
+            <ol class="form-steps" id="form-steps" hidden>
+              <li class="is-current" aria-current="step"><span>1</span>L'enfant</li>
+              <li><span>2</span>Les parents</li>
+              <li><span>3</span>Validation</li>
+            </ol>
+
+            <form id="inscription-form" novalidate>
+              <fieldset class="form-step">
+                <legend class="form-step-title">1. L'enfant</legend>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="enfant-prenom">Prénom de l'enfant</label>
+                    <input type="text" id="enfant-prenom" name="enfantPrenom" placeholder="Prénom" autocomplete="off" maxlength="200" required>
+                  </div>
+                  <div class="form-field">
+                    <label for="enfant-nom">Nom de l'enfant</label>
+                    <input type="text" id="enfant-nom" name="enfantNom" placeholder="Nom" autocomplete="off" maxlength="200" required>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="naissance">Date de naissance</label>
+                    <input type="date" id="naissance" name="naissance" required>
+                  </div>
+                  <div class="form-field">
+                    <label for="categorie">Catégorie</label>
+                    <select id="categorie" name="categorie" required>
+                      <option value="U6 - U7" data-org="group.u6-u7.option" data-org-if="group.u6-u7.name">U6 - U7 (2020-2021)</option>
+                      <option value="U8 - U9" data-org="group.u8-u9.option" data-org-if="group.u8-u9.name">U8 - U9 (2018-2019)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <p id="inscription-age-warning" class="form-alert" role="alert" hidden>
+                  Cette date de naissance ne correspond à aucune catégorie ouverte cette saison. Votre enfant est né en 2017 ? <a href="/pre-inscription-u10">Pré-inscrivez-le au futur groupe U10</a>. Sinon, vérifiez la date ou écrivez-nous à <a href="mailto:contact@clubdemo.licyo.fr" data-org="org.email" data-org-attr="href:org.mailto">contact@clubdemo.licyo.fr</a>.
+                </p>
+
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="pays-naissance">Pays de naissance</label>
+                    <input type="text" id="pays-naissance" name="paysNaissance" placeholder="Pays" autocomplete="off" maxlength="200" value="France" required>
+                  </div>
+                  <div class="form-field">
+                    <label for="cp-naissance">Code postal de naissance</label>
+                    <input type="text" id="cp-naissance" name="cpNaissance" placeholder="5 chiffres" autocomplete="off" inputmode="numeric" maxlength="5" pattern="[0-9]{5}">
+                  </div>
+                </div>
+                <div class="form-field address-field">
+                  <label for="ville-naissance">Ville de naissance</label>
+                  <input type="text" id="ville-naissance" name="villeNaissance" placeholder="Ville de naissance" autocomplete="off" maxlength="200" required>
+                  <ul id="ville-naissance-suggestions" class="address-suggestions" role="listbox" aria-label="Communes correspondant au code postal" hidden></ul>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="taille-maillot">Taille de maillot</label>
+                    <select id="taille-maillot" name="tailleMaillot" required>
+                      <option value="" disabled selected>Choisir une taille</option>
+                      <option value="4 ans">4 ans</option>
+                      <option value="6 ans">6 ans</option>
+                      <option value="8 ans">8 ans</option>
+                      <option value="10 ans">10 ans</option>
+                      <option value="12 ans">12 ans</option>
+                    </select>
+                    <small class="form-hint">Tenue Sportéquip (maillot, short, survêtement, sac) — taille approximative, à ajuster si besoin le jour de la remise.</small>
+                  </div>
+                </div>
+
+                <div class="form-step-nav">
+                  <button type="button" class="btn btn-primary" data-step-next>Continuer</button>
+                </div>
+              </fieldset>
+
+              <fieldset class="form-step">
+                <legend class="form-step-title">2. Les responsables légaux</legend>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="parent-prenom">Prénom du parent</label>
+                    <input type="text" id="parent-prenom" name="parentPrenom" placeholder="Prénom" autocomplete="given-name" maxlength="200" required>
+                  </div>
+                  <div class="form-field">
+                    <label for="parent-nom">Nom du parent</label>
+                    <input type="text" id="parent-nom" name="parentNom" placeholder="Nom" autocomplete="family-name" maxlength="200" required>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="email">E-mail (parent)</label>
+                    <input type="email" id="email" name="email" placeholder="vous@exemple.fr" autocomplete="email" maxlength="200" required>
+                  </div>
+                  <div class="form-field">
+                    <label for="telephone">Téléphone (parent)</label>
+                    <input type="tel" id="telephone" name="telephone" placeholder="06 12 34 56 78" autocomplete="tel" maxlength="200" required>
+                  </div>
+                </div>
+
+                <p id="inscription-duplicate-warning" class="form-alert" hidden>
+                  Un enfant portant ce nom et prénom semble déjà inscrit avec cette adresse e-mail. Si c'est une erreur, vérifiez l'orthographe — sinon consultez vos e-mails ou écrivez-nous à <a href="mailto:contact@clubdemo.licyo.fr" data-org="org.email" data-org-attr="href:org.mailto">contact@clubdemo.licyo.fr</a>.
+                </p>
+
+                <details class="form-parent2">
+                  <summary>Ajouter un second responsable légal <span>(facultatif)</span></summary>
+                  <div class="form-row">
+                    <div class="form-field">
+                      <label for="parent2-prenom">Prénom du 2e responsable</label>
+                      <input type="text" id="parent2-prenom" name="parent2Prenom" placeholder="Prénom" maxlength="200">
+                    </div>
+                    <div class="form-field">
+                      <label for="parent2-nom">Nom du 2e responsable</label>
+                      <input type="text" id="parent2-nom" name="parent2Nom" placeholder="Nom" maxlength="200">
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-field">
+                      <label for="parent2-email">E-mail (2e responsable)</label>
+                      <input type="email" id="parent2-email" name="parent2Email" placeholder="autre@exemple.fr" maxlength="200">
+                    </div>
+                    <div class="form-field">
+                      <label for="parent2-telephone">Téléphone (2e responsable)</label>
+                      <input type="tel" id="parent2-telephone" name="parent2Telephone" placeholder="06 12 34 56 78" maxlength="200">
+                    </div>
+                  </div>
+                  <p class="form-parent2-hint">Il recevra aussi les e-mails de suivi de l'inscription.</p>
+                </details>
+
+                <div class="form-field address-field">
+                  <label for="adresse">Adresse</label>
+                  <input type="text" id="adresse" name="adresse" placeholder="Numéro et nom de la rue" autocomplete="street-address" maxlength="200">
+                  <ul id="adresse-suggestions" class="address-suggestions" role="listbox" aria-label="Adresses suggérées" hidden></ul>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="code-postal">Code postal</label>
+                    <input type="text" id="code-postal" name="codePostal" placeholder="5 chiffres" autocomplete="postal-code" inputmode="numeric" maxlength="200">
+                  </div>
+                  <div class="form-field address-field">
+                    <label for="ville">Ville</label>
+                    <input type="text" id="ville" name="ville" placeholder="Ville" autocomplete="address-level2" maxlength="200">
+                    <ul id="ville-suggestions" class="address-suggestions" role="listbox" aria-label="Ville" hidden></ul>
+                  </div>
+                </div>
+
+                <div class="form-step-nav">
+                  <button type="button" class="btn btn-ghost" data-step-prev>Retour</button>
+                  <button type="button" class="btn btn-primary" data-step-next>Continuer</button>
+                </div>
+              </fieldset>
+
+              <fieldset class="form-step">
+                <legend class="form-step-title">3. Paiement et autorisations</legend>
+                <div class="form-field">
+                  <label for="mode-paiement">Mode de paiement</label>
+                  <select id="mode-paiement" name="modePaiement" required>
+                    <option value="" disabled selected>Choisir un mode de paiement</option>
+                    <option value="HelloAsso">HelloAsso (en ligne)</option>
+                    <option value="Carte bancaire">Carte bancaire (au club)</option>
+                    <option value="Espèces">Espèces</option>
+                    <option value="Chèque">Chèque</option>
+                  </select>
+                </div>
+
+                <div class="form-field">
+                  <label for="pass-sport-code">Code alphanumérique Pass'Sport <span class="form-optional">si applicable</span></label>
+                  <input type="text" id="pass-sport-code" name="passSportCode" placeholder="Ex. 24-ABC12345" autocomplete="off" maxlength="40">
+                  <small class="form-hint">Aide de l'État de 50 €, dès 6 ans et sous conditions de ressources. Le code vous est envoyé par la CAF ou la MSA. <a href="https://pass.sports.gouv.fr" target="_blank" rel="noopener">En savoir plus</a>.</small>
+                </div>
+                <p id="pass-sport-note" class="form-note form-note-strong" hidden>
+                  Le Pass'Sport se règle au club : présentez votre code à un responsable, nous retirons 50 € de l'adhésion<span data-prix-block data-org-if="price.seasonAmount"> (<strong><span data-prix-passsport-text data-org="price.passSportAmount">130</span> €</strong> au lieu de <span data-prix-text data-org="price.seasonAmount">180</span> €)</span> et vous payez sur place, par carte bancaire, en espèces ou par chèque. Nous vérifions chaque code : s'il n'est pas valable, les 50 € restants vous seront demandés avant l'enregistrement de la licence.
+                </p>
+
+                <div class="form-checks">
+                  <label class="form-check">
+                    <input type="checkbox" id="autorisation" name="autorisation" required>
+                    <span>J'autorise mon enfant à participer aux entraînements et activités du Club Démo.</span>
+                  </label>
+                  <label class="form-check">
+                    <input type="checkbox" id="droit-image" name="droitImage">
+                    <span>J'autorise le club à utiliser des photos/vidéos de mon enfant prises lors des activités du club, à des fins de communication (site, réseaux sociaux). <em>Facultatif.</em></span>
+                  </label>
+                  <label class="form-check">
+                    <input type="checkbox" id="rgpd" name="rgpd" required>
+                    <span>J'accepte que ces informations soient utilisées uniquement pour traiter l'inscription de mon enfant au club (voir notre <a href="/confidentialite" target="_blank">politique de confidentialité</a>).</span>
+                  </label>
+                </div>
+
+                <p class="form-note">Un questionnaire de santé (ou certificat médical) pourra vous être demandé avant le début de la saison.</p>
+                <p class="form-note"><strong>Important :</strong> cette inscription ne sera définitive qu'une fois l'adhésion réglée et la licence de votre enfant enregistrée par le club auprès de la FFF.</p>
+
+                <div class="form-step-nav">
+                  <button type="button" class="btn btn-ghost" data-step-prev>Retour</button>
+                  <button type="submit" class="btn btn-primary">Télécharger mon dossier</button>
+                </div>
+              </fieldset>
+            </form>
+
+            <div id="inscription-duplicate" class="form-result" role="status" hidden>
+              <h3>Dossier déjà envoyé</h3>
+              <p>Une inscription existe déjà pour cet enfant avec cette adresse e-mail. Le lien de votre espace famille est renvoyé à l'adresse enregistrée (au plus une fois par heure) : pensez à vérifier les spams. Besoin d'aide ? <a href="mailto:contact@clubdemo.licyo.fr" data-org="org.email" data-org-attr="href:org.mailto">contact@clubdemo.licyo.fr</a></p>
+            </div>
+
+            <div id="inscription-next-steps" class="form-result" hidden>
+              <h3>Dossier téléchargé : il reste 3 choses à faire</h3>
+              <ol class="form-result-steps">
+                <li>Imprimez le dossier téléchargé et faites-le signer.</li>
+                <li>Depuis votre espace famille, déposez-le (photo ou scan) avec une photo de votre enfant, de face sur fond blanc.</li>
+                <li>Réglez l'adhésion selon le mode choisi.</li>
+              </ol>
+              <a id="depot-btn" target="_blank" rel="noopener" class="btn btn-dark">Ouvrir mon espace famille</a>
+              <p id="depot-email-hint" class="form-hint">Le lien vous est aussi envoyé par e-mail. Pensez à ajouter <strong data-org="org.email">contact@clubdemo.licyo.fr</strong> à vos contacts et, si vous ne le trouvez pas, à regarder dans vos courriers indésirables.</p>
+              <p id="depot-fallback" class="form-hint" hidden>Le lien de votre espace famille n'a pas pu être créé (connexion instable) — <a id="mailto-btn">envoyez-nous votre dossier par e-mail</a> à la place.</p>
+              <div id="paiement-especes-cheque" class="form-result-box" hidden>
+                Merci de prévoir le règlement (<strong id="paiement-especes-cheque-mode"></strong>) lors de la remise du dossier signé au club<span id="paiement-especes-cheque-passsport" data-org-if="price.seasonAmount" hidden> : <strong><span data-prix-passsport-text data-org="price.passSportAmount">130</span> €</strong>, Pass'Sport déduit</span>.
+              </div>
+              <div id="paiement-helloasso" hidden>
+                <p id="paiement-passsport" class="form-note form-note-strong" hidden>
+                  Pass'Sport (code <strong id="paiement-passsport-code"></strong>) : la réduction de 50 € s'applique au club, pas en ligne. Présentez votre code à un responsable et réglez sur place — le paiement en ligne ci-dessous encaisserait le tarif complet.
+                </p>
+                <div id="helloasso-widget-container"></div>
+                <p class="form-hint">Le paiement ne s'affiche pas ? <a id="helloasso-fallback-link" target="_blank" rel="noopener">Ouvrez-le dans un nouvel onglet</a>.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="inscription-closed form-result">
+            <h3>Inscriptions fermées pour le moment</h3>
+            <p>Les inscriptions pour la saison <span data-saison-text>2026-2027</span> ne sont pas ouvertes actuellement. Contactez-nous pour être informé(e) dès leur réouverture.</p>
+            <a href="/contact" class="btn btn-primary">Nous contacter</a>
+          </div>
+
+          <div class="inscription-priority form-result">
+            <h3>Réinscription prioritaire en cours</h3>
+            <p>Les familles déjà inscrites la saison précédente ont reçu un lien personnel pour réserver la place de leur enfant en priorité. Les nouvelles inscriptions ouvriront au public le <strong id="inscription-priority-date">—</strong>. Contactez-nous pour être informé(e) dès l'ouverture.</p>
+            <a href="/contact" class="btn btn-primary">Nous contacter</a>
+          </div>
+
+        </div>
+      </div>
+
+      <aside class="insc-aside" data-reveal aria-label="Récapitulatif de l'adhésion">
+        <div class="insc-recap">
+          <p class="insc-recap-kicker">Adhésion saison <span data-saison-text>2026-2027</span></p>
+          <p class="insc-recap-price" data-org-if="price.seasonAmount"><span data-prix-text data-org="price.seasonAmount">180</span>&nbsp;€</p>
+          <p class="insc-recap-sub" data-org-if="price.seasonAmount">ou 3 × <span data-prix-tiers-text data-org="price.tierAmount">60</span>&nbsp;€ sans frais sur HelloAsso</p>
+          <ul class="insc-recap-list">
+            <li>Ouvert aux filles comme aux garçons, quel que soit leur niveau</li>
+            <li>Licence et tenue complète Sportéquip incluses (maillot, short, survêtement, sac)</li>
+            <li data-org-if="schedule.any">Entraînement <span data-org-list="slots-sentence">le <span data-org="schedule.day">jeudi</span>, <span data-org="schedule.start">17h</span> – <span data-org="schedule.end">18h</span><span data-org-if="location.name">, au <span data-org="location.name">Stade municipal</span></span></span></li>
+            <li>Séance d'essai gratuite possible avant de s'inscrire</li>
+            <li>Pass'Sport accepté au club : 50 € de moins, dès 6 ans et sous conditions</li>
+            <li>Paiement en ligne, ou au club par carte bancaire, espèces ou chèque</li>
+          </ul>
+          <div class="insc-recap-after">
+            <h3 class="insc-recap-title">Après le formulaire</h3>
+            <ol class="insc-recap-steps">
+              <li>Vous signez le dossier téléchargé.</li>
+              <li>Vous le déposez avec une photo de votre enfant, depuis votre espace famille.</li>
+              <li>Vous réglez l'adhésion.</li>
+            </ol>
+          </div>
+          <p class="insc-recap-help">Une question ? <a href="mailto:contact@clubdemo.licyo.fr" data-org="org.email" data-org-attr="href:org.mailto">contact@clubdemo.licyo.fr</a><br><a href="/entrainements">Plan d'accès au stade</a><br><a href="/pre-inscription-u10">Né en 2017 ? Pré-inscription U10</a></p>
+        </div>
+        <p class="insc-aside-note"><strong>Plus nous serons nombreux, plus vite nous pourrons ouvrir de nouveaux créneaux les prochaines années.</strong>Chaque inscription compte pour montrer à la ville la demande des familles.</p>
+      </aside>
+
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-brand">
+          <img src="assets/images/logo-96.webp" alt="">
+          <strong>Club Démo</strong>
+        </div>
+        <p>Nouveau club de football loisir à Sportville, le Club Démo accueille les filles et les garçons de 5 à 8 ans<span data-org-if="groups.any"> (<span data-org-list="groups-names">U6-U7 et U8-U9</span>)</span> dans un esprit familial, 100% porté par des bénévoles.</p>
+        <div class="social-row">
+          <a href="https://www.facebook.com/clubdemo" aria-label="Facebook" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M13.5 21v-7.2h2.4l.4-2.8h-2.8v-1.6c0-.8.2-1.4 1.4-1.4h1.5V5.4c-.3 0-1.3-.1-2.4-.1-2.4 0-4 1.5-4 4.2v1.9H7.5v2.8h2.1V21h3.9z"/></svg></a>
+          <a href="https://www.instagram.com/clubdemo" aria-label="Instagram" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 8.2a3.8 3.8 0 100 7.6 3.8 3.8 0 000-7.6zm0 6.3a2.5 2.5 0 110-5 2.5 2.5 0 010 5zm5-6.6a1 1 0 11-2 0 1 1 0 012 0zM12 3c-2.5 0-2.8 0-3.7.1-1 .1-1.7.2-2.3.5-.6.2-1.1.6-1.6 1.1-.5.5-.8 1-1.1 1.6-.2.6-.4 1.3-.5 2.3C3 9.5 3 9.8 3 12.3s0 2.8.1 3.7c.1 1 .2 1.7.5 2.3.2.6.6 1.1 1.1 1.6.5.5 1 .8 1.6 1.1.6.2 1.3.4 2.3.5.9.1 1.2.1 3.7.1s2.8 0 3.7-.1c1-.1 1.7-.2 2.3-.5.6-.2 1.1-.6 1.6-1.1.5-.5.8-1 1.1-1.6.2-.6.4-1.3.5-2.3.1-.9.1-1.2.1-3.7s0-2.8-.1-3.7c-.1-1-.2-1.7-.5-2.3-.2-.6-.6-1.1-1.1-1.6-.5-.5-1-.8-1.6-1.1-.6-.2-1.3-.4-2.3-.5C14.8 3 14.5 3 12 3z"/></svg></a>
+        </div>
+      </div>
+      <div>
+        <h3>Navigation</h3>
+        <ul>
+          <li><a href="/">Accueil</a></li>
+          <li><a href="/actualites">Actualités</a></li>
+          <li><a href="/equipe">Le Club</a></li>
+          <li><a href="/entrainements">Entraînements</a></li>
+          <li><a href="/partenaires">Partenaires</a></li>
+          <li><a href="/contact">Contact</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Infos pratiques</h3>
+        <ul>
+          <li data-org-if="location.short"><a href="/contact" data-org="location.short">Stade municipal, Sportville</a></li>
+          <li data-org-if="org.email"><a href="mailto:contact@clubdemo.licyo.fr" data-org="org.email" data-org-attr="href:org.mailto">contact@clubdemo.licyo.fr</a></li>
+          <li data-org-if="org.phone"><a href="tel:+33600000000" data-org="org.phone" data-org-attr="href:org.tel">06 00 00 00 00</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 Club Démo — Tous droits réservés.</p>
+      <p><a href="/mentions-legales">Mentions légales</a> · <a href="/confidentialite">Confidentialité</a></p>
+      <p>Club de démonstration · Depuis 2020</p>
+      <p>Site créé par <a href="https://abiweb.fr" target="_blank" rel="nofollow noopener">Abiweb</a></p>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/js/main.js?v=84bf26f2d5"></script>
+<script src="assets/js/pdf-inscription.js?v=2b5878e67f"></script>
+<script src="assets/js/inscription.js?v=69996daf2c"></script>
+<script src="assets/js/adresse-autocomplete.js?v=7050f97583"></script>
+<script src="assets/js/naissance-autocomplete.js?v=35e5df3788"></script>
+</body>
+</html>

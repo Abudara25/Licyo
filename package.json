@@ -1,0 +1,21 @@
+{
+  "name": "licyo",
+  "private": true,
+  "type": "module",
+  "description": "Outils de développement uniquement : le site est publié tel quel, sans étape de build.",
+  "scripts": {
+    "build": "node scripts/build-public.mjs",
+    "css": "node scripts/build-css.mjs",
+    "test": "node scripts/build-news.mjs && node --test --disable-warning=ExperimentalWarning \"tests/*.test.mjs\"",
+    "pages": "node scripts/build-pages.mjs",
+    "sync": "node scripts/sync-assets.mjs",
+    "check": "node scripts/build-css.mjs --check && node scripts/build-pages.mjs --check && node scripts/sync-assets.mjs --check && npm test",
+    "visual": "npm --prefix tests/visual run visual",
+    "visual:baseline": "npm --prefix tests/visual run visual:baseline",
+    "platform:preview": "node scripts/serve-platform-prototype.mjs",
+    "platform:e2e": "npm --prefix tests/visual run platform"
+  },
+  "dependencies": {
+    "markdown-it": "14.1.0"
+  }
+}

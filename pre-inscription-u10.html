@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pré-inscription U10 — Club Démo</title>
+<meta name="description" content="Votre enfant est né en 2017 ? Pré-inscrivez-le au futur groupe U10 du Club Démo : gratuit, sans engagement, 15 places.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://clubdemo.licyo.fr/pre-inscription-u10">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Pré-inscription U10 — Club Démo">
+<meta property="og:description" content="Futur groupe U10 (enfants nés en 2017) : pré-inscription gratuite et sans engagement, 15 places.">
+<meta property="og:image" content="https://clubdemo.licyo.fr/assets/images/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:url" content="https://clubdemo.licyo.fr/pre-inscription-u10">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://clubdemo.licyo.fr/assets/images/og-image.jpg">
+<link rel="icon" href="assets/images/favicon.ico">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="assets/images/apple-touch-icon.png">
+<meta name="theme-color" content="#4f1414">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Club Démo">
+<link rel="preload" href="assets/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/oswald.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/styles.css?v=03b73c8724">
+</head>
+<body>
+<a href="#main" class="skip-link">Aller au contenu</a>
+
+<header class="site-header">
+  <div class="container">
+    <a href="/" class="brand">
+      <img src="assets/images/logo-96.webp" alt="Blason du Club Démo" width="48" height="48">
+      <span class="brand-name"><strong>Club Démo</strong><span>Club de démonstration</span></span>
+    </a>
+    <nav class="main-nav" id="main-nav" aria-label="Navigation principale">
+      <ul>
+        <li><a href="/">Accueil</a></li>
+        <li><a href="/actualites">Actualités</a></li>
+        <li><a href="/equipe">Le Club</a></li>
+        <li><a href="/entrainements">Entraînements</a></li>
+        <li><a href="/partenaires">Partenaires</a></li>
+        <li><a href="/contact">Contact</a></li>
+      </ul>
+      <a href="/inscription" class="btn btn-primary btn-sm nav-cta adhesion-cta">Inscription</a>
+    </nav>
+    <div class="header-actions">
+      <a href="/inscription" class="btn btn-primary btn-sm adhesion-cta">Inscription</a>
+      <button class="burger" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="main-nav">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <div class="page-header">
+    <div class="container">
+      <span class="eyebrow">Nouveau groupe en projet</span>
+      <h1>Pré-inscription U10</h1>
+      <p>Votre enfant est né en 2017 ? Le club prépare un groupe U10 : pré-inscrivez-le pour nous aider à l'ouvrir.</p>
+    </div>
+  </div>
+
+  <section class="bg-surface" id="pre-inscription">
+    <div class="container insc-layout">
+
+      <div class="insc-main" data-reveal>
+        <span class="eyebrow">Futur groupe U10</span>
+        <h2 class="section-title">Pré-inscrire mon enfant</h2>
+
+        <div class="prein-status" id="preinscription-status" data-state="open">
+          <div class="prein-open">
+            <p class="section-sub">Le groupe U10 n'est pas encore ouvert : il démarrera quand assez d'enfants seront intéressés. Laissez-nous vos coordonnées, cela prend une minute.</p>
+
+            <form id="preinscription-form" novalidate>
+              <div class="form-row">
+              <div class="form-field">
+                <label for="prein-enfant-prenom">Prénom de l'enfant</label>
+                <input type="text" id="prein-enfant-prenom" name="enfantPrenom" placeholder="Prénom" autocomplete="off" maxlength="200" required>
+              </div>
+              <div class="form-field">
+                <label for="prein-enfant-nom">Nom de l'enfant</label>
+                <input type="text" id="prein-enfant-nom" name="enfantNom" placeholder="Nom" autocomplete="off" maxlength="200" required>
+              </div>
+              </div>
+              <div class="form-field">
+                <label for="prein-naissance">Date de naissance</label>
+                <input type="date" id="prein-naissance" name="naissance" required>
+                <small class="form-hint">Groupe réservé aux enfants nés en 2017.</small>
+              </div>
+              <div id="preinscription-age" class="form-alert prein-age" role="alert" hidden
+                data-young="Votre enfant, né(e) en {annee}, est trop jeune pour le groupe {groupe}." data-old="Votre enfant, né(e) en {annee}, est trop âgé(e) pour le groupe {groupe}." data-category="Bonne nouvelle : il ou elle peut déjà s'inscrire en {categorie}." data-none="Nous n'avons pas encore de groupe pour son âge : écrivez-nous, nous en parlerons ensemble."
+                data-inscription="Aller au formulaire d'inscription" data-inscription-href="/inscription"
+                data-contact="Nous contacter" data-contact-href="/contact"></div>
+              <div class="form-row">
+              <div class="form-field">
+                <label for="prein-pays-naissance">Pays de naissance</label>
+                <input type="text" id="prein-pays-naissance" name="paysNaissance" placeholder="Pays" autocomplete="off" maxlength="100" value="France" required>
+              </div>
+              <div class="form-field address-field">
+                <label for="prein-ville-naissance">Ville de naissance</label>
+                <input type="text" id="prein-ville-naissance" name="villeNaissance" placeholder="Ville de naissance" autocomplete="off" maxlength="100" required>
+                <ul id="prein-ville-naissance-suggestions" class="address-suggestions" role="listbox" aria-label="Ville de naissance" hidden></ul>
+              </div>
+              </div>
+              <div class="form-field">
+                <label for="prein-taille-maillot">Taille de maillot</label>
+                <select id="prein-taille-maillot" name="tailleMaillot" required>
+                  <option value="" disabled selected>Choisir une taille</option>
+                  <option value="4 ans">4 ans</option>
+                  <option value="6 ans">6 ans</option>
+                  <option value="8 ans">8 ans</option>
+                  <option value="10 ans">10 ans</option>
+                  <option value="12 ans">12 ans</option>
+                </select>
+                <small class="form-hint">Tenue Sportéquip (maillot, short, survêtement, sac) — taille approximative, à ajuster si besoin.</small>
+              </div>
+              <div class="form-row">
+              <div class="form-field">
+                <label for="prein-parent-prenom">Prénom du parent</label>
+                <input type="text" id="prein-parent-prenom" name="parentPrenom" placeholder="Prénom" autocomplete="given-name" maxlength="200" required>
+              </div>
+              <div class="form-field">
+                <label for="prein-parent-nom">Nom du parent</label>
+                <input type="text" id="prein-parent-nom" name="parentNom" placeholder="Nom" autocomplete="family-name" maxlength="200" required>
+              </div>
+              </div>
+              <div class="form-row">
+              <div class="form-field">
+                <label for="prein-email">E-mail (parent)</label>
+                <input type="email" id="prein-email" name="email" placeholder="vous@exemple.fr" autocomplete="email" maxlength="200" required>
+              </div>
+              <div class="form-field">
+                <label for="prein-telephone">Téléphone (parent)</label>
+                <input type="tel" id="prein-telephone" name="telephone" placeholder="06 12 34 56 78" autocomplete="tel" maxlength="200" required>
+              </div>
+              </div>
+              <details class="form-parent2">
+                <summary>Ajouter un second responsable légal <span>(facultatif)</span></summary>
+                <div class="form-row">
+              <div class="form-field">
+                <label for="prein-parent2-prenom">Prénom du 2e responsable</label>
+                <input type="text" id="prein-parent2-prenom" name="parent2Prenom" placeholder="Prénom" autocomplete="off" maxlength="200">
+              </div>
+              <div class="form-field">
+                <label for="prein-parent2-nom">Nom du 2e responsable</label>
+                <input type="text" id="prein-parent2-nom" name="parent2Nom" placeholder="Nom" autocomplete="off" maxlength="200">
+              </div>
+                </div>
+                <div class="form-row">
+              <div class="form-field">
+                <label for="prein-parent2-email">E-mail (2e responsable)</label>
+                <input type="email" id="prein-parent2-email" name="parent2Email" placeholder="autre@exemple.fr" autocomplete="off" maxlength="200">
+              </div>
+              <div class="form-field">
+                <label for="prein-parent2-telephone">Téléphone (2e responsable)</label>
+                <input type="tel" id="prein-parent2-telephone" name="parent2Telephone" placeholder="06 12 34 56 78" autocomplete="off" maxlength="200">
+              </div>
+                </div>
+                <p class="form-parent2-hint">Il recevra aussi l'e-mail de confirmation et nos nouvelles du groupe U10.</p>
+              </details>
+              <div class="form-field">
+                <label for="prein-commentaire">Un message pour le club <span class="form-optional">(facultatif)</span></label>
+                <textarea id="prein-commentaire" name="commentaire" rows="3" maxlength="500" placeholder="Ex. : déjà joué en club, disponibilités…"></textarea>
+              </div>
+              <div class="form-checks">
+                <label class="form-check">
+                  <input type="checkbox" id="prein-rgpd" name="rgpd" required>
+                  <span>J'accepte que le club conserve ces informations pour me recontacter au sujet du groupe U10 (<a href="/confidentialite">politique de confidentialité</a>).</span>
+                </label>
+              </div>
+              <p class="form-note">Ce n'est pas encore une inscription : la place sera confirmée à l'ouverture du groupe, avec le dossier et le paiement.</p>
+              <div id="preinscription-turnstile"></div>
+              <p id="preinscription-error" class="form-alert" role="alert" hidden></p>
+              <button type="submit" class="btn btn-primary">Envoyer la pré-inscription</button>
+            </form>
+          </div>
+
+          <div id="preinscription-success" class="form-result" role="status" hidden>
+            <h3>Pré-inscription enregistrée, merci !</h3>
+            <p>Un e-mail de confirmation vient de vous être envoyé. Nous vous recontacterons dès que le groupe U10 ouvrira. Pensez à vérifier vos courriers indésirables.</p>
+          </div>
+
+          <div class="prein-full form-result">
+            <h3>Les 15 places sont prises</h3>
+            <p>La liste de pré-inscription U10 est complète. Écrivez-nous à <a href="mailto:contact@clubdemo.licyo.fr" data-org="org.email" data-org-attr="href:org.mailto">contact@clubdemo.licyo.fr</a> : nous vous préviendrons si une place se libère.</p>
+            <a href="/contact" class="btn btn-primary">Nous contacter</a>
+          </div>
+
+          <div class="prein-closed form-result">
+            <h3>Pré-inscription fermée</h3>
+            <p>La pré-inscription U10 n'est pas ouverte pour le moment. Une question ? Écrivez-nous à <a href="mailto:contact@clubdemo.licyo.fr" data-org="org.email" data-org-attr="href:org.mailto">contact@clubdemo.licyo.fr</a>.</p>
+            <a href="/contact" class="btn btn-primary">Nous contacter</a>
+          </div>
+
+          <div class="prein-opened form-result">
+            <h3>Le groupe U10 est ouvert !</h3>
+            <p>Assez d'enfants se sont pré-inscrits : le groupe U10 ouvre. Inscrivez votre enfant directement avec le formulaire d'inscription (dossier, photo et paiement).</p>
+            <a href="/inscription" class="btn btn-primary">Inscrire mon enfant</a>
+          </div>
+        </div>
+      </div>
+
+      <aside class="insc-aside" data-reveal aria-label="Places disponibles">
+        <div class="insc-recap">
+          <p class="insc-recap-kicker">Places disponibles</p>
+          <p class="insc-recap-price"><span id="preinscription-remaining">15</span></p>
+          <p class="insc-recap-sub"><span id="preinscription-remaining-label" data-one="place restante" data-many="places restantes">places restantes</span> sur <span id="preinscription-capacity">15</span></p>
+          <div class="prein-progress" aria-hidden="true"><span id="preinscription-progress" style="width:0%"></span></div>
+          <ul class="insc-recap-list">
+            <li>Pour les enfants nés en <strong>2017</strong>, filles et garçons</li>
+            <li>Gratuit et sans engagement : rien à payer ni à envoyer aujourd'hui</li>
+            <li>Le groupe ouvre dès qu'il y a assez d'enfants</li>
+            <li>Nous vous recontactons pour l'inscription définitive</li>
+          </ul>
+          <p class="insc-recap-help">Une question ? <a href="mailto:contact@clubdemo.licyo.fr" data-org="org.email" data-org-attr="href:org.mailto">contact@clubdemo.licyo.fr</a>. Votre enfant est né en 2018 ou après ? Direction la <a href="/inscription">page Inscription</a>.</p>
+        </div>
+      </aside>
+
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-brand">
+          <img src="assets/images/logo-96.webp" alt="">
+          <strong>Club Démo</strong>
+        </div>
+        <p>Nouveau club de football loisir à Sportville, le Club Démo accueille les filles et les garçons de 5 à 8 ans<span data-org-if="groups.any"> (<span data-org-list="groups-names">U6-U7 et U8-U9</span>)</span> dans un esprit familial, 100% porté par des bénévoles.</p>
+        <div class="social-row">
+          <a href="https://www.facebook.com/clubdemo" aria-label="Facebook" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M13.5 21v-7.2h2.4l.4-2.8h-2.8v-1.6c0-.8.2-1.4 1.4-1.4h1.5V5.4c-.3 0-1.3-.1-2.4-.1-2.4 0-4 1.5-4 4.2v1.9H7.5v2.8h2.1V21h3.9z"/></svg></a>
+          <a href="https://www.instagram.com/clubdemo" aria-label="Instagram" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 8.2a3.8 3.8 0 100 7.6 3.8 3.8 0 000-7.6zm0 6.3a2.5 2.5 0 110-5 2.5 2.5 0 010 5zm5-6.6a1 1 0 11-2 0 1 1 0 012 0zM12 3c-2.5 0-2.8 0-3.7.1-1 .1-1.7.2-2.3.5-.6.2-1.1.6-1.6 1.1-.5.5-.8 1-1.1 1.6-.2.6-.4 1.3-.5 2.3C3 9.5 3 9.8 3 12.3s0 2.8.1 3.7c.1 1 .2 1.7.5 2.3.2.6.6 1.1 1.1 1.6.5.5 1 .8 1.6 1.1.6.2 1.3.4 2.3.5.9.1 1.2.1 3.7.1s2.8 0 3.7-.1c1-.1 1.7-.2 2.3-.5.6-.2 1.1-.6 1.6-1.1.5-.5.8-1 1.1-1.6.2-.6.4-1.3.5-2.3.1-.9.1-1.2.1-3.7s0-2.8-.1-3.7c-.1-1-.2-1.7-.5-2.3-.2-.6-.6-1.1-1.1-1.6-.5-.5-1-.8-1.6-1.1-.6-.2-1.3-.4-2.3-.5C14.8 3 14.5 3 12 3z"/></svg></a>
+        </div>
+      </div>
+      <div>
+        <h3>Navigation</h3>
+        <ul>
+          <li><a href="/">Accueil</a></li>
+          <li><a href="/actualites">Actualités</a></li>
+          <li><a href="/equipe">Le Club</a></li>
+          <li><a href="/entrainements">Entraînements</a></li>
+          <li><a href="/partenaires">Partenaires</a></li>
+          <li><a href="/contact">Contact</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Infos pratiques</h3>
+        <ul>
+          <li data-org-if="location.short"><a href="/contact" data-org="location.short">Stade municipal, Sportville</a></li>
+          <li data-org-if="org.email"><a href="mailto:contact@clubdemo.licyo.fr" data-org="org.email" data-org-attr="href:org.mailto">contact@clubdemo.licyo.fr</a></li>
+          <li data-org-if="org.phone"><a href="tel:+33600000000" data-org="org.phone" data-org-attr="href:org.tel">06 00 00 00 00</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 Club Démo — Tous droits réservés.</p>
+      <p><a href="/mentions-legales">Mentions légales</a> · <a href="/confidentialite">Confidentialité</a></p>
+      <p>Club de démonstration · Depuis 2020</p>
+      <p>Site créé par <a href="https://abiweb.fr" target="_blank" rel="nofollow noopener">Abiweb</a></p>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/js/main.js?v=84bf26f2d5"></script>
+<script src="assets/js/preinscription.js?v=b649c489b7"></script>
+<script src="assets/js/naissance-autocomplete.js?v=35e5df3788"></script>
+</body>
+</html>

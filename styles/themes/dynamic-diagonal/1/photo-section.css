@@ -1,0 +1,16 @@
+/* ---------- Photo section (background photograph + overlay content) ---------- */
+.photo-section {
+  position: relative;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  color: var(--color-on-dark);
+}
+.photo-section::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(160deg, rgba(var(--color-primary-deep-rgb), .93), rgba(var(--color-primary-dark-rgb), .86) 55%, rgba(var(--color-primary-deep-rgb), .93));
+}
+.photo-section .container { position: relative; z-index: 2; }
+.photo-section p { color: rgba(var(--color-on-dark-rgb), 0.85); }
+
