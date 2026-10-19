@@ -1002,3 +1002,10 @@ dd .adm-link, .adm-kv .adm-link, .adm-prein-line a { display: inline-flex; align
   .adm-user-actions form:first-child { width: 100%; }
   .adm-user-actions form:first-child select { flex: 1; min-width: 0; }
 }
+
+/* Console plateforme : ajout d'un domaine (champ pleine largeur, bouton à côté ou dessous). */
+.adm-user-actions .adm-domain-form { display: flex; flex-wrap: wrap; gap: 8px; flex: 1 1 100%; min-width: 0; }
+.adm-domain-form input[type="text"] { flex: 1 1 180px; min-width: 0; min-height: 44px; font-size: 16px; padding: 0 12px; border: 1px solid var(--adm-line, #e5ddd0); border-radius: 10px; background: #fff; }
+.adm-domain-form .adm-btn { min-height: 44px; }
+.adm-club-row { grid-template-columns: minmax(0, 1fr); }
+.adm-club-row .adm-user-actions { justify-content: flex-start; }

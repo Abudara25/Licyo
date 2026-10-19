@@ -28,6 +28,7 @@ export function requiredPermission(method, pathname, action = null) {
   const path = pathname.replace(/\/+$/, '') || '/admin';
   if (OPEN.some((re) => re.test(path))) return null;
   const write = !SAFE_METHODS.has(method.toUpperCase());
+  if (path.startsWith('/admin/plateforme')) return 'platform.manage';
   if (path.startsWith('/admin/utilisateurs')) return 'users.manage';
   if (path === '/admin/journal') return 'users.manage';
   if (path.startsWith('/admin/parametres') || path.startsWith('/admin/categories') || path === '/admin/inscription-status') return 'settings.manage';

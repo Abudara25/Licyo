@@ -13,6 +13,7 @@ import {
 import { dossierStatus, ARCHIVE_MOTIFS, ARCHIVE_MOTIFS_MANUELS, ensureSchema } from './inscriptions-db.js';
 import { resolveOrganization } from './organization.js';
 import { authenticate, normalizeEmail, permissionsFor, roleLabel, logAudit } from './accounts.js';
+import { isPlatformAdmin } from './platform.js';
 
 export const COOKIE_NAME = 'admin_session';
 // Ancien cookie, qui contenait le mot de passe lui-même : effacé à chaque connexion et déconnexion.
@@ -52,12 +53,16 @@ export const withCookies = (response, cookies) => {
 export async function isAuthed(request, env, { touch = true } = {}) {
   const session = await readSession(request, env, { touch });
   if (!session) return null;
+  // Administrateur de la plateforme (PLATFORM_ADMIN_EMAILS, voir platform.js) : droit en plus sur la console, jamais
+  // sur les données d'un autre club.
+  const platformAdmin = isPlatformAdmin(env, session.email);
   return {
     organizationId: session.organizationId,
     userId: session.userId,
     role: session.role,
     roleLabel: roleLabel(session.role),
-    permissions: permissionsFor(session.role),
+    permissions: [...permissionsFor(session.role), ...(platformAdmin ? ['platform.manage'] : [])],
+    platformAdmin,
     user: { name: session.name, email: session.email },
   };
 }
@@ -187,7 +192,7 @@ export const escapeHtml = (str = '') =>
 // Version (?v=) de tous les assets chargés par l'admin — Cloudflare Pages les met en cache 4h sans
 // possibilité de le changer (voir CLAUDE.md). Valeur écrite par `npm run sync` (empreinte des assets) :
 // ne pas la modifier à la main.
-const ASSETS_VERSION = 'ee5676b946';
+const ASSETS_VERSION = 'd1219997fb';
 const asset = (path) => `${path}?v=${ASSETS_VERSION}`;
 
 // Icônes au trait (viewBox 24, stroke 1.8), même convention que les SVG du site public.
@@ -270,6 +275,7 @@ const ADMIN_NAV_LINKS = [
   // top: false = absent de la barre du haut (déjà pleine sur ordinateur), présent dans le menu « Plus » du mobile.
   { key: 'email', href: '/admin/email', label: 'Écrire un e-mail', icon: 'send', top: false },
   { key: 'utilisateurs', href: '/admin/utilisateurs', label: 'Utilisateurs', icon: 'users', top: false },
+  { key: 'plateforme', href: '/admin/plateforme', label: 'Console plateforme', icon: 'dashboard', top: false },
   { key: 'categories', href: '/admin/categories', label: 'Catégories', icon: 'tag' },
   { key: 'parametres', href: '/admin/parametres', label: 'Paramètres', icon: 'settings' },
 ];

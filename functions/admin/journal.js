@@ -17,6 +17,10 @@ const LABELS = {
   'compte.nom': 'Nom modifié',
   'compte.reinitialisation-demandee': 'Nouveau mot de passe demandé',
   'compte.mot-de-passe-reinitialise': 'Mot de passe réinitialisé',
+  'plateforme.club-cree': 'Club créé par la plateforme',
+  'plateforme.statut:active': 'Club réactivé par la plateforme',
+  'plateforme.statut:suspended': 'Club suspendu par la plateforme',
+  'plateforme.domaine': 'Domaine ajouté par la plateforme',
 };
 
 // Formulaires de l'admin (journalisés par admin-access.js sous la forme « chemin:action »).

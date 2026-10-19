@@ -52,7 +52,7 @@ export async function loadOrganization(env, organizationId) {
 // Réponse commune quand le domaine ne correspond à aucune organisation.
 export const unknownOrganization = () => new Response('Organisation inconnue.', { status: 404, headers: { 'Content-Type': 'text/plain;charset=UTF-8' } });
 
-// Tests uniquement.
+// Vide le cache des domaines (tests, et console plateforme après la création ou la suspension d'un club).
 export function clearOrganizationCache() {
   cache.clear();
 }

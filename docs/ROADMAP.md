@@ -122,7 +122,9 @@ Légende : ✅ fait et testé · 🟡 partiel · ⬜ à faire.
 | Élément | État |
 |---|---|
 | Maquette navigable | ✅ (`prototypes/platform-crm/`) |
-| Création de club, modules, domaines, abonnements réels | ⬜ |
+| Console réelle : création de club, invitation du responsable, domaines, suspension | ✅ (`/admin/plateforme`) |
+| Modules activables, abonnements et facturation | ⬜ |
+| Rattachement automatique du domaine au projet Pages | ⬜ |
 
 ### Phase 7 : deuxième club réel
 
@@ -131,6 +133,13 @@ Un club d'un autre sport (tennis, padel, judo...), parcours complet sans aucune 
 ## Journal des avancées
 
 Les étapes réalisées sont ajoutées ici, la plus récente en haut.
+
+### 2026-10-20 : console plateforme (phase 6, première version)
+
+- `/admin/plateforme`, réservée aux e-mails listés dans `PLATFORM_ADMIN_EMAILS` (permission `platform.manage`, distincte des rôles de club).
+- Créer un club : organisation, domaine, sport, invitation du responsable sur le domaine du club (7 jours). Doublons de domaine ou d'identifiant refusés.
+- Ajouter un domaine, suspendre ou réactiver (son site et son admin ne répondent plus, aucune donnée supprimée). Impossible de suspendre le club depuis lequel on est connecté.
+- Aucune donnée d'adhérent n'est lue par la console. Tests : `tests/platform.test.mjs`.
 
 ### 2026-10-20 : profil sportif du club
 
