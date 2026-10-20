@@ -141,6 +141,15 @@ Un club d'un autre sport (tennis, padel, judo...), parcours complet sans aucune 
 
 Les étapes réalisées sont ajoutées ici, la plus récente en haut.
 
+### 2026-10-20 (suite) : groupes, site, champs, présences, abonnements
+
+- **Entraîneur limité à ses groupes** : cases à cocher dans Utilisateurs ; listes, CSV, tableau de bord, adhérents, pré-inscriptions et présences filtrés ; fiche d'un autre groupe introuvable ; pages sans filtre possible (journal des e-mails, réinscription, contacts) réservées aux rôles qui voient tout.
+- **Site web** : un club créé dans la console a aussitôt un site publié (accueil, le club, actualités, inscription, contact, mentions, confidentialité) ; « Site web » modifie le brouillon (textes, coordonnées, couleurs), montre l'aperçu avec les vraies données, puis publie.
+- **Champs propres au club** : définis dans Paramètres (suggestions selon le sport), demandés à l'inscription et contrôlés par le serveur, visibles et modifiables sur la fiche, exportés.
+- **E-mails** : nom, lieu, créneaux, couleurs, réseaux et adresse du club qui envoie ; pages famille et admin avec l'adresse du club.
+- **Présences** : séances du jour d'après le planning, appel en quatre statuts, bilan sur la fiche.
+- **Abonnements** : formules, essai de 30 jours, paiements reçus enregistrés dans la console, passage « En retard » par le cron, affichage côté club.
+
 ### 2026-10-20 : tenue facultative selon le sport
 
 - Taille d'équipement exigée seulement si le sport du club fournit une tenue (profil sportif) ; champ masqué dans le formulaire (`sizes: []`) et dans la réinscription. Tests : `tests/sport-profile.test.mjs`.
