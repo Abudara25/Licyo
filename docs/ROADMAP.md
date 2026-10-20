@@ -78,11 +78,14 @@ Légende : ✅ fait et testé · 🟡 partiel · ⬜ à faire.
 
 | Élément | État |
 |---|---|
-| Brouillon / publication en base | ✅ (service, sans écran) |
-| Écran d'édition, aperçu, retour arrière | ⬜ |
+| Brouillon / publication en base | ✅ |
+| Site de départ d'un nouveau club, généré depuis un profil simple | ✅ (`sites/starter.js`, publié à la création dans la console) |
+| Écran d'édition et aperçu | ✅ (`/admin/site` : profil complet pour un site de départ, champs sûrs pour une configuration écrite à la main) |
+| Retour arrière (historique des versions) | ⬜ |
 | Actualités par organisation en base | 🟡 (services 4E.1 prêts, non branchés) |
 | Thèmes (4 au maximum) | 🟡 (1 : diagonales) |
-| Couleurs déduites du logo | ⬜ |
+| Couleurs par club | ✅ deux couleurs choisies dans « Site web », nuances calculées (`renderer/palette.js`), reprises dans les e-mails |
+| Couleurs déduites du logo, logo du club téléversé | ⬜ (logo générique neutre pour l'instant) |
 | Domaines personnalisés automatisés | ⬜ |
 
 ### Phase 3 : identité et permissions
@@ -93,8 +96,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⬜ à faire.
 | Appartenances à plusieurs clubs | ✅ (un compte, plusieurs appartenances) |
 | Rôles et permissions | ✅ (6 rôles, contrôle par route dans `admin-access.js`) |
 | Journal d'audit, sessions sécurisées | ✅ (`/admin/journal`, sessions liées au compte) |
-| Entraîneur limité à ses équipes | ⬜ (aujourd'hui : consultation de tous les inscrits) |
-| Premier responsable d'un club | 🟡 (`/admin/premier-acces` + `SETUP_SECRET`, en attendant la console) |
+| Entraîneur limité à ses équipes | ✅ groupes attribués dans Utilisateurs (migration 15), listes, fiches, CSV et présences filtrés |
+| Premier responsable d'un club | ✅ invité par la console plateforme (ou `/admin/premier-acces` + `SETUP_SECRET`) |
 
 ### Phase 4 : CRM de base
 
@@ -104,8 +107,8 @@ Légende : ✅ fait et testé · 🟡 partiel · ⬜ à faire.
 | Préinscription, places, transformation | 🟡 (liste d'intérêt, ouverture automatique) |
 | Dossiers, documents, validation, relances | ✅ |
 | Vocabulaire par sport (fédération, plateforme des licences, équipement) | ✅ (`sport-profile.js`, 14 sports, Paramètres) |
-| Champs personnalisés par sport (grade, ceinture, certificat…) | ⬜ |
-| Licence et équipement facultatifs dans le formulaire public | ⬜ |
+| Champs personnalisés par club (grade, ceinture, classement…) | ✅ Paramètres, suggestions par sport, formulaire, fiche, PDF, CSV (migration 16) |
+| Équipement facultatif selon le sport | ✅ ; licence encore suivie pour tous les sports (champ vide si inutile) |
 | Affectation aux équipes et historique | 🟡 (`group_memberships`) |
 
 ### Phase 5 : services opérationnels
@@ -113,9 +116,11 @@ Légende : ✅ fait et testé · 🟡 partiel · ⬜ à faire.
 | Élément | État |
 |---|---|
 | E-mails transactionnels (SMTP, Brevo en secours), journal | ✅ (identifiants de plateforme) |
-| Expéditeur et domaine d'envoi par club | ⬜ |
+| Identité du club dans les e-mails (nom, lieu, créneaux, couleurs, réponse au club) | ✅ (`email-identity.js`, `MAIL_FROM`) |
+| Domaine d'envoi propre à chaque club | ⬜ (adresse de la plateforme, réponse au club) |
 | Paiement HelloAsso, rapprochement | ✅ identifiants propres à chaque club, chiffrés (`integrations.js`, `SECRETS_KEY`) |
-| Présences, planning, convocations | ⬜ |
+| Présences et planning | ✅ séances du jour d'après le planning, appel, bilan par enfant (migration 17, `/admin/presences`) |
+| Convocations (matchs, compétitions) | ⬜ |
 
 ### Phase 6 : console SaaS
 
@@ -123,7 +128,9 @@ Légende : ✅ fait et testé · 🟡 partiel · ⬜ à faire.
 |---|---|
 | Maquette navigable | ✅ (`prototypes/platform-crm/`) |
 | Console réelle : création de club, invitation du responsable, domaines, suspension | ✅ (`/admin/plateforme`) |
-| Modules activables, abonnements et facturation | ⬜ |
+| Abonnements : formules, essai, paiements reçus, retards | ✅ suivi manuel dans la console (migration 18, `billing.js`) |
+| Prélèvement automatique (prestataire de paiement) et factures PDF | ⬜ |
+| Modules activables par club | ⬜ |
 | Rattachement automatique du domaine au projet Pages | ⬜ |
 
 ### Phase 7 : deuxième club réel
