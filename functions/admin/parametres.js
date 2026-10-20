@@ -2,6 +2,7 @@
 // familles, les automatisations (_shared/automations.js) et la durée de conservation. Depuis les comptes nominatifs
 // (phase 3, 2026-10-20), il n'y a plus de mot de passe partagé ici : chacun gère le sien dans « Mon compte »
 // (/admin/compte) et les accès se gèrent dans « Utilisateurs » (/admin/utilisateurs).
+import { getSubscription, listPayments, dueDate, formatEuros, PLANS, SUBSCRIPTION_STATUSES } from '../_shared/billing.js';
 import { getCustomFields, setCustomFields, SPORT_SUGGESTIONS, MAX_CUSTOM_FIELDS, slugKey } from '../_shared/custom-fields.js';
 import { retentionDue, RETENTION_YEARS } from '../_shared/retention.js';
 import { getSportProfile, setSportProfile, SPORT_PRESETS, SPORT_KEYS } from '../_shared/sport-profile.js';
@@ -207,6 +208,22 @@ function sportSection(sport, { sportOk = false } = {}) {
   </section>`;
 }
 
+// Abonnement du club à Licyo (lecture seule, suivi par l'éditeur dans la console : billing.js).
+function subscriptionSection(sub, payments) {
+  if (!sub) return '';
+  const due = dueDate(sub);
+  return `<section class="adm-surface" id="abonnement">
+    <h2 class="adm-h2">${icon('card')}Abonnement Licyo</h2>
+    <dl class="adm-kv">
+      <div><dt>Formule</dt><dd>${escapeHtml(PLANS[sub.plan]?.label || sub.plan)} · ${escapeHtml(formatEuros(sub.monthly_price_cents))} / mois</dd></div>
+      <div><dt>État</dt><dd>${escapeHtml(SUBSCRIPTION_STATUSES[sub.status] || sub.status)}</dd></div>
+      ${due ? `<div><dt>${sub.status === 'trial' ? 'Fin de l’essai' : 'Prochaine échéance'}</dt><dd>${escapeHtml(due.split('-').reverse().join('/'))}</dd></div>` : ''}
+    </dl>
+    ${payments.length ? `<p class="adm-help">Derniers paiements : ${payments.slice(0, 3).map((p) => `${escapeHtml(p.paid_at.split('-').reverse().join('/'))} (${escapeHtml(formatEuros(p.amount_cents))})`).join(', ')}.</p>` : ''}
+    <p class="adm-help">Une question sur votre abonnement ? Écrivez à l’équipe Licyo.</p>
+  </section>`;
+}
+
 // Champs propres au club (custom-fields.js) : liste, ajout, suppression, suggestions du sport.
 function customFieldsSection(fields, sport, { customOk = '', customError = '' } = {}) {
   const suggestions = (SPORT_SUGGESTIONS[sport.sport] || []).filter((s) => !fields.some((f) => f.key === s.key));
@@ -253,7 +270,7 @@ function customFieldsSection(fields, sport, { customOk = '', customError = '' } 
   </section>`;
 }
 
-function page({ notificationEmail, emailError, emailOk, auto, badges, family, sport, sportOk, customFields = [], customOk = '', customError = '', due = [] }) {
+function page({ notificationEmail, emailError, emailOk, auto, badges, family, sport, sportOk, customFields = [], customOk = '', customError = '', subscription = null, payments = [], due = [] }) {
   return `${adminHead('Paramètres')}
 ${adminShell({
   active: 'parametres',
@@ -280,6 +297,7 @@ ${adminShell({
 
   ${sportSection(sport, { sportOk })}
   ${customFieldsSection(customFields, sport, { customOk, customError })}
+  ${subscriptionSection(subscription, payments)}
 
   ${familyInfoSection(family)}
 
@@ -323,7 +341,9 @@ async function render(request, env, organizationId, props, { status = 200, heade
   const due = await retentionDue(env.DB, organizationId).catch(() => null);
   const sport = await getSportProfile(env, organizationId);
   const customFields = await getCustomFields(env, organizationId);
-  return new Response(page({ ...props, auto, badges, due, sport, customFields, family: { ...family, ...(props.family || {}) } }), { status, headers: { 'Content-Type': 'text/html;charset=UTF-8', ...headers } });
+  const subscription = await getSubscription(env.DB, organizationId);
+  const payments = subscription ? await listPayments(env.DB, organizationId, 3).catch(() => []) : [];
+  return new Response(page({ ...props, auto, badges, due, sport, customFields, subscription, payments, family: { ...family, ...(props.family || {}) } }), { status, headers: { 'Content-Type': 'text/html;charset=UTF-8', ...headers } });
 }
 
 // Dernier passage du cron, et dernier échec s'il est plus récent (voir recordCronFailure dans functions/api/cron.js).

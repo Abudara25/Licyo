@@ -1057,3 +1057,7 @@ dd .adm-link, .adm-kv .adm-link, .adm-prein-line a { display: inline-flex; align
 .adm-att-choice.is-absent input:checked + span { background: #fbe2e2; border-color: #b3261e; color: #7f1b15; }
 .adm-att-save { position: sticky; bottom: 76px; padding-top: 10px; background: linear-gradient(transparent, #fff 30%); }
 @media (min-width: 901px) { .adm-att-save { bottom: 12px; } .adm-att-kid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); align-items: center; } }
+/* Console : abonnement d'un club. */
+.adm-sub { margin: 6px 0; display: grid; gap: 6px; }
+.adm-sub p { margin: 0; }
+.adm-sub input[type="text"], .adm-sub input[type="number"], .adm-sub textarea { width: 100%; min-height: 44px; font-size: 16px; box-sizing: border-box; }

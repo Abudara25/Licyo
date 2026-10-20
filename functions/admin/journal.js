@@ -22,6 +22,8 @@ const LABELS = {
   'plateforme.statut:active': 'Club réactivé par la plateforme',
   'plateforme.statut:suspended': 'Club suspendu par la plateforme',
   'plateforme.domaine': 'Domaine ajouté par la plateforme',
+  'plateforme.abonnement': 'Abonnement modifié par la plateforme',
+  'plateforme.paiement': 'Paiement d’abonnement enregistré',
 };
 
 // Formulaires de l'admin (journalisés par admin-access.js sous la forme « chemin:action »).

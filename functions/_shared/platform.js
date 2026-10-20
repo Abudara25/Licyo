@@ -11,6 +11,7 @@
 import { normalizeEmail, inviteMember, findUserByEmail, AccountError } from './accounts.js';
 import { setSportProfile, SPORT_KEYS } from './sport-profile.js';
 import { randomToken } from './security.js';
+import { startTrial } from './billing.js';
 
 export function platformAdminEmails(env) {
   return String(env.PLATFORM_ADMIN_EMAILS || '')
@@ -54,7 +55,7 @@ export async function listOrganizations(db) {
 }
 
 // Crée un club et invite son premier responsable. Renvoie { organizationId, token, ownerEmail, domain }.
-export async function createOrganization(env, { name, slug, domain, sport, ownerEmail, actorUserId }) {
+export async function createOrganization(env, { name, slug, domain, sport, ownerEmail, actorUserId, plan = 'club' }) {
   const db = env.DB;
   const cleanName = String(name || '').replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim();
   if (cleanName.length < 2 || cleanName.length > 100) throw new AccountError('name', 'Nom du club : 2 à 100 caractères.');
@@ -74,6 +75,8 @@ export async function createOrganization(env, { name, slug, domain, sport, owner
     db.prepare('INSERT INTO organization_domains (domain, organization_id) VALUES (?, ?)').bind(finalDomain, organizationId),
   ]);
   if (sport) await setSportProfile(env, organizationId, { sport });
+  // Période d'essai de l'abonnement (billing.js).
+  await startTrial(db, organizationId, { plan });
   // Invitation au rôle de responsable du club : l'acteur est la plateforme (droit de nommer un responsable).
   const { token, existing } = await inviteMember(db, organizationId, { email, role: 'owner', actor: { userId: actorUserId, role: 'owner' } });
   return { organizationId, slug: finalSlug, token, existing, ownerEmail: email, domain: finalDomain, name: cleanName };

@@ -42,7 +42,8 @@ test('cron : une panne des automatisations n’empêche pas la réconciliation C
   });
   assert.deepEqual(ran, ['automations', 'crm'], 'les deux tâches ont tourné');
   assert.equal(response.status, 500, 'l’échec est visible du Worker programmé');
-  const { organizations, ...body } = await response.json();
+  const { organizations, billingOverdue, ...body } = await response.json();
+  assert.equal(billingOverdue, 0, 'contrôle des abonnements de la plateforme');
   assert.deepEqual(body, { automations: 'échec', crm: 'fait' });
   assert.deepEqual(organizations[A], { automations: 'échec', crm: 'fait' }, 'résultats par club');
   const warned = t.mock.calls?.length ? '' : String(console.warn.mock.calls.map((c) => c.arguments[0]).join(' '));

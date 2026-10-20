@@ -1,8 +1,9 @@
 // Tableau de bord admin — première page de la navigation (voir _shared/admin-auth.js). Vue
 // synthétique (effectifs par catégorie, part des documents et paiements validés, fiches à compléter)
 // plutôt que d'obliger à parcourir /admin/inscriptions carte par carte. Lecture seule, aucune action.
+import { getSubscription, subscriptionNotice } from '../_shared/billing.js';
 import { ensureInscriptionsTable, isInscriptionComplete, dossierStatus, isTransferredToPreinscription, ageGroup, sortAgeGroups } from '../_shared/inscriptions-db.js';
-import { isAuthed, loginPage, escapeHtml, adminHead, adminShell, adminScripts, adminBadges, icon, scopeRows } from '../_shared/admin-auth.js';
+import { isAuthed, loginPage, escapeHtml, adminHead, adminShell, adminScripts, adminBadges, icon, scopeRows, can } from '../_shared/admin-auth.js';
 import { getCategoriesConfig, getCronState } from '../_shared/settings-kv.js';
 import { loadAgeContext } from '../_shared/preinscriptions.js';
 
@@ -37,7 +38,7 @@ function kpi({ iconName, label, value, of, link }) {
 const shortcut = (href, iconName, title, description) =>
   `<a href="${href}" class="adm-shortcut">${icon(iconName)}<span><strong>${title}</strong><small>${description}</small></span></a>`;
 
-function page({ total, archivedCount, payeCount, dossierCount, dossierAVerifier, firstToVerify, completCount, categorieCounts, saison, badges, cronStale }) {
+function page({ total, archivedCount, payeCount, dossierCount, dossierAVerifier, firstToVerify, completCount, categorieCounts, saison, badges, cronStale, subNotice = null }) {
   const categories = sortAgeGroups(Object.keys(categorieCounts));
 
   return `${adminHead('Tableau de bord')}
@@ -51,6 +52,7 @@ ${adminShell({
 })}
 <main id="adm-main" class="adm-wrap adm-main">
   ${cronBanner(cronStale)}
+  ${subNotice ? `<div class="adm-wrap" style="margin-top:12px;"><p class="adm-flash adm-flash-${subNotice.tone === 'error' ? 'error' : 'info'}" role="${subNotice.tone === 'error' ? 'alert' : 'status'}">${icon(subNotice.tone === 'error' ? 'alert' : 'calendar')}<span>${escapeHtml(subNotice.text)} <a class="adm-link" href="/admin/parametres#abonnement">Voir l’abonnement</a></span></p></div>` : ''}
   <div class="adm-kpis">
     ${kpi({ iconName: 'users', label: 'Inscriptions actives', value: total, link: { href: '/admin/inscriptions', label: 'Voir la liste' } })}
     ${kpi({
@@ -135,6 +137,8 @@ export async function onRequestGet({ request, env }) {
       saison,
       badges: await adminBadges(env, admin),
       cronStale: await getCronState(env, admin.organizationId).then((state) => cronStaleSince(state), () => null),
+      // Abonnement Licyo : seulement pour les comptes qui gèrent les paramètres du club.
+      subNotice: can(admin, 'settings.manage') ? subscriptionNotice(await getSubscription(env.DB, admin.organizationId)) : null,
     }),
     { headers: { 'Content-Type': 'text/html;charset=UTF-8' } }
   );

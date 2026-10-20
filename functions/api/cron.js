@@ -9,6 +9,7 @@
 // Les tâches sont INDÉPENDANTES : une panne des automatisations n'empêche pas la réconciliation CRM, et
 // inversement. Chacune est exécutée, son résultat est rapporté (sans donnée personnelle) ; si l'une a échoué la
 // réponse est un 500 (le Worker programmé le voit), après que toutes ont tourné.
+import { markOverdue } from '../_shared/billing.js';
 import { runDailyAutomations } from '../_shared/automations.js';
 import { resolveOrganization } from '../_shared/organization.js';
 import { ensureSchema } from '../_shared/inscriptions-db.js';
@@ -135,7 +136,15 @@ export async function onRequestPost({ request, env, tasks }) {
     all[organization.id] = results;
     if (here?.id === organization.id || (!here && !rootResults)) rootResults = results;
   }
+  // Abonnements Licyo : essais terminés et périodes échues passés « En retard » (jamais de suspension automatique).
+  let billing = 0;
+  try {
+    billing = await markOverdue(env.DB);
+  } catch (error) {
+    console.warn(`Cron : abonnements non contrôlés (${error?.name || 'erreur'})`);
+    failedTotal += 1;
+  }
   const results = rootResults || {};
-  const body = { ...(typeof results.automations === 'object' && results.automations ? results.automations : {}), ...results, organizations: all };
+  const body = { ...(typeof results.automations === 'object' && results.automations ? results.automations : {}), ...results, organizations: all, billingOverdue: billing };
   return json(body, failedTotal ? 500 : 200);
 }

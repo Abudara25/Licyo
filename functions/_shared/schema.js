@@ -18,6 +18,7 @@
 import { crmStatements, repairCrmInvariants } from './crm-schema.js';
 import { NEWS_MIGRATION_VERSION, checkNewsSchema, newsMigrationStatements } from './news-schema.js';
 import { normalizeSql, SchemaIntegrityError } from './schema-utils.js';
+import { BILLING_MIGRATION_VERSION, billingMigrationStatements, repairBillingInvariants } from './billing.js';
 import { ATTENDANCE_MIGRATION_VERSION, attendanceMigrationStatements, repairAttendanceInvariants } from './attendance.js';
 import { ACCOUNTS_MIGRATION_VERSION, accountsMigrationStatements, repairAccountsInvariants, GROUP_SCOPE_MIGRATION_VERSION, groupScopeMigrationStatements, repairGroupScopeInvariants } from './accounts.js';
 
@@ -31,7 +32,7 @@ export const DEMO_DOMAINS = Object.freeze(['clubdemo.licyo.fr', 'www.clubdemo.li
 // Tables rattachées à une organisation pendant la phase 1 (voir tests/tenant-scoping.test.mjs, qui vérifie
 // que toute requête sur ces tables filtre par organization_id). site_events (R0a) est créée par son module
 // (_shared/site-events.js, organization_id NOT NULL) ; l'ancienne table globale `events` n'y figure volontairement pas.
-export const TENANT_TABLES = ['inscriptions', 'email_log', 'admin_sessions', 'helloasso_orders', 'locations', 'groups', 'group_schedules', 'prices', 'contacts', 'contact_relationships', 'periods', 'memberships', 'group_memberships', 'contact_relationship_sources', 'contact_duplicate_candidates', 'site_configs', 'site_events', 'preinscriptions', 'articles', 'organization_news_state', 'family_links', 'organization_memberships', 'user_tokens', 'admin_audit_log', 'attendance_sessions', 'attendance_marks'];
+export const TENANT_TABLES = ['inscriptions', 'email_log', 'admin_sessions', 'helloasso_orders', 'locations', 'groups', 'group_schedules', 'prices', 'contacts', 'contact_relationships', 'periods', 'memberships', 'group_memberships', 'contact_relationship_sources', 'contact_duplicate_candidates', 'site_configs', 'site_events', 'preinscriptions', 'articles', 'organization_news_state', 'family_links', 'organization_memberships', 'user_tokens', 'admin_audit_log', 'attendance_sessions', 'attendance_marks', 'platform_subscriptions', 'platform_payments'];
 // Tables de la migration 3, figées : une migration déjà en production ne doit jamais changer de comportement.
 const PHASE1_TABLES = ['inscriptions', 'email_log', 'admin_sessions'];
 
@@ -357,6 +358,12 @@ export const MIGRATIONS = [
     name: 'attendance',
     statements: (db) => attendanceMigrationStatements(db),
   },
+  {
+    // Abonnements des clubs à la plateforme (suivi par l'éditeur). Additive. Voir billing.js.
+    version: BILLING_MIGRATION_VERSION,
+    name: 'billing',
+    statements: (db) => billingMigrationStatements(db),
+  },
 ];
 
 // Configuration du site : brouillon et version publiée d'une organisation (voir _shared/site-config.js).
@@ -589,6 +596,7 @@ export async function repairSchemaInvariants(db) {
   // 2 sexies. Comptes et rôles (migration 14) : tables, index et colonne admin_sessions.user_id recréés s'ils manquent.
   if (await migrationRecorded(db, ACCOUNTS_MIGRATION_VERSION)) statements.push(...(await repairAccountsInvariants(db, { tableExists, columnNames })));
   if (await migrationRecorded(db, GROUP_SCOPE_MIGRATION_VERSION)) statements.push(...(await repairGroupScopeInvariants(db, { tableExists, columnNames })));
+  if (await migrationRecorded(db, BILLING_MIGRATION_VERSION)) statements.push(...(await repairBillingInvariants(db, { tableExists })));
   if (await migrationRecorded(db, ATTENDANCE_MIGRATION_VERSION)) statements.push(...(await repairAttendanceInvariants(db, { tableExists })));
   if ((await migrationRecorded(db, 16)) && (await tableExists(db, 'inscriptions')) && !(await columnNames(db, 'inscriptions')).has('custom_fields')) {
     statements.push(db.prepare('ALTER TABLE inscriptions ADD COLUMN custom_fields TEXT'));
