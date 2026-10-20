@@ -1,6 +1,7 @@
 // Gabarits communs d'une page publique : <head> (SEO global + SEO de page), header et navigation, footer
 // (complet ou réduit), visionneuse, scripts. Le balisage et les classes sont ceux du thème dynamic_diagonal v1 ;
 // tout le contenu vient de la configuration du site, échappé selon son contexte.
+import { paletteStyleTag } from './palette.js';
 import { escapeAttr, escapeText, jsonLd, jsonLdCompact, safeAbsoluteUrl, safeAssetPath, safeHref } from './html.js';
 import { bindAttrs, renderInline } from './inline.js';
 import { SOCIAL_ICONS } from './icons.js';
@@ -61,6 +62,8 @@ export function renderHead(ctx) {
     lines.push(`<link rel="preload" href="${escapeAttr(assetUrl(ctx, image.href))}" as="image"${image.fetchpriority ? ` fetchpriority="${escapeAttr(image.fetchpriority)}"` : ''}>`);
   }
   lines.push(`<link rel="stylesheet" href="${escapeAttr(versionedAsset(ctx, site.theme.stylesheet))}">`);
+  // Couleurs propres au club (site.theme.colors, choisies dans l'admin) : remplacent la palette de référence.
+  if (site.theme.colors) lines.push(paletteStyleTag(site.theme.colors));
   for (const block of page.head?.jsonLd || []) {
     const binding = block.binding && ctx.mode === 'markers' ? bindAttrs([['data-org-jsonld', block.binding]]) : '';
     lines.push(

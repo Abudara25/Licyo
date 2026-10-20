@@ -8,6 +8,7 @@ import { listOrganizations, createOrganization, setOrganizationStatus, addDomain
 import { SPORT_PRESETS, SPORT_KEYS } from '../_shared/sport-profile.js';
 import { sendAdminInvitation } from '../_shared/confirmation-email.js';
 import { clearOrganizationCache } from '../_shared/organization.js';
+import { createStarterSite } from '../_shared/site-editor.js';
 
 const html = (body, status = 200) => new Response(body, { status, headers: { 'Content-Type': 'text/html;charset=UTF-8' } });
 
@@ -63,7 +64,8 @@ ${adminShell({
         <div class="form-field"><label for="club-domain">Domaine</label><input type="text" id="club-domain" name="domain" value="${v('domain')}" required maxlength="253" placeholder="monclub.licyo.fr"><small class="form-hint">Le domaine doit pointer vers le projet Cloudflare Pages de Licyo.</small></div>
         <div class="form-field"><label for="club-sport">Sport</label><select id="club-sport" name="sport" class="adm-select">${SPORT_KEYS.map((k) => `<option value="${k}"${k === (values.sport || 'autre') ? ' selected' : ''}>${escapeHtml(SPORT_PRESETS[k].label)}</option>`).join('')}</select></div>
       </div>
-      <div class="form-field"><label for="club-owner">E-mail du responsable du club</label><input type="email" id="club-owner" name="ownerEmail" value="${v('ownerEmail')}" required maxlength="200"><small class="form-hint">Il reçoit une invitation (7 jours) pour créer son compte sur le domaine du club.</small></div>
+      <div class="form-field"><label for="club-city">Ville</label><input type="text" id="club-city" name="city" value="${v('city')}" required maxlength="60"></div>
+      <div class="form-field"><label for="club-owner">E-mail du responsable du club</label><input type="email" id="club-owner" name="ownerEmail" value="${v('ownerEmail')}" required maxlength="200"><small class="form-hint">Il reçoit une invitation (7 jours) pour créer son compte sur le domaine du club. Un site de départ est publié aussitôt, à personnaliser dans « Site web ».</small></div>
       <div class="adm-form-actions"><button type="submit" class="adm-btn adm-btn-primary">${icon('check')}Créer le club</button></div>
     </form>
   </section>
@@ -91,10 +93,17 @@ export async function onRequestPost({ request, env }) {
   await ensureSchema(env.DB);
   const form = await request.formData();
   const action = String(form.get('action') || '');
-  const values = Object.fromEntries(['name', 'slug', 'domain', 'sport', 'ownerEmail'].map((k) => [k, String(form.get(k) || '').slice(0, 253)]));
+  const values = Object.fromEntries(['name', 'slug', 'domain', 'sport', 'ownerEmail', 'city'].map((k) => [k, String(form.get(k) || '').slice(0, 253)]));
   try {
     if (action === 'create') {
       const club = await createOrganization(env, { ...values, actorUserId: admin.userId });
+      // Site de départ publié tout de suite (le club le personnalise ensuite dans « Site web »).
+      await createStarterSite(env, {
+        organizationId: club.organizationId,
+        slug: club.slug,
+        domain: club.domain,
+        profile: { name: club.name, sportLabel: SPORT_PRESETS[values.sport]?.label || 'Sport', city: values.city, email: club.ownerEmail },
+      });
       const siteUrl = `https://${club.domain}`;
       const sent = await sendAdminInvitation(env, {
         to: club.ownerEmail,

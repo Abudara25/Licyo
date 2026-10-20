@@ -10,6 +10,7 @@ import { SOCIAL_ICONS } from './icons.js';
 import { validateNews } from './news.js';
 import { strings } from './i18n.js';
 import { allowKeys } from './blocks.js';
+import { isHexColor } from './palette.js';
 import { renderInline } from './inline.js';
 
 export const SCHEMA_VERSION = 2;
@@ -80,7 +81,9 @@ export function validateSite(site) {
 
   check(() => need(site.schemaVersion === SCHEMA_VERSION, `schemaVersion ${site.schemaVersion} inconnue (attendue : ${SCHEMA_VERSION})`), 'schemaVersion');
   check(() => checkLimits(site), 'limites');
-  check(() => allowKeys(site, 'site', ['schemaVersion', 'id', 'locale', 'theme', 'brand', 'seo', 'contact', 'navigation', 'social', 'footer', 'notFoundPage', 'pages'], ['organizationId', 'news']), 'site');
+  check(() => allowKeys(site, 'site', ['schemaVersion', 'id', 'locale', 'theme', 'brand', 'seo', 'contact', 'navigation', 'social', 'footer', 'notFoundPage', 'pages'], ['organizationId', 'news', 'starter']), 'site');
+  // Profil du site de départ (sites/starter.js), conservé pour l'éditeur de l'admin : ignoré au rendu.
+  if (site.starter !== undefined) check(() => need(site.starter && typeof site.starter === 'object' && !Array.isArray(site.starter) && Number.isInteger(site.starter.version), 'starter : profil attendu'), 'starter');
   check(() => need(typeof site.id === 'string' && ID.test(site.id), 'identifiant requis'), 'id');
   let localeOk = true;
   check(() => {
@@ -89,7 +92,11 @@ export function validateSite(site) {
     localeOk = true;
   }, 'locale');
   check(() => {
-    allowKeys(site.theme, 'theme', ['id', 'version', 'stylesheet', 'palette', 'preloadFonts']);
+    allowKeys(site.theme, 'theme', ['id', 'version', 'stylesheet', 'palette', 'preloadFonts'], ['colors']);
+    if (site.theme.colors !== undefined) {
+      allowKeys(site.theme.colors, 'theme.colors', ['primary', 'accent']);
+      need(isHexColor(site.theme.colors.primary) && isHexColor(site.theme.colors.accent), 'theme.colors : couleurs #rrggbb attendues');
+    }
     const theme = THEMES[site.theme?.id];
     need(theme, `thème inconnu : ${site.theme?.id}`);
     need(theme.versions.includes(site.theme.version), `version de thème inconnue : ${site.theme.version}`);

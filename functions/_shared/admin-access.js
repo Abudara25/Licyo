@@ -31,6 +31,7 @@ export function requiredPermission(method, pathname, action = null) {
   if (path.startsWith('/admin/plateforme')) return 'platform.manage';
   if (path.startsWith('/admin/utilisateurs')) return 'users.manage';
   if (path === '/admin/journal') return 'users.manage';
+  if (path === '/admin/site' || path.startsWith('/admin/site/')) return 'settings.manage';
   if (path.startsWith('/admin/parametres') || path.startsWith('/admin/categories') || path === '/admin/inscription-status') return 'settings.manage';
   if (path.startsWith('/admin/email')) return 'emails.send';
   // Pages qui montrent tous les groupes sans pouvoir les filtrer (journal des e-mails, réinscription, fiches contact) :

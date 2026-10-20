@@ -1015,3 +1015,19 @@ dd .adm-link, .adm-kv .adm-link, .adm-prein-line a { display: inline-flex; align
 .adm-scope-list { display: flex; flex-wrap: wrap; gap: 6px 14px; border: 0; padding: 0; margin: 8px 0 10px; }
 .adm-scope-check { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 16px; }
 .adm-scope-check input { width: 20px; height: 20px; }
+
+/* Site web (éditeur). */
+.adm-site-status { font-weight: 600; margin: 0 0 12px; }
+.adm-site-status.is-pending { color: var(--adm-warn, #a15c00); }
+.adm-site-preview { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.adm-site-preview select { flex: 1 1 200px; min-width: 0; min-height: 44px; font-size: 16px; }
+.adm-site-colors .form-field { width: auto; margin: 0; }
+.adm-site-publish { margin: 0; }
+.adm-site-group { border: 1px solid var(--adm-line, #e7e0d4); border-radius: 14px; padding: 12px 14px 4px; margin: 0 0 16px; min-width: 0; }
+.adm-site-group legend { font-weight: 700; padding: 0 6px; }
+.adm-site-form textarea, .adm-site-form input[type="text"] { width: 100%; font-size: 16px; min-height: 44px; box-sizing: border-box; }
+.adm-site-colors { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: flex-end; }
+.adm-site-colors input[type="color"] { width: 64px; height: 44px; padding: 2px; border-radius: 10px; border: 1px solid var(--adm-line, #e7e0d4); background: #fff; }
+.adm-site-swatches { display: flex; gap: 6px; padding-bottom: 6px; }
+.adm-site-swatches span { width: 28px; height: 28px; border-radius: 8px; border: 1px solid rgba(0, 0, 0, .08); }
+.adm-site-page { margin-bottom: 10px; }

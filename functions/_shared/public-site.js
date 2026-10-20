@@ -125,6 +125,13 @@ async function withPublicData(env, template, organization) {
   }
 }
 
+// Aperçu du BROUILLON dans l'admin (/admin/site/apercu) : même rendu que le site public (moteur + données vivantes du
+// club), sans cache. Lève une erreur si la configuration n'est pas rendable (l'admin affiche le message).
+export async function renderPreview(env, organization, config, route) {
+  const template = renderSitePage({ site: config, route, locale: config.locale, assetVersions: ASSET_VERSIONS, mode: 'markers', base: '' }).html;
+  return withPublicData(env, template, organization);
+}
+
 async function finish(request, env, { template, headers, organization, status }) {
   const html = await withPublicData(env, template, organization);
   return new Response(request.method === 'HEAD' ? null : html, { status, headers });

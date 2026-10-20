@@ -76,7 +76,7 @@ export async function createOrganization(env, { name, slug, domain, sport, owner
   if (sport) await setSportProfile(env, organizationId, { sport });
   // Invitation au rôle de responsable du club : l'acteur est la plateforme (droit de nommer un responsable).
   const { token, existing } = await inviteMember(db, organizationId, { email, role: 'owner', actor: { userId: actorUserId, role: 'owner' } });
-  return { organizationId, token, existing, ownerEmail: email, domain: finalDomain, name: cleanName };
+  return { organizationId, slug: finalSlug, token, existing, ownerEmail: email, domain: finalDomain, name: cleanName };
 }
 
 export async function setOrganizationStatus(db, organizationId, status) {
