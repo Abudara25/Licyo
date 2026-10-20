@@ -344,6 +344,12 @@ export const MIGRATIONS = [
     name: 'group-scope',
     statements: (db) => groupScopeMigrationStatements(db),
   },
+  {
+    // Champs propres au club (grade, ceinture, classement…) : valeurs JSON par inscription. Additive. Voir custom-fields.js.
+    version: 16,
+    name: 'custom-fields',
+    statements: (db) => [db.prepare('ALTER TABLE inscriptions ADD COLUMN custom_fields TEXT')],
+  },
 ];
 
 // Configuration du site : brouillon et version publiée d'une organisation (voir _shared/site-config.js).
@@ -576,6 +582,9 @@ export async function repairSchemaInvariants(db) {
   // 2 sexies. Comptes et rôles (migration 14) : tables, index et colonne admin_sessions.user_id recréés s'ils manquent.
   if (await migrationRecorded(db, ACCOUNTS_MIGRATION_VERSION)) statements.push(...(await repairAccountsInvariants(db, { tableExists, columnNames })));
   if (await migrationRecorded(db, GROUP_SCOPE_MIGRATION_VERSION)) statements.push(...(await repairGroupScopeInvariants(db, { tableExists, columnNames })));
+  if ((await migrationRecorded(db, 16)) && (await tableExists(db, 'inscriptions')) && !(await columnNames(db, 'inscriptions')).has('custom_fields')) {
+    statements.push(db.prepare('ALTER TABLE inscriptions ADD COLUMN custom_fields TEXT'));
+  }
 
   // 3. Index indispensables aux requêtes filtrées par organisation.
   for (const [table, name, cols] of TENANT_INDEXES) {

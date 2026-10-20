@@ -1028,7 +1028,7 @@ export async function getContactProfile(db, organizationId, contactId) {
                 gm.group_label, gm.started_at AS group_started_at,
                 i.id AS inscription_id, i.created_at AS inscription_created_at, i.categorie, i.saison, i.paye, i.mode_paiement,
                 i.dossier_status, i.dossier_uploaded_at, i.photo_uploaded_at, i.archived_at, i.archive_motif, i.archive_commentaire, i.enfant_prenom, i.enfant_nom,
-                i.numero_licence, i.taille_maillot, i.ville_naissance, i.pays_naissance, i.cp_naissance, i.adresse, i.code_postal, i.ville,
+                i.numero_licence, i.taille_maillot, i.custom_fields, i.ville_naissance, i.pays_naissance, i.cp_naissance, i.adresse, i.code_postal, i.ville,
                 i.pass_sport_code, i.droit_image, i.autorisation, i.dossier_key, i.photo_key, i.dossier_verified_at,
                 i.email, i.parent2_email, i.dossier_refused_at, i.photo_refused_at, i.parent_prenom, i.parent2_prenom, i.note_interne,
                 i.licence_demandee_at, i.licence_verif_at, i.tenue_commandee_at, i.tenue_remise_at

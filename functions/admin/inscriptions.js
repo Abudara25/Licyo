@@ -48,9 +48,10 @@ import { afterInscriptionChange } from '../_shared/automations.js';
 import { deleteInscriptionPermanently } from '../_shared/inscription-deletion.js';
 import { syncInscriptionSafe } from '../_shared/crm.js';
 import { FOLLOWUP_STEPS } from '../_shared/club-followup.js';
+import { getCustomFields, parseValues } from '../_shared/custom-fields.js';
 
-function toCsv(rows, ageCtx) {
-  const headers = ['Date', 'Enfant', 'Naissance', 'Code postal de naissance', 'Ville de naissance', 'Pays de naissance', 'N° licence FFF', 'Catégorie', "Catégorie d'âge", 'Taille maillot', 'Mode paiement', 'Paiement reçu', "Code Pass'Sport", 'Parent', 'E-mail', 'Téléphone', 'Adresse', 'Code postal', 'Ville', 'Autorisation', 'Droit image', 'RGPD', 'Dossier signé', 'Photo reçue', 'Parent 2', 'E-mail parent 2', 'Téléphone parent 2', 'Archivé le', 'Motif corbeille', ...FOLLOWUP_STEPS.map((s) => s.label)];
+function toCsv(rows, ageCtx, customDefs = []) {
+  const headers = ['Date', 'Enfant', 'Naissance', 'Code postal de naissance', 'Ville de naissance', 'Pays de naissance', 'N° licence FFF', 'Catégorie', "Catégorie d'âge", 'Taille maillot', 'Mode paiement', 'Paiement reçu', "Code Pass'Sport", 'Parent', 'E-mail', 'Téléphone', 'Adresse', 'Code postal', 'Ville', 'Autorisation', 'Droit image', 'RGPD', 'Dossier signé', 'Photo reçue', 'Parent 2', 'E-mail parent 2', 'Téléphone parent 2', 'Archivé le', 'Motif corbeille', ...FOLLOWUP_STEPS.map((s) => s.label), ...customDefs.map((d) => d.label)];
   // Un champ commençant par =, +, -, @, tab ou retour chariot est préfixé d'une apostrophe :
   // sinon Excel/Sheets peut l'interpréter comme une formule (injection CSV) à l'ouverture de
   // l'export si un parent a saisi ce genre de contenu dans le formulaire public.
@@ -91,6 +92,7 @@ function toCsv(rows, ageCtx) {
       r.archived_at,
       r.archived_at ? archiveReason(r) : '',
       ...FOLLOWUP_STEPS.map((s) => (r[s.column] ? String(r[s.column]).slice(0, 10) : '')),
+      ...customDefs.map((d) => parseValues(r.custom_fields)[d.key] || ''),
     ]
       .map(escapeCsv)
       .join(',')
@@ -477,7 +479,7 @@ export async function onRequestGet({ request, env }) {
   const filtered = filterAndSort(viewRows, filters, ageCtx);
 
   if (isCsv) {
-    return new Response(toCsv(filtered, ageCtx), {
+    return new Response(toCsv(filtered, ageCtx, await getCustomFields(env, admin.organizationId)), {
       headers: {
         'Content-Type': 'text/csv;charset=UTF-8',
         'Content-Disposition': `attachment; filename="${filters.etat === 'complet' ? 'adherents' : 'inscriptions'}.csv"`,
@@ -633,7 +635,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
     const selected = results.filter((r) => ids.includes(r.id));
 
     if (action === 'bulk-export') {
-      return new Response(toCsv(selected), {
+      return new Response(toCsv(selected, undefined, await getCustomFields(env, admin.organizationId)), {
         headers: {
           'Content-Type': 'text/csv;charset=UTF-8',
           'Content-Disposition': 'attachment; filename="inscriptions-selection.csv"',

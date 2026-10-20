@@ -2,6 +2,7 @@
 // familles, les automatisations (_shared/automations.js) et la durée de conservation. Depuis les comptes nominatifs
 // (phase 3, 2026-10-20), il n'y a plus de mot de passe partagé ici : chacun gère le sien dans « Mon compte »
 // (/admin/compte) et les accès se gèrent dans « Utilisateurs » (/admin/utilisateurs).
+import { getCustomFields, setCustomFields, SPORT_SUGGESTIONS, MAX_CUSTOM_FIELDS, slugKey } from '../_shared/custom-fields.js';
 import { retentionDue, RETENTION_YEARS } from '../_shared/retention.js';
 import { getSportProfile, setSportProfile, SPORT_PRESETS, SPORT_KEYS } from '../_shared/sport-profile.js';
 import {
@@ -206,7 +207,53 @@ function sportSection(sport, { sportOk = false } = {}) {
   </section>`;
 }
 
-function page({ notificationEmail, emailError, emailOk, auto, badges, family, sport, sportOk, due = [] }) {
+// Champs propres au club (custom-fields.js) : liste, ajout, suppression, suggestions du sport.
+function customFieldsSection(fields, sport, { customOk = '', customError = '' } = {}) {
+  const suggestions = (SPORT_SUGGESTIONS[sport.sport] || []).filter((s) => !fields.some((f) => f.key === s.key));
+  const typeLabel = { text: 'Texte', select: 'Liste de choix', number: 'Nombre' };
+  const rows = fields.length
+    ? fields
+        .map(
+          (f) => `<li class="adm-user-row adm-club-row">
+        <div><h3>${escapeHtml(f.label)} ${f.required ? '<span class="adm-tag is-no">Obligatoire</span>' : ''}</h3>
+        <p>${escapeHtml(typeLabel[f.type])}${f.options.length ? ` : ${escapeHtml(f.options.join(', '))}` : ''}</p></div>
+        <div class="adm-user-actions"><form method="POST" class="admin-confirm-form"><input type="hidden" name="action" value="custom-remove"><input type="hidden" name="key" value="${escapeHtml(f.key)}">
+          <button type="submit" class="adm-btn adm-btn-sm adm-btn-danger" data-confirm="Retirer le champ « ${escapeHtml(f.label)} » du formulaire ? Les réponses déjà enregistrées sont conservées.">${icon('trash')}Retirer</button></form></div>
+      </li>`
+        )
+        .join('')
+    : '<p class="adm-help">Aucun champ pour le moment.</p>';
+  return `<section class="adm-surface" id="champs">
+    <h2 class="adm-h2">${icon('edit')}Champs du formulaire d’inscription</h2>
+    <p class="adm-help" style="margin-top:8px;">Informations propres à votre sport (ceinture, classement, niveau…), demandées à l’inscription et visibles sur chaque fiche. ${MAX_CUSTOM_FIELDS} au plus.</p>
+    ${customOk ? flash('ok', customOk) : ''}
+    ${customError ? flash('error', customError) : ''}
+    <ul class="adm-users" role="list">${rows}</ul>
+    ${
+      suggestions.length
+        ? `<form method="POST" style="margin-top:12px;"><input type="hidden" name="action" value="custom-suggest">
+      <button type="submit" class="adm-btn adm-btn-sm adm-btn-ghost">${icon('plus')}Ajouter les champs suggérés (${escapeHtml(suggestions.map((s) => s.label).join(', '))})</button></form>`
+        : ''
+    }
+    ${
+      fields.length < MAX_CUSTOM_FIELDS
+        ? `<details class="adm-fold" style="margin-top:12px;"><summary><span>Ajouter un champ</span></summary>
+      <form method="POST">
+        <input type="hidden" name="action" value="custom-add">
+        <div class="form-row">
+          <div class="form-field"><label for="cf-label">Libellé</label><input type="text" id="cf-label" name="label" maxlength="80" required></div>
+          <div class="form-field"><label for="cf-type">Type</label><select id="cf-type" name="type" class="adm-select"><option value="text">Texte</option><option value="select">Liste de choix</option><option value="number">Nombre</option></select></div>
+        </div>
+        <div class="form-field"><label for="cf-options">Choix possibles (liste de choix : un par ligne)</label><textarea id="cf-options" name="options" rows="4" maxlength="1500"></textarea></div>
+        <label class="form-check adm-scope-check"><input type="checkbox" name="required"> <span>Réponse obligatoire</span></label>
+        <div class="adm-form-actions"><button type="submit" class="adm-btn adm-btn-primary">${icon('plus')}Ajouter le champ</button></div>
+      </form></details>`
+        : ''
+    }
+  </section>`;
+}
+
+function page({ notificationEmail, emailError, emailOk, auto, badges, family, sport, sportOk, customFields = [], customOk = '', customError = '', due = [] }) {
   return `${adminHead('Paramètres')}
 ${adminShell({
   active: 'parametres',
@@ -232,6 +279,7 @@ ${adminShell({
   </section>
 
   ${sportSection(sport, { sportOk })}
+  ${customFieldsSection(customFields, sport, { customOk, customError })}
 
   ${familyInfoSection(family)}
 
@@ -274,7 +322,8 @@ async function render(request, env, organizationId, props, { status = 200, heade
   }
   const due = await retentionDue(env.DB, organizationId).catch(() => null);
   const sport = await getSportProfile(env, organizationId);
-  return new Response(page({ ...props, auto, badges, due, sport, family: { ...family, ...(props.family || {}) } }), { status, headers: { 'Content-Type': 'text/html;charset=UTF-8', ...headers } });
+  const customFields = await getCustomFields(env, organizationId);
+  return new Response(page({ ...props, auto, badges, due, sport, customFields, family: { ...family, ...(props.family || {}) } }), { status, headers: { 'Content-Type': 'text/html;charset=UTF-8', ...headers } });
 }
 
 // Dernier passage du cron, et dernier échec s'il est plus récent (voir recordCronFailure dans functions/api/cron.js).
@@ -341,6 +390,23 @@ export async function onRequestPost({ request, env }) {
     const fields = sport === previous.sport ? Object.fromEntries(['federation', 'federationName', 'platform', 'tagline', 'equipment'].map((f) => [f, form.get(f)])) : {};
     await setSportProfile(env, org, { sport, ...fields });
     return render(request, env, org, { notificationEmail, sportOk: true });
+  }
+
+  if (action === 'custom-add' || action === 'custom-remove' || action === 'custom-suggest') {
+    const current = await getCustomFields(env, org);
+    let next = current;
+    if (action === 'custom-remove') next = current.filter((f) => f.key !== String(form.get('key') || ''));
+    if (action === 'custom-suggest') next = [...current, ...(SPORT_SUGGESTIONS[(await getSportProfile(env, org)).sport] || []).filter((s) => !current.some((f) => f.key === s.key))];
+    if (action === 'custom-add') {
+      const type = String(form.get('type') || 'text');
+      const options = String(form.get('options') || '').split(/\r?\n/).map((o) => o.trim()).filter(Boolean);
+      if (type === 'select' && options.length < 2) return render(request, env, org, { notificationEmail, customError: 'Une liste de choix demande au moins deux choix.' }, { status: 400 });
+      const label = String(form.get('label') || '').trim();
+      if (!label) return render(request, env, org, { notificationEmail, customError: 'Libellé requis.' }, { status: 400 });
+      next = [...current, { label, type, options, required: form.get('required') === 'on', key: slugKey(label) }];
+    }
+    const saved = await setCustomFields(env, org, next);
+    return render(request, env, org, { notificationEmail, customOk: action === 'custom-remove' ? 'Champ retiré du formulaire.' : `Champs du formulaire : ${saved.length}.` });
   }
 
   if (action === 'helloasso' || action === 'helloasso-clear') {

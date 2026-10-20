@@ -2,6 +2,7 @@
 // dépôt manuel du dossier, archivage) et, avec ?edit=1, le formulaire de modification. Liée depuis
 // les cartes de /admin/inscriptions et depuis /admin/reinscription. Les actions sont traitées par
 // functions/admin/inscriptions.js (ou [id]/dossier.js pour le dépôt) et reviennent ici via redirectTo.
+import { getCustomFields, displayRows, parseValues, MAX_VALUE_LENGTH } from '../../_shared/custom-fields.js';
 import { syncInscriptionSafe } from '../../_shared/crm.js';
 import { ensureInscriptionsTable, familyHasActionPending, hasBirthPlace, dossierStatus, refusMotifs, archiveReason, PHOTO_REFUS_MOTIFS, photoRefusMotifs, isPhotoToRedo, ageGroup, ageRangesFrom } from '../../_shared/inscriptions-db.js';
 import { photoTag,
@@ -34,7 +35,8 @@ import { afterInscriptionChange } from '../../_shared/automations.js';
 import { dossierVerificationForms, DOSSIER_CHECKLIST, verifMessage } from '../../_shared/admin-dossier.js';
 import { getPreinscriptionConfig, ensurePreinscriptionsTable, findPreinscriptionForChild } from '../../_shared/preinscriptions.js';
 
-const REQUIRED_FIELDS = ['enfantPrenom', 'enfantNom', 'naissance', 'categorie', 'tailleMaillot', 'modePaiement', 'parentPrenom', 'parentNom', 'email', 'telephone'];
+// Taille d'équipement facultative (sport sans tenue fournie) : l'admin peut écrire ce qu'il veut.
+const REQUIRED_FIELDS = ['enfantPrenom', 'enfantNom', 'naissance', 'categorie', 'modePaiement', 'parentPrenom', 'parentNom', 'email', 'telephone'];
 const LONG_DATE = { day: 'numeric', month: 'long', year: 'numeric' };
 // Numéro de licence FFF (saisi par le club) : chiffres et lettres, espaces ou tirets tolérés.
 const LICENCE_RE = /^[A-Za-z0-9][A-Za-z0-9 -]{0,39}$/;
@@ -185,6 +187,7 @@ function fichePage(row, { saison, ageCtx, prix, siteUrl, messages, preinscriptio
     saison,
     prix,
     tailleMaillot: row.taille_maillot,
+    customFieldList: displayRows(row.__customDefs || [], row.custom_fields).map(({ label, value }) => ({ label, value })),
     modePaiement: row.mode_paiement,
     passSportCode: row.pass_sport_code,
     parentPrenom: row.parent_prenom,
@@ -256,6 +259,7 @@ function fichePage(row, { saison, ageCtx, prix, siteUrl, messages, preinscriptio
       ${kv('Lieu de naissance', escapeHtml([[row.cp_naissance, row.ville_naissance].filter(Boolean).join(' '), row.pays_naissance].filter(Boolean).join(', ') || '—'))}
       ${kv('Catégorie', escapeHtml(row.categorie))}
       ${kv('Taille de maillot', escapeHtml(row.taille_maillot || '—'))}
+      ${displayRows(row.__customDefs || [], row.custom_fields).map((f) => kv(escapeHtml(f.label), escapeHtml(f.value))).join('')}
       ${kv('Saison', escapeHtml(row.saison || '—'))}
       ${kv('Autorisation de participation', yesNo(row.autorisation))}
       ${kv("Droit à l'image", yesNo(row.droit_image))}
@@ -417,6 +421,36 @@ ${adminScripts('pdf-inscription', 'admin-nav', 'admin-inscriptions')}
 const NOTE_MAX = 2000;
 const adherentRetour = (value) => (/^\/admin\/adherents\/\d+$/.test(String(value || '')) ? String(value) : null);
 
+// Champs propres au club (custom-fields.js) dans le formulaire Modifier, préremplis.
+function customFieldInputs(row) {
+  const defs = row.__customDefs || [];
+  if (!defs.length) return '';
+  const values = row.__customValues || parseValues(row.custom_fields);
+  return `<div class="form-row adm-custom-fields">${defs
+    .map((d) => {
+      const id = `cf-${escapeHtml(d.key)}`;
+      const value = values[d.key] || '';
+      const input =
+        d.type === 'select'
+          ? `<select id="${id}" name="cf_${escapeHtml(d.key)}"><option value="">—</option>${d.options.map((o) => `<option value="${escapeHtml(o)}"${o === value ? ' selected' : ''}>${escapeHtml(o)}</option>`).join('')}</select>`
+          : `<input type="text" id="${id}" name="cf_${escapeHtml(d.key)}" value="${escapeHtml(value)}" maxlength="${MAX_VALUE_LENGTH}">`;
+      return `<div class="form-field"><label for="${id}">${escapeHtml(d.label)}</label>${input}</div>`;
+    })
+    .join('')}</div>`;
+}
+
+// Valeurs des champs propres saisies dans Modifier : une valeur de liste hors des choix est ignorée ; les valeurs de
+// champs retirés depuis restent conservées.
+function customValuesFromForm(defs, data, existingRaw) {
+  const values = { ...parseValues(existingRaw) };
+  for (const d of defs) {
+    const value = String(data[`cf_${d.key}`] ?? '').replace(/[\u0000-\u001f\u007f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, MAX_VALUE_LENGTH);
+    if (!value || (d.type === 'select' && !d.options.includes(value))) delete values[d.key];
+    else values[d.key] = value;
+  }
+  return Object.keys(values).length ? JSON.stringify(values) : null;
+}
+
 function editPage(row, categories, { error, badges, retour = null } = {}) {
   const checked = (v) => (v ? 'checked' : '');
   const selected = (value, option) => (value === option ? 'selected' : '');
@@ -492,10 +526,12 @@ ${adminShell({
           <input type="text" id="numero-licence" name="numeroLicence" value="${escapeHtml(row.numero_licence || '')}" maxlength="40" inputmode="numeric" autocomplete="off">
         </div>
       </div>
+      ${customFieldInputs(row)}
       <div class="form-row">
         <div class="form-field">
           <label for="taille-maillot">Taille de maillot</label>
-          <select id="taille-maillot" name="tailleMaillot" required>
+          <select id="taille-maillot" name="tailleMaillot">
+            <option value="" ${selected(row.taille_maillot || '', '')}>Aucune</option>
             ${['4 ans', '6 ans', '8 ans', '10 ans', '12 ans'].map((t) => `<option value="${t}" ${selected(row.taille_maillot, t)}>${t}</option>`).join('')}
           </select>
         </div>
@@ -611,6 +647,7 @@ export async function onRequestGet({ request, env, params }) {
   if (!row) {
     return new Response('Inscription introuvable.', { status: 404 });
   }
+  row.__customDefs = await getCustomFields(env, admin.organizationId);
 
   const url = new URL(request.url);
   const { categories, saison, prix } = await getCategoriesConfig(env, admin.organizationId);
@@ -668,6 +705,7 @@ export async function onRequestPost({ request, env, params, waitUntil }) {
   await ensureInscriptionsTable(env.DB);
   const id = Number(params.id);
   const existing = await env.DB.prepare('SELECT * FROM inscriptions WHERE organization_id = ? AND id = ?').bind(admin.organizationId, id).first();
+  if (existing) existing.__customDefs = await getCustomFields(env, admin.organizationId);
   if (!existing) {
     return new Response('Inscription introuvable.', { status: 404 });
   }
@@ -752,7 +790,7 @@ export async function onRequestPost({ request, env, params, waitUntil }) {
       enfant_prenom = ?, enfant_nom = ?, naissance = ?, categorie = ?, taille_maillot = ?, mode_paiement = ?,
       parent_prenom = ?, parent_nom = ?, email = ?, telephone = ?, adresse = ?, code_postal = ?, ville = ?,
       parent2_prenom = ?, parent2_nom = ?, parent2_email = ?, parent2_telephone = ?, pass_sport_code = ?,
-      ville_naissance = ?, pays_naissance = ?, cp_naissance = ?, numero_licence = ?,
+      ville_naissance = ?, pays_naissance = ?, cp_naissance = ?, numero_licence = ?, custom_fields = ?,
       autorisation = ?, droit_image = ?, rgpd = ?, paye = ?,
       complete_notified_at = CASE WHEN ? = 0 THEN NULL ELSE complete_notified_at END
      WHERE organization_id = ? AND id = ?`
@@ -762,7 +800,7 @@ export async function onRequestPost({ request, env, params, waitUntil }) {
       data.enfantNom.trim(),
       data.naissance,
       data.categorie,
-      data.tailleMaillot,
+      data.tailleMaillot || '',
       data.modePaiement,
       data.parentPrenom.trim(),
       data.parentNom.trim(),
@@ -780,6 +818,7 @@ export async function onRequestPost({ request, env, params, waitUntil }) {
       paysNaissance,
       cpNaissance,
       numeroLicence,
+      customValuesFromForm(existing.__customDefs, data, existing.custom_fields),
       data.autorisation ? 1 : 0,
       data.droitImage ? 1 : 0,
       data.rgpd ? 1 : 0,

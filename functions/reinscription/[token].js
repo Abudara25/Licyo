@@ -13,6 +13,7 @@
 import { ensureInscriptionsTable, findCurrentSeasonSubmission } from '../_shared/inscriptions-db.js';
 import { resolveOrganization } from '../_shared/organization.js';
 import { getSportProfile } from '../_shared/sport-profile.js';
+import { getCustomFields, parseValues } from '../_shared/custom-fields.js';
 import { getCategoriesConfig } from '../_shared/settings-kv.js';
 import { ensureFamilyLinksTable, isReinscriptionLinkValid } from '../_shared/family-links.js';
 
@@ -132,8 +133,8 @@ function shell({ title, intro, body }) {
 </footer>
 
 <script src="/assets/js/main.js?v=84bf26f2d5"></script>
-<script src="/assets/js/pdf-inscription.js?v=e463cf97f8"></script>
-<script src="/assets/js/inscription.js?v=f6fbed9c13"></script>
+<script src="/assets/js/pdf-inscription.js?v=8cb0bbb147"></script>
+<script src="/assets/js/inscription.js?v=6416f1383d"></script>
 <script src="/assets/js/adresse-autocomplete.js?v=7050f97583"></script>
 <script src="/assets/js/naissance-autocomplete.js?v=35e5df3788"></script>
 </body>
@@ -141,7 +142,24 @@ function shell({ title, intro, body }) {
 `;
 }
 
-function formPage(row, { equipment = 'Taille de maillot' } = {}) {
+// Champs propres au club, préremplis avec les réponses de la saison précédente (lus par assets/js/inscription.js).
+function customFieldsHtml(defs, raw) {
+  const values = parseValues(raw);
+  return defs
+    .map((d) => {
+      const id = `cf-${escapeHtml(d.key)}`;
+      const attrs = `id="${id}" name="cf_${escapeHtml(d.key)}" data-custom-field="${escapeHtml(d.key)}" data-custom-label="${escapeHtml(d.label)}"${d.required ? ' required' : ''}`;
+      const value = values[d.key] || '';
+      const input =
+        d.type === 'select'
+          ? `<select ${attrs}><option value="" disabled${value ? '' : ' selected'}>Choisir</option>${d.options.map((o) => `<option value="${escapeHtml(o)}"${o === value ? ' selected' : ''}>${escapeHtml(o)}</option>`).join('')}</select>`
+          : `<input type="text" ${attrs} value="${escapeHtml(value)}" maxlength="100">`;
+      return `        <div class="form-field"><label for="${id}">${escapeHtml(d.required ? d.label : `${d.label} (facultatif)`)}</label>${input}</div>`;
+    })
+    .join('\n');
+}
+
+function formPage(row, { equipment = 'Taille de maillot', customDefs = [] } = {}) {
   const nomEnfant = `${escapeHtml(row.enfant_prenom)} ${escapeHtml(row.enfant_nom)}`;
   const selected = (value, option) => (value === option ? 'selected' : '');
 
@@ -212,6 +230,7 @@ ${equipment ? `        <div class="form-row">
             <small style="font-size:.82rem;color:var(--color-text-muted);line-height:1.5;">Tenue Sportéquip (maillot, short, survêtement, sac) — à ajuster si votre enfant a grandi.</small>
           </div>
         </div>` : ''}
+${customFieldsHtml(customDefs, row.custom_fields)}
         <div class="form-row">
           <div class="form-field">
             <label for="parent-prenom">Prénom du parent</label>
@@ -373,5 +392,5 @@ export async function onRequestGet({ request, env, params }) {
     saison
   );
 
-  return page(alreadyDone ? alreadyRegisteredPage(row) : formPage(row, { equipment: (await getSportProfile(env, row.organization_id).catch(() => null))?.equipment ?? 'Taille de maillot' }));
+  return page(alreadyDone ? alreadyRegisteredPage(row) : formPage(row, { equipment: (await getSportProfile(env, row.organization_id).catch(() => null))?.equipment ?? 'Taille de maillot', customDefs: await getCustomFields(env, row.organization_id) }));
 }

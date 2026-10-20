@@ -77,6 +77,7 @@ function buildInscriptionPdfDoc(data, depotUrl) {
   line(`Date de naissance : ${data.naissance || '—'}  ·  Lieu : ${lieuNaissance || '—'}`);
   line(`Catégorie : ${data.categorie}`);
   if (data.tailleMaillot) line(`Taille de maillot : ${data.tailleMaillot}`);
+  for (const f of data.customFieldList || []) line(`${f.label} : ${f.value}`);
   y += 4;
 
   heading('Parent / responsable légal');

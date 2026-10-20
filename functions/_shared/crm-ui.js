@@ -1,6 +1,7 @@
 // Affichage du CRM dans l'admin (phase 3) : liste des adhérents et fiche d'une personne. Lecture seule : les
 // données de personne viennent des inscriptions (voir _shared/crm.js) ; les statuts de dossier, de photo et de
 // paiement sont LUS dans l'inscription source (memberships.legacy_inscription_id), jamais copiés.
+import { displayRows } from './custom-fields.js';
 import { dossierTag, escapeHtml, icon, statusTag, avatar, formatDateFr, formatBirth, adminHead, adminShell, adminScripts, contactActions, familyActions, flash, PHOTO_TAG, PAIEMENT_TAG, ageAndCategory } from './admin-auth.js';
 import { archiveReason, ageGroup, sortAgeGroups, dossierStatus, isPhotoToRedo, isInscriptionComplete, familyHasActionPending } from './inscriptions-db.js';
 import { EMAIL_KINDS, isClubEmailKind } from './email-log.js';
@@ -477,7 +478,7 @@ function licenceSection(m, contactId, messages) {
   </section>`;
 }
 
-function childSection(contact, m, ageCtx) {
+function childSection(contact, m, ageCtx, customDefs = []) {
   const age = ageGroup(contact.birth_date, ageCtx || m?.period_name);
   const yes = (v) => (v ? statusTag(true, { yes: 'Oui', no: 'Non' }) : statusTag(false, { yes: 'Oui', no: 'Non' }));
   const adresse = m ? [m.adresse, [m.code_postal, m.ville].filter(Boolean).join(' ')].filter(Boolean).map(escapeHtml).join('<br>') : '';
@@ -500,6 +501,7 @@ function childSection(contact, m, ageCtx) {
     <dl class="adm-kv">
       ${m ? kv('Catégorie', ageAndCategory(age, m.group_label) || '—') : ''}
       ${m?.taille_maillot ? kv('Taille de tenue', escapeHtml(m.taille_maillot)) : ''}
+      ${displayRows(customDefs, m?.custom_fields).map((f) => kv(escapeHtml(f.label), escapeHtml(f.value))).join('')}
       ${adresse ? kv('Adresse', adresse) : ''}
       ${m?.inscription_id ? kv('Participation autorisée', yes(m.autorisation)) : ''}
       ${m?.inscription_id ? kv('Droit à l’image', yes(m.droit_image)) : ''}
@@ -656,7 +658,7 @@ function followupSection(m, contactId, messages) {
   </section>`;
 }
 
-function memberPageBody(profile, current, { ageCtx, emails, messages }) {
+function memberPageBody(profile, current, { ageCtx, emails, messages, customDefs = [] }) {
   const { contact, memberships } = profile;
   const steps = current?.inscription_id ? parcoursSteps(current) : null;
   const complete = Boolean(steps && isInscriptionComplete(current));
@@ -669,7 +671,7 @@ function memberPageBody(profile, current, { ageCtx, emails, messages }) {
       ${reviewSection(profile)}
       ${steps ? (complete ? licenceSection(current, contact.id, messages) : parcoursSection(current, steps, contact.id, messages)) : ''}
       ${followupSection(current, contact.id, messages)}
-      ${childSection(contact, current, ageCtx)}
+      ${childSection(contact, current, ageCtx, customDefs)}
       ${emailsSection(emails, current)}
       ${historySection(memberships, true)}
     </div>
@@ -681,7 +683,7 @@ function memberPageBody(profile, current, { ageCtx, emails, messages }) {
   </div>`;
 }
 
-export function profilePage(profile, { asMember, ageCtx = null, badges = {}, emails = [], messages = {} }) {
+export function profilePage(profile, { asMember, ageCtx = null, badges = {}, emails = [], messages = {}, customDefs = [] }) {
   const { contact, memberships } = profile;
   const current = memberships.find((m) => m.is_current) || memberships[0] || null;
   const name = escapeHtml(fullName(contact));
@@ -720,7 +722,7 @@ ${adminShell({
 <main id="adm-main" class="adm-wrap adm-main">
   ${
     asMember
-      ? memberPageBody(profile, current, { ageCtx, emails, messages })
+      ? memberPageBody(profile, current, { ageCtx, emails, messages, customDefs })
       : `<div class="adm-fiche-grid adm-crm-grid">
     ${identitySection(contact)}
     ${currentMembershipSection(current)}

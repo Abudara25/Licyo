@@ -5,6 +5,7 @@
 // formats et tranche d'âge revérifiés ici, anti-doublon par saison — et jamais de lien de suivi dans la
 // réponse à un doublon (il est renvoyé par e-mail aux adresses déjà enregistrées).
 import { getSportProfile } from '../_shared/sport-profile.js';
+import { getCustomFields, validateValues } from '../_shared/custom-fields.js';
 import { ensureInscriptionsTable, findExistingInscription, buildDedupKey, isInscriptionComplete, SHIRT_SIZES as SIZES } from '../_shared/inscriptions-db.js';
 import { resolveOrganization, unknownOrganization } from '../_shared/organization.js';
 import { sendConfirmationEmail, sendAdminNotification, sendReminderEmail, sendFollowUpEmail } from '../_shared/confirmation-email.js';
@@ -104,7 +105,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return json({ error: 'JSON invalide' }, 400);
 
   if (await overLimit(env, request, 'inscription', SUBMIT_LIMIT)) {
-    return json({ error: 'Trop de demandes envoyées depuis cette connexion. Réessayez dans une heure, ou écrivez-nous à contact@clubdemo.licyo.fr.' }, 429);
+    return json({ error: 'Trop de demandes envoyées depuis cette connexion. Réessayez dans une heure, ou écrivez au club.' }, 429);
   }
   if (!(await verifyTurnstile(env, body.turnstileToken, request))) {
     return json({ error: 'La vérification anti-robot a échoué. Rechargez la page et réessayez.', turnstile: true }, 403);
@@ -155,7 +156,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
   // jeton doit appartenir à cette organisation et au même enfant (même date de naissance).
   const { status } = await getEffectiveInscriptionStatus(env, organizationId);
   if (status !== 'open' && !(await validReinscription(env, organizationId, body.reinscriptionToken, data))) {
-    return json({ error: 'Les inscriptions sont fermées pour le moment. Écrivez-nous à contact@clubdemo.licyo.fr pour être prévenu(e) de leur réouverture.', closed: true }, 403);
+    return json({ error: `Les inscriptions sont fermées pour le moment. Écrivez-nous${organization.email ? ` à ${organization.email}` : ''} pour être prévenu(e) de leur réouverture.`, closed: true }, 403);
   }
 
   // Saison et catégories lues côté serveur, jamais celles envoyées par le navigateur.
@@ -167,6 +168,11 @@ export async function onRequestPost({ request, env, waitUntil }) {
     (c) => c.active && c.label === data.categorie && anneeNaissance >= c.anneeMin && anneeNaissance <= c.anneeMax
   );
   if (!categorieValide) return json({ error: 'La date de naissance ne correspond pas à la catégorie sélectionnée' }, 400);
+
+  // Champs propres au club (grade, classement…) : contrôlés contre les définitions du club, jamais pris tels quels.
+  const custom = validateValues(await getCustomFields(env, organizationId), body.customFields);
+  if (custom.error) return json({ error: custom.error }, 400);
+  const customJson = Object.keys(custom.values).length ? JSON.stringify(custom.values) : null;
 
   const siteUrl = new URL(request.url).origin;
   try {
@@ -188,8 +194,8 @@ export async function onRequestPost({ request, env, waitUntil }) {
   try {
     const inserted = await env.DB.prepare(
       `INSERT INTO inscriptions
-        (organization_id, enfant_prenom, enfant_nom, naissance, categorie, taille_maillot, mode_paiement, parent_prenom, parent_nom, email, telephone, adresse, code_postal, ville, autorisation, droit_image, rgpd, upload_token, dedup_key, saison, parent2_prenom, parent2_nom, parent2_email, parent2_telephone, pass_sport_code, ville_naissance, pays_naissance, cp_naissance)
-       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        (organization_id, enfant_prenom, enfant_nom, naissance, categorie, taille_maillot, mode_paiement, parent_prenom, parent_nom, email, telephone, adresse, code_postal, ville, autorisation, droit_image, rgpd, upload_token, dedup_key, saison, parent2_prenom, parent2_nom, parent2_email, parent2_telephone, pass_sport_code, ville_naissance, pays_naissance, cp_naissance, custom_fields)
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
        WHERE NOT EXISTS (
          SELECT 1 FROM inscriptions
          WHERE organization_id = ? AND dedup_key = ? AND naissance = ? AND (saison = ? OR saison IS NULL)
@@ -224,6 +230,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
         data.villeNaissance || null,
         data.paysNaissance || null,
         data.cpNaissance || null,
+        customJson,
         organizationId,
         dedupKey,
         data.naissance,

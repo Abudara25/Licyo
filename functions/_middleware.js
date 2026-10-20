@@ -10,6 +10,20 @@
 import { internalPathsMiddleware } from './_shared/internal-paths.js';
 import { onRequest as publicSite } from './_shared/public-site.js';
 import { withSecurityHeaders } from './_shared/security-headers.js';
+import { resolveOrganization, replaceDemoContact, DEMO_CONTACT_EMAIL } from './_shared/organization.js';
+
+// Pages famille (gabarits écrits pour le club de démo) : adresse de contact de l'organisation du domaine.
+const FAMILY_PAGES = /^\/(depot|reinscription|espace-famille)(\/|$)/;
+async function withClubContact(request, env, response) {
+  const type = response.headers.get('Content-Type') || '';
+  if (!FAMILY_PAGES.test(new URL(request.url).pathname) || !type.includes('text/html') || !response.body) return response;
+  const body = await response.text();
+  if (!body.includes(DEMO_CONTACT_EMAIL)) return new Response(body, response);
+  const organization = await resolveOrganization(request, env).catch(() => null);
+  const headers = new Headers(response.headers);
+  headers.delete('Content-Length');
+  return new Response(replaceDemoContact(body, organization), { status: response.status, statusText: response.statusText, headers });
+}
 
 const hasEmptySegment = (request) => new URL(request.url).pathname.includes('//');
 
@@ -18,5 +32,9 @@ const hasEmptySegment = (request) => new URL(request.url).pathname.includes('//'
 export const onRequest = async (context) =>
   withSecurityHeaders(
     context.request,
-    await internalPathsMiddleware({ ...context, next: () => (hasEmptySegment(context.request) ? publicSite(context) : context.next()) })
+    await withClubContact(
+      context.request,
+      context.env,
+      await internalPathsMiddleware({ ...context, next: () => (hasEmptySegment(context.request) ? publicSite(context) : context.next()) })
+    )
   );

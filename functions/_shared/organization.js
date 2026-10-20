@@ -52,6 +52,20 @@ export async function loadOrganization(env, organizationId) {
 // Réponse commune quand le domaine ne correspond à aucune organisation.
 export const unknownOrganization = () => new Response('Organisation inconnue.', { status: 404, headers: { 'Content-Type': 'text/plain;charset=UTF-8' } });
 
+// Adresse de contact du club de démo écrite dans les gabarits des pages famille et de l'admin (héritage de la copie
+// mono-club) : remplacée au dernier moment par l'adresse de l'organisation, ou par « le club » si elle n'en a pas.
+// Jamais l'adresse d'un autre club.
+export const DEMO_CONTACT_EMAIL = 'contact@clubdemo.licyo.fr';
+export function replaceDemoContact(text, organization) {
+  if (!text || !text.includes(DEMO_CONTACT_EMAIL) || organization?.id === 'org_demo') return text;
+  const email = organization?.email && /^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/.test(organization.email) ? organization.email : null;
+  if (email) return text.split(DEMO_CONTACT_EMAIL).join(email);
+  return text
+    .replace(/<a href="mailto:contact@clubdemo\.licyo\.fr">contact@clubdemo\.licyo\.fr<\/a>/g, 'le club')
+    .split(DEMO_CONTACT_EMAIL)
+    .join('le club');
+}
+
 // Vide le cache des domaines (tests, et console plateforme après la création ou la suspension d'un club).
 export function clearOrganizationCache() {
   cache.clear();

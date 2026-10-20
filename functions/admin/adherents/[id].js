@@ -1,6 +1,7 @@
 // Fiche adhérent (CRM, phase 3 ; refaite le 2026-10-14) : prochaine étape, parcours de l'adhésion (dossier, photo,
 // paiement, licence FFF), responsables joignables, l'enfant, e-mails envoyés à la famille et historique. L'identifiant
 // est celui de la PERSONNE (contacts.id), qui reste le même d'une période à l'autre ; l'organisation vient de la session.
+import { getCustomFields } from '../../_shared/custom-fields.js';
 import { ensureSchema } from '../../_shared/inscriptions-db.js';
 import { isAuthed, loginPage, adminBadges } from '../../_shared/admin-auth.js';
 import { getContactProfile } from '../../_shared/crm.js';
@@ -29,6 +30,7 @@ export async function onRequestGet({ request, env, params }) {
         bulkOk: url.searchParams.get('bulkOk'), bulkError: url.searchParams.get('bulkError') },
       ageCtx: await loadAgeContext(env, admin.organizationId).catch(() => null),
       badges: await adminBadges(env, admin),
+      customDefs: await getCustomFields(env, admin.organizationId),
     })
   );
 }

@@ -14,6 +14,7 @@
 // seule approche fiable across les clients mail (Outlook en particulier ignore le CSS externe/
 // flexbox/grid). Ne jamais utiliser de <style> externe ni de classes CSS ici : tout doit être en
 // attributs/style inline directement sur chaque balise.
+import { clubIdentity, applyClubIdentity } from './email-identity.js';
 import { issueFamilyLink, FAMILY_LINK_DAYS } from './family-links.js';
 import { getNotificationEmail, getCategoriesConfig, getFamilyInfo } from './settings-kv.js';
 import { isInscriptionComplete, familyHasActionPending, dossierStatus, refusMotifs, hasBirthPlace, photoRefusMotifs } from './inscriptions-db.js';
@@ -760,7 +761,11 @@ async function brevoSend(env, body, log = null) {
       htmlContent: applySportVocabulary(body.htmlContent, profile),
       textContent: applySportVocabulary(body.textContent, profile),
     };
+    // Identité du club (nom, lieu, créneaux, couleurs, adresse) : voir email-identity.js. Club de démo inchangé.
+    body = applyClubIdentity(body, await clubIdentity(env, log.organizationId).catch(() => null), { mailFrom: env.MAIL_FROM || '' });
   }
+  // Adresse d'expédition de la plateforme (variable MAIL_FROM, domaine authentifié) : vaut pour tous les clubs.
+  if (env.MAIL_FROM && body.sender) body = { ...body, sender: { ...body.sender, email: env.MAIL_FROM } };
   // Exemples d'e-mails (email-samples.js) : tout part vers l'adresse de test, objet préfixé, jamais rattaché à une
   // fiche. Posé uniquement par le code (objet env recopié), jamais par une variable Cloudflare.
   if (env.__sampleTo) {

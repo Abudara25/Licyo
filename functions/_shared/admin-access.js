@@ -13,6 +13,7 @@
 // Routes sans session (connexion, mot de passe oublié, invitation, premier accès) : laissées aux handlers.
 import { isAuthed, escapeHtml, icon, inGroupScope } from './admin-auth.js';
 import { logAudit } from './accounts.js';
+import { loadOrganization, replaceDemoContact } from './organization.js';
 import { getSportProfile, applySportVocabulary } from './sport-profile.js';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
@@ -143,7 +144,8 @@ export async function adminAccessMiddleware({ request, env, next }) {
   if (!isHtml && !type.startsWith('text/csv')) return response;
   // Vocabulaire du sport du club (fédération, plateforme de licence…) : voir sport-profile.js.
   const profile = await getSportProfile(env, admin.organizationId).catch(() => null);
-  const text = applySportVocabulary(await response.text(), profile);
+  const organization = await loadOrganization(env, admin.organizationId).catch(() => null);
+  const text = replaceDemoContact(applySportVocabulary(await response.text(), profile), organization);
   const html = isHtml ? decorateAdminHtml(text, admin) : text;
   const headers = new Headers(response.headers);
   headers.delete('Content-Length');

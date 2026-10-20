@@ -5,6 +5,7 @@
 // catégorie et les liens/widgets HelloAsso, sans devoir toucher au code à chaque saison.
 import { getCategoriesConfig } from '../_shared/settings-kv.js';
 import { resolveOrganization, unknownOrganization } from '../_shared/organization.js';
+import { getCustomFields } from '../_shared/custom-fields.js';
 
 export async function onRequestGet({ request, env }) {
   const organization = await resolveOrganization(request, env);
@@ -21,7 +22,7 @@ export async function onRequestGet({ request, env }) {
       helloAssoWidgetUrl: c.helloAssoWidgetUrl || '',
     }));
 
-  return new Response(JSON.stringify({ saison: config.saison, prix: config.prix ?? null, categories, turnstileSiteKey: env.TURNSTILE_SITE_KEY || '' }), {
+  return new Response(JSON.stringify({ saison: config.saison, prix: config.prix ?? null, categories, customFields: await getCustomFields(env, organization.id), turnstileSiteKey: env.TURNSTILE_SITE_KEY || '' }), {
     headers: {
       'Content-Type': 'application/json',
       'Cache-Control': 'no-store',

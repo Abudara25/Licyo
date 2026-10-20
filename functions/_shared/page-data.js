@@ -430,3 +430,10 @@ export async function loadPublicContext(env, organization) {
 // Routage et rendu des pages publiques (version publiée de l'organisation, 404, secours) : public-site.js.
 // Réexporté ici pour les appelants historiques.
 export { onRequest } from './public-site.js';
+
+// Phrase des créneaux (« jeudi de 17h à 18h au Stade X ») et lieu principal, pour les e-mails (email-identity.js).
+export function scheduleSummary(data) {
+  if (!data) return { sentence: '', location: null };
+  const slots = describeSlots(data);
+  return { sentence: slots.length ? slotsSentence(slots) : '', location: primaryLocation(data, slots) };
+}

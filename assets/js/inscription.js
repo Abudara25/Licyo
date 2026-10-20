@@ -149,10 +149,52 @@ document.addEventListener('DOMContentLoaded', () => {
   const naissanceInput = form.naissance;
   const categorieSelect = form.categorie;
 
+  // Champs propres au club (grade, classement…), définis dans l'admin et fournis par /api/categories. Ajoutés à la
+  // première étape, créés via le DOM (aucune donnée interprétée comme du HTML). La réinscription les écrit déjà côté
+  // serveur : rien n'est ajouté s'ils existent.
+  function addCustomFields(fields) {
+    if (!fields.length || form.querySelector('[data-custom-field]')) return;
+    const step = form.querySelector('.form-step') || form;
+    const anchor = step.querySelector('.form-step-nav') || submitAnchor;
+    for (const f of fields) {
+      const wrap = document.createElement('div');
+      wrap.className = 'form-field';
+      const id = `cf-${f.key}`;
+      const label = document.createElement('label');
+      label.htmlFor = id;
+      label.textContent = f.required ? f.label : `${f.label} (facultatif)`;
+      let input;
+      if (f.type === 'select') {
+        input = document.createElement('select');
+        input.append(new Option('Choisir', ''));
+        input.options[0].disabled = true;
+        input.options[0].selected = true;
+        for (const o of f.options) input.append(new Option(o, o));
+      } else {
+        input = document.createElement('input');
+        input.type = 'text';
+        input.maxLength = 100;
+        if (f.type === 'number') input.inputMode = 'decimal';
+      }
+      input.id = id;
+      input.name = `cf_${f.key}`;
+      input.dataset.customField = f.key;
+      input.dataset.customLabel = f.label;
+      input.required = Boolean(f.required);
+      wrap.append(label, input);
+      anchor.parentNode.insertBefore(wrap, anchor);
+    }
+  }
+  const customFieldValues = () =>
+    Object.fromEntries([...form.querySelectorAll('[data-custom-field]')].map((el) => [el.dataset.customField, el.value.trim()]).filter(([, v]) => v));
+  const customFieldList = () =>
+    [...form.querySelectorAll('[data-custom-field]')].map((el) => ({ label: el.dataset.customLabel, value: el.value.trim() })).filter((f) => f.value);
+
   fetch('/api/categories')
     .then((res) => (res.ok ? res.json() : null))
     .then((data) => {
       if (data?.turnstileSiteKey) setupTurnstile(data.turnstileSiteKey, submitAnchor);
+      if (Array.isArray(data?.customFields)) addCustomFields(data.customFields);
       if (!data || !Array.isArray(data.categories) || !data.categories.length) return;
 
       if (data.saison) {
@@ -379,6 +421,8 @@ document.addEventListener('DOMContentLoaded', () => {
       saison,
       prix,
       tailleMaillot: form.tailleMaillot ? form.tailleMaillot.value : '',
+      customFields: customFieldValues(),
+      customFieldList: customFieldList(),
       modePaiement: form.modePaiement.value,
       parentPrenom: form.parentPrenom.value.trim(),
       parentNom: form.parentNom.value.trim(),
