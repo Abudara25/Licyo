@@ -17,6 +17,7 @@ const LABELS = {
   'compte.nom': 'Nom modifié',
   'compte.reinitialisation-demandee': 'Nouveau mot de passe demandé',
   'compte.mot-de-passe-reinitialise': 'Mot de passe réinitialisé',
+  'utilisateur.groupes': 'Groupes d’un entraîneur modifiés',
   'plateforme.club-cree': 'Club créé par la plateforme',
   'plateforme.statut:active': 'Club réactivé par la plateforme',
   'plateforme.statut:suspended': 'Club suspendu par la plateforme',

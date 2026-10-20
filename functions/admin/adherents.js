@@ -44,6 +44,7 @@ export async function onRequestGet({ request, env }) {
     page: params.get('page'),
     // Adhérents = inscriptions complètes uniquement ; les autres restent dans Inscriptions / Réinscription.
     completeOnly: true,
+    groupScope: admin.groupScope,
   };
   const [list, options, stats, needs] = await Promise.all([
     listMembers(env.DB, org, filters),

@@ -14,7 +14,8 @@ import {
   formatDateFr,
 } from '../_shared/admin-auth.js';
 import { ensureSchema } from '../_shared/inscriptions-db.js';
-import { listMembers, inviteMember, changeRole, revokeMember, AccountError, ROLES, ROLE_KEYS, roleLabel, logAudit } from '../_shared/accounts.js';
+import { listMembers, inviteMember, changeRole, revokeMember, AccountError, ROLES, ROLE_KEYS, roleLabel, logAudit, setGroupScope, parseGroupScope, normalizeGroupLabel, permissionsFor } from '../_shared/accounts.js';
+import { getCategoriesConfig } from '../_shared/settings-kv.js';
 import { sendAdminInvitation, mailConfigured } from '../_shared/confirmation-email.js';
 import { loadOrganization } from '../_shared/organization.js';
 
@@ -27,7 +28,25 @@ function roleOptions(actorRole, selected) {
     .join('');
 }
 
-function memberRow(m, admin) {
+// Groupes d'un compte qui ne voit pas tous les groupes (entraîneur) : cases à cocher parmi les catégories du club.
+function groupScopeForm(m, groups) {
+  const scope = parseGroupScope(m.group_scope);
+  const keys = new Set(scope.map(normalizeGroupLabel));
+  const all = [...groups, ...scope.filter((g) => !groups.some((x) => normalizeGroupLabel(x) === normalizeGroupLabel(g)))];
+  const boxes = all.length
+    ? all.map((g, i) => `<label class="form-check adm-scope-check"><input type="checkbox" name="groups" value="${escapeHtml(g)}"${keys.has(normalizeGroupLabel(g)) ? ' checked' : ''}> <span>${escapeHtml(g)}</span></label>`).join('')
+    : '<p class="adm-help">Aucune catégorie : créez-en dans Catégories.</p>';
+  return `<details class="adm-fold adm-scope"${scope.length ? '' : ' open'}>
+      <summary><span>Groupes suivis : ${scope.length ? escapeHtml(scope.join(', ')) : '<strong>aucun, ne voit aucun inscrit</strong>'}</span></summary>
+      <form method="POST">
+        <input type="hidden" name="action" value="groups"><input type="hidden" name="userId" value="${escapeHtml(m.id)}">
+        <fieldset class="adm-scope-list"><legend class="visually-hidden">Groupes de ${escapeHtml(m.name || m.email)}</legend>${boxes}</fieldset>
+        <button type="submit" class="adm-btn adm-btn-sm adm-btn-ghost">Enregistrer les groupes</button>
+      </form>
+    </details>`;
+}
+
+function memberRow(m, admin, groups = []) {
   const self = m.id === admin.userId;
   const canTouch = !self && (m.role !== 'owner' || admin.role === 'owner');
   const status = m.status === 'invited' ? '<span class="adm-tag is-no">Invitation envoyée</span>' : '';
@@ -52,6 +71,7 @@ function memberRow(m, admin) {
       <h3>${escapeHtml(m.name || m.email)} ${status}</h3>
       <p>${m.name ? `${escapeHtml(m.email)} · ` : ''}<strong>${escapeHtml(roleLabel(m.role))}</strong></p>
       <p>${last}</p>
+      ${!permissionsFor(m.role).includes('inscriptions.all') && admin.permissions.includes('users.manage') ? groupScopeForm(m, groups) : ''}
     </div>
     <div class="adm-user-actions">${actions}</div>
   </li>`;
@@ -59,6 +79,7 @@ function memberRow(m, admin) {
 
 async function render(env, admin, { message = '', error = '', email = '', role = 'secretary', status = 200 } = {}) {
   const members = await listMembers(env.DB, admin.organizationId);
+  const groups = (await getCategoriesConfig(env, admin.organizationId).catch(() => ({ categories: [] }))).categories.map((c) => c.label).filter(Boolean);
   const badges = await adminBadges(env, admin);
   const roles = ROLE_KEYS.map(
     (r) => `<li><strong>${escapeHtml(ROLES[r].label)}</strong> : ${escapeHtml(ROLES[r].description)}</li>`
@@ -97,7 +118,7 @@ ${adminShell({
 
   <section class="adm-surface">
     <h2 class="adm-h2">${icon('users')}Accès au club</h2>
-    <ul class="adm-users" role="list">${members.map((m) => memberRow(m, admin)).join('')}</ul>
+    <ul class="adm-users" role="list">${members.map((m) => memberRow(m, admin, groups)).join('')}</ul>
     <p class="adm-help" style="margin-top:14px;"><a class="adm-link" href="/admin/journal">Journal des actions</a></p>
   </section>
 
@@ -154,6 +175,14 @@ export async function onRequestPost({ request, env }) {
       return render(env, admin, sent
         ? { message: `Invitation envoyée à ${invited.user.email}.` }
         : { error: `L’invitation est enregistrée mais l’e-mail n’a pas pu partir (service d’envoi). Réessayez avec « Renvoyer ».` });
+    }
+    if (action === 'groups') {
+      const target = (await listMembers(env.DB, admin.organizationId)).find((m) => m.id === userId);
+      if (!target) throw new AccountError('missing', 'Compte introuvable dans ce club.');
+      if (target.role === 'owner' && admin.role !== 'owner') throw new AccountError('forbidden', 'Seul un responsable du club peut modifier un responsable.');
+      const saved = await setGroupScope(env.DB, admin.organizationId, userId, form.getAll('groups').map(String));
+      await logAudit(env.DB, admin.organizationId, { userId: admin.userId, action: 'utilisateur.groupes', target: userId });
+      return render(env, admin, { message: saved.length ? `Groupes enregistrés : ${saved.join(', ')}.` : 'Aucun groupe : ce compte ne voit plus aucun inscrit.' });
     }
     if (action === 'role') {
       const role = String(form.get('role') || '');

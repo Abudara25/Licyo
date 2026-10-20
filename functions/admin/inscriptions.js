@@ -36,6 +36,7 @@ import { photoTag,
   flash,
   formatDateFr,
   ageAndCategory,
+  scopeRows,
 } from '../_shared/admin-auth.js';
 
 const DOSSIER_LABELS = { valide: 'Validé', a_verifier: 'À vérifier', refuse: 'Refusé', manquant: 'Non reçu' };
@@ -446,7 +447,9 @@ export async function onRequestGet({ request, env }) {
   }
 
   await ensureInscriptionsTable(env.DB);
-  const { results } = await env.DB.prepare('SELECT * FROM inscriptions WHERE organization_id = ? ORDER BY created_at DESC').bind(admin.organizationId).all();
+  const { results: allRows } = await env.DB.prepare('SELECT * FROM inscriptions WHERE organization_id = ? ORDER BY created_at DESC').bind(admin.organizationId).all();
+  // Entraîneur : seulement ses groupes (admin.groupScope), y compris dans le CSV et les compteurs.
+  const results = scopeRows(admin, allRows);
 
   const { searchParams } = new URL(request.url);
   const filters = parseFilters(searchParams);

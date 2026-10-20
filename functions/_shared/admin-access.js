@@ -11,7 +11,7 @@
 //    aucun contenu de formulaire.
 //
 // Routes sans session (connexion, mot de passe oublié, invitation, premier accès) : laissées aux handlers.
-import { isAuthed, escapeHtml, icon } from './admin-auth.js';
+import { isAuthed, escapeHtml, icon, inGroupScope } from './admin-auth.js';
 import { logAudit } from './accounts.js';
 import { getSportProfile, applySportVocabulary } from './sport-profile.js';
 
@@ -33,6 +33,9 @@ export function requiredPermission(method, pathname, action = null) {
   if (path === '/admin/journal') return 'users.manage';
   if (path.startsWith('/admin/parametres') || path.startsWith('/admin/categories') || path === '/admin/inscription-status') return 'settings.manage';
   if (path.startsWith('/admin/email')) return 'emails.send';
+  // Pages qui montrent tous les groupes sans pouvoir les filtrer (journal des e-mails, réinscription, fiches contact) :
+  // réservées aux comptes qui voient tous les groupes.
+  if (!write && /^\/admin\/(contacts|reinscription|events)(\/|$)/.test(path)) return 'inscriptions.all';
   if (/^\/admin\/(inscriptions|adherents|contacts|preinscriptions|reinscription|events)(\/|$)/.test(path)) {
     if (!write) return 'inscriptions.read';
     return ACTION_PERMISSIONS[action] || 'inscriptions.write';
@@ -50,6 +53,35 @@ async function formAction(request) {
   } catch {
     return null;
   }
+}
+
+// Compte limité à ses groupes (entraîneur) : une fiche d'inscription ou d'adhérent d'un autre groupe est introuvable,
+// comme celle d'un autre club. Le contrôle est fait ici, une fois, pour toutes les sous-pages (aperçu, dossier, photo).
+async function recordInScope(env, admin, pathname) {
+  const inscription = /^\/admin\/inscriptions\/(\d+)(\/|$)/.exec(pathname);
+  if (inscription) {
+    const row = await env.DB.prepare('SELECT categorie FROM inscriptions WHERE organization_id = ? AND id = ?')
+      .bind(admin.organizationId, Number(inscription[1]))
+      .first();
+    return Boolean(row) && inGroupScope(admin, row.categorie);
+  }
+  const member = /^\/admin\/adherents\/([^/]+)/.exec(pathname);
+  if (member) {
+    const { results } = await env.DB.prepare(
+      `SELECT i.categorie, gm.group_label FROM memberships m
+       LEFT JOIN inscriptions i ON i.organization_id = m.organization_id AND i.id = m.legacy_inscription_id
+       LEFT JOIN group_memberships gm ON gm.organization_id = m.organization_id AND gm.membership_id = m.id
+       WHERE m.organization_id = ? AND m.contact_id = ?`
+    )
+      .bind(admin.organizationId, decodeURIComponent(member[1]))
+      .all();
+    return results.some((r) => inGroupScope(admin, r.categorie) || inGroupScope(admin, r.group_label));
+  }
+  return true;
+}
+
+function notInScopePage() {
+  return new Response('Fiche introuvable.', { status: 404, headers: { 'Content-Type': 'text/plain;charset=UTF-8', 'Cache-Control': 'no-store' } });
 }
 
 export function forbiddenAdminPage(admin) {
@@ -99,6 +131,7 @@ export async function adminAccessMiddleware({ request, env, next }) {
   const action = write ? await formAction(request) : null;
   const permission = requiredPermission(request.method, url.pathname, action);
   if (permission && !admin.permissions.includes(permission)) return forbiddenAdminPage(admin);
+  if (admin.groupScope && !(await recordInScope(env, admin, url.pathname))) return notInScopePage();
 
   const response = await next();
   if (write && response.status < 400) {

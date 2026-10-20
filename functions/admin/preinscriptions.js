@@ -3,7 +3,7 @@
 // Tout est filtré par l'organisation de la session ; le jeton CSRF est injecté dans les formulaires par le middleware.
 import { SHIRT_SIZES, ensureInscriptionsTable, ageGroup } from '../_shared/inscriptions-db.js';
 import { openPreinscriptionGroupIfFull } from '../_shared/preinscription-opening.js';
-import { isAuthed, loginPage, escapeHtml, adminHead, adminShell, adminScripts, adminBadges, icon, flash, formatDateFr, formatBirth, avatar } from '../_shared/admin-auth.js';
+import { isAuthed, loginPage, escapeHtml, adminHead, adminShell, adminScripts, adminBadges, icon, flash, formatDateFr, formatBirth, avatar, inGroupScope } from '../_shared/admin-auth.js';
 import {
   ensurePreinscriptionsTable,
   getPreinscriptionConfig,
@@ -211,7 +211,8 @@ ${adminScripts('admin-nav')}
 </body></html>`);
   }
   await ensurePreinscriptionsTable(env.DB);
-  const rows = await listPreinscriptions(env.DB, admin.organizationId, config.groupe);
+  // Entraîneur : la liste n'est visible que si le groupe de pré-inscription fait partie de ses groupes.
+  const rows = inGroupScope(admin, config.groupe) ? await listPreinscriptions(env.DB, admin.organizationId, config.groupe) : [];
   await ensureInscriptionsTable(env.DB);
   const links = await inscriptionLinks(env.DB, admin.organizationId);
   const ageCtx = await loadAgeContext(env, admin.organizationId);

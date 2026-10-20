@@ -2,7 +2,7 @@
 // synthétique (effectifs par catégorie, part des documents et paiements validés, fiches à compléter)
 // plutôt que d'obliger à parcourir /admin/inscriptions carte par carte. Lecture seule, aucune action.
 import { ensureInscriptionsTable, isInscriptionComplete, dossierStatus, isTransferredToPreinscription, ageGroup, sortAgeGroups } from '../_shared/inscriptions-db.js';
-import { isAuthed, loginPage, escapeHtml, adminHead, adminShell, adminScripts, adminBadges, icon } from '../_shared/admin-auth.js';
+import { isAuthed, loginPage, escapeHtml, adminHead, adminShell, adminScripts, adminBadges, icon, scopeRows } from '../_shared/admin-auth.js';
 import { getCategoriesConfig, getCronState } from '../_shared/settings-kv.js';
 import { loadAgeContext } from '../_shared/preinscriptions.js';
 
@@ -105,7 +105,8 @@ export async function onRequestGet({ request, env }) {
   }
 
   await ensureInscriptionsTable(env.DB);
-  const { results } = await env.DB.prepare('SELECT * FROM inscriptions WHERE organization_id = ?').bind(admin.organizationId).all();
+  const { results: allRows } = await env.DB.prepare('SELECT * FROM inscriptions WHERE organization_id = ?').bind(admin.organizationId).all();
+  const results = scopeRows(admin, allRows);
   const active = results.filter((r) => !r.archived_at);
   const categoriesConfig = await getCategoriesConfig(env, admin.organizationId);
   const { saison } = categoriesConfig;

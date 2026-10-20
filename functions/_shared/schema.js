@@ -18,7 +18,7 @@
 import { crmStatements, repairCrmInvariants } from './crm-schema.js';
 import { NEWS_MIGRATION_VERSION, checkNewsSchema, newsMigrationStatements } from './news-schema.js';
 import { normalizeSql, SchemaIntegrityError } from './schema-utils.js';
-import { ACCOUNTS_MIGRATION_VERSION, accountsMigrationStatements, repairAccountsInvariants } from './accounts.js';
+import { ACCOUNTS_MIGRATION_VERSION, accountsMigrationStatements, repairAccountsInvariants, GROUP_SCOPE_MIGRATION_VERSION, groupScopeMigrationStatements, repairGroupScopeInvariants } from './accounts.js';
 
 // Première organisation réelle de la plateforme. Identifiant opaque et stable (le slug, lui, peut changer).
 export const DEMO_ORG_ID = 'org_demo';
@@ -338,6 +338,12 @@ export const MIGRATIONS = [
     name: 'accounts',
     statements: (db) => accountsMigrationStatements(db),
   },
+  {
+    // Groupes attribués à un compte (entraîneur limité à ses groupes, 2026-10-20). Additive. Voir accounts.js.
+    version: GROUP_SCOPE_MIGRATION_VERSION,
+    name: 'group-scope',
+    statements: (db) => groupScopeMigrationStatements(db),
+  },
 ];
 
 // Configuration du site : brouillon et version publiée d'une organisation (voir _shared/site-config.js).
@@ -569,6 +575,7 @@ export async function repairSchemaInvariants(db) {
 
   // 2 sexies. Comptes et rôles (migration 14) : tables, index et colonne admin_sessions.user_id recréés s'ils manquent.
   if (await migrationRecorded(db, ACCOUNTS_MIGRATION_VERSION)) statements.push(...(await repairAccountsInvariants(db, { tableExists, columnNames })));
+  if (await migrationRecorded(db, GROUP_SCOPE_MIGRATION_VERSION)) statements.push(...(await repairGroupScopeInvariants(db, { tableExists, columnNames })));
 
   // 3. Index indispensables aux requêtes filtrées par organisation.
   for (const [table, name, cols] of TENANT_INDEXES) {

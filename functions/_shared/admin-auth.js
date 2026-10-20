@@ -12,7 +12,7 @@ import {
 } from './security.js';
 import { dossierStatus, ARCHIVE_MOTIFS, ARCHIVE_MOTIFS_MANUELS, ensureSchema } from './inscriptions-db.js';
 import { resolveOrganization } from './organization.js';
-import { authenticate, normalizeEmail, permissionsFor, roleLabel, logAudit } from './accounts.js';
+import { authenticate, normalizeEmail, permissionsFor, roleLabel, logAudit, parseGroupScope, normalizeGroupLabel } from './accounts.js';
 import { isPlatformAdmin } from './platform.js';
 
 export const COOKIE_NAME = 'admin_session';
@@ -56,18 +56,29 @@ export async function isAuthed(request, env, { touch = true } = {}) {
   // Administrateur de la plateforme (PLATFORM_ADMIN_EMAILS, voir platform.js) : droit en plus sur la console, jamais
   // sur les données d'un autre club.
   const platformAdmin = isPlatformAdmin(env, session.email);
+  const permissions = [...permissionsFor(session.role), ...(platformAdmin ? ['platform.manage'] : [])];
   return {
     organizationId: session.organizationId,
     userId: session.userId,
     role: session.role,
     roleLabel: roleLabel(session.role),
-    permissions: [...permissionsFor(session.role), ...(platformAdmin ? ['platform.manage'] : [])],
+    permissions,
+    // Groupes visibles : null = tous ; sinon liste de libellés de catégorie (voir accounts.js, group_scope).
+    groupScope: permissions.includes('inscriptions.all') ? null : parseGroupScope(session.groupScope),
     platformAdmin,
     user: { name: session.name, email: session.email },
   };
 }
 
 export const can = (admin, permission) => Boolean(admin?.permissions?.includes(permission));
+
+// Un libellé de catégorie (inscriptions.categorie, groupe de pré-inscription) est-il visible par ce compte ?
+export function inGroupScope(admin, label) {
+  if (!admin?.groupScope) return true;
+  const key = normalizeGroupLabel(label);
+  return Boolean(key) && admin.groupScope.some((g) => normalizeGroupLabel(g) === key);
+}
+export const scopeRows = (admin, rows, field = 'categorie') => (admin?.groupScope ? rows.filter((r) => inGroupScope(admin, r[field])) : rows);
 
 // Session de la requête : { organizationId, userId, role, name, email, expiresAt } ou null. touch : prolonge
 // l'expiration (activité) ; false pour une simple lecture (GET /admin/session, qui ne doit pas maintenir la session
@@ -82,7 +93,7 @@ export async function readSession(request, env, { touch = true } = {}) {
     // organisation). Même requête : l'organisation doit exister et être active, le compte actif, et son appartenance
     // au club active. Une session sans compte (ouverte avant les comptes nominatifs) n'ouvre plus rien.
     const row = await env.DB.prepare(
-      `SELECT s.created_at, s.expires_at, s.organization_id, s.user_id, m.role, u.name, u.email
+      `SELECT s.created_at, s.expires_at, s.organization_id, s.user_id, m.role, m.group_scope, u.name, u.email
        FROM admin_sessions s /* toutes-organisations */
        JOIN organizations o ON o.id = s.organization_id AND o.status = 'active'
        JOIN organization_memberships m ON m.organization_id = s.organization_id AND m.user_id = s.user_id AND m.status = 'active'
@@ -105,7 +116,7 @@ export async function readSession(request, env, { touch = true } = {}) {
       expiresAt = target;
     }
     if (expiresAt <= now) return null;
-    return { organizationId: row.organization_id, userId: row.user_id, role: row.role, name: row.name || '', email: row.email, expiresAt };
+    return { organizationId: row.organization_id, userId: row.user_id, role: row.role, groupScope: row.group_scope, name: row.name || '', email: row.email, expiresAt };
   } catch {
     return null;
   }
@@ -192,7 +203,7 @@ export const escapeHtml = (str = '') =>
 // Version (?v=) de tous les assets chargés par l'admin — Cloudflare Pages les met en cache 4h sans
 // possibilité de le changer (voir CLAUDE.md). Valeur écrite par `npm run sync` (empreinte des assets) :
 // ne pas la modifier à la main.
-const ASSETS_VERSION = '3e0855a64a';
+const ASSETS_VERSION = 'd163681734';
 const asset = (path) => `${path}?v=${ASSETS_VERSION}`;
 
 // Icônes au trait (viewBox 24, stroke 1.8), même convention que les SVG du site public.

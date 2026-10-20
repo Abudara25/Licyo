@@ -35,6 +35,8 @@ export const PERMISSIONS = Object.freeze({
   'emails.send': 'Écrire aux familles depuis l’admin',
   'settings.manage': 'Paramètres, catégories, ouverture des inscriptions',
   'users.manage': 'Inviter et gérer les utilisateurs du club',
+  'inscriptions.all': 'Voir tous les groupes (sans elle : seulement les groupes attribués au compte)',
+  'attendance.write': 'Faire l’appel des présents aux séances',
 });
 
 const ALL = Object.keys(PERMISSIONS);
@@ -43,9 +45,9 @@ const ALL = Object.keys(PERMISSIONS);
 export const ROLES = Object.freeze({
   owner: { label: 'Responsable du club', description: 'Tous les droits, y compris nommer d’autres responsables.', permissions: ALL },
   admin: { label: 'Administrateur', description: 'Tous les droits, sauf toucher aux responsables du club.', permissions: ALL },
-  secretary: { label: 'Secrétaire', description: 'Dossiers, relances et e-mails aux familles.', permissions: ['inscriptions.read', 'inscriptions.write', 'emails.send'] },
-  treasurer: { label: 'Trésorier', description: 'Consultation et enregistrement des paiements.', permissions: ['inscriptions.read', 'finance.write'] },
-  coach: { label: 'Entraîneur', description: 'Consultation des inscrits, sans modification.', permissions: ['inscriptions.read'] },
+  secretary: { label: 'Secrétaire', description: 'Dossiers, relances et e-mails aux familles.', permissions: ['inscriptions.read', 'inscriptions.all', 'inscriptions.write', 'emails.send', 'attendance.write'] },
+  treasurer: { label: 'Trésorier', description: 'Consultation et enregistrement des paiements.', permissions: ['inscriptions.read', 'inscriptions.all', 'finance.write'] },
+  coach: { label: 'Entraîneur', description: 'Ses groupes seulement : consultation des inscrits et appel des présents.', permissions: ['inscriptions.read', 'attendance.write'] },
   volunteer: { label: 'Bénévole', description: 'Tableau de bord seulement.', permissions: [] },
 });
 
@@ -151,6 +153,56 @@ export async function repairAccountsInvariants(db, { tableExists, columnNames })
 }
 
 // ---------------------------------------------------------------------------------------------
+// Groupes attribués à un compte (migration 15, 2026-10-20) : un compte SANS la permission inscriptions.all (l'entraîneur)
+// ne voit que les inscrits des groupes listés dans organization_memberships.group_scope (tableau JSON de libellés de
+// catégorie, comparés sans casse ni espaces ni tirets). Aucun groupe attribué = aucun inscrit visible.
+
+export const GROUP_SCOPE_MIGRATION_VERSION = 15;
+const GROUP_SCOPE_COLUMN_SQL = 'ALTER TABLE organization_memberships ADD COLUMN group_scope TEXT';
+
+export function groupScopeMigrationStatements(db) {
+  return [db.prepare(GROUP_SCOPE_COLUMN_SQL)];
+}
+
+export async function repairGroupScopeInvariants(db, { tableExists, columnNames }) {
+  if ((await tableExists(db, 'organization_memberships')) && !(await columnNames(db, 'organization_memberships')).has('group_scope')) {
+    return [db.prepare(GROUP_SCOPE_COLUMN_SQL)];
+  }
+  return [];
+}
+
+export const normalizeGroupLabel = (value) => String(value ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[\s\u2010-\u2015_-]+/g, '');
+
+export function parseGroupScope(raw) {
+  try {
+    const list = JSON.parse(raw || '[]');
+    return Array.isArray(list) ? list.filter((v) => typeof v === 'string' && v.trim()).slice(0, 30) : [];
+  } catch {
+    return [];
+  }
+}
+
+// Enregistre les groupes d'un compte du club (libellés nettoyés, 30 au plus, doublons retirés).
+export async function setGroupScope(db, organizationId, userId, labels) {
+  const seen = new Set();
+  const clean = [];
+  for (const raw of Array.isArray(labels) ? labels : []) {
+    const label = String(raw ?? '').replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 60);
+    const key = normalizeGroupLabel(label);
+    if (!label || seen.has(key)) continue;
+    seen.add(key);
+    clean.push(label);
+    if (clean.length >= 30) break;
+  }
+  const result = await db
+    .prepare("UPDATE organization_memberships SET group_scope = ?, updated_at = datetime('now') WHERE organization_id = ? AND user_id = ?")
+    .bind(JSON.stringify(clean), organizationId, userId)
+    .run();
+  if (!result.meta?.changes) throw new AccountError('missing', 'Compte introuvable dans ce club.');
+  return clean;
+}
+
+// ---------------------------------------------------------------------------------------------
 // Utilitaires
 
 const EMAIL_RE = /^[^\s@<>"',;:()[\]\\]+@[^\s@<>"',;:()[\]\\]+\.[^\s@<>"',;:()[\]\\]+$/;
@@ -239,7 +291,7 @@ export async function listMembers(db, organizationId) {
   const { results } = await db
     .prepare(
       `SELECT u.id, u.email, u.name, u.last_login_at, u.status AS user_status, u.password_hash IS NOT NULL AS has_password,
-              m.role, m.status, m.created_at, m.updated_at
+              m.role, m.status, m.created_at, m.updated_at, m.group_scope
        FROM organization_memberships m JOIN users u ON u.id = m.user_id
        WHERE m.organization_id = ? AND m.status != 'revoked'
        ORDER BY CASE m.status WHEN 'active' THEN 0 ELSE 1 END, CASE m.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END, u.name, u.email`

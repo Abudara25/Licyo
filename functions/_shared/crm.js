@@ -33,6 +33,7 @@
 // Une relation enfant ↔ responsable est permanente ; elle est soutenue par une ou plusieurs inscriptions
 // (contact_relationship_sources : une ligne par inscription et par emplacement). Supprimer une inscription retire
 // sa provenance ; la relation reste tant qu'une autre inscription la soutient.
+import { normalizeGroupLabel } from './accounts.js';
 import { ensureSchema, normalize } from './inscriptions-db.js';
 import { FOLLOWUP_FILTERS } from './club-followup.js';
 
@@ -932,6 +933,17 @@ export async function listMembers(db, organizationId, filters = {}) {
     params.push(filters.status);
   }
   if (filters.completeOnly) where.push(COMPLETE_INSCRIPTION_SQL);
+  // Compte limité à ses groupes (entraîneur) : libellés normalisés comme normalizeGroupLabel (accounts.js), sans accents.
+  if (Array.isArray(filters.groupScope)) {
+    const keys = filters.groupScope.map((g) => normalizeGroupLabel(g)).filter(Boolean);
+    if (!keys.length) where.push('0');
+    else {
+      const norm = (col) => `lower(replace(replace(replace(COALESCE(${col}, ''), ' ', ''), '-', ''), '_', ''))`;
+      const list = keys.map(() => '?').join(', ');
+      where.push(`(${norm('i.categorie')} IN (${list}) OR ${norm('gm.group_label')} IN (${list}))`);
+      params.push(...keys, ...keys);
+    }
+  }
   // Suivi licence et tenue (club-followup.js) : liste fermée, jamais de SQL venant du navigateur.
   if (filters.suivi && Object.hasOwn(FOLLOWUP_FILTERS, filters.suivi)) where.push(`(${FOLLOWUP_FILTERS[filters.suivi].sql})`);
   const base = `FROM memberships m
