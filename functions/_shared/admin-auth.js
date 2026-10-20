@@ -203,7 +203,7 @@ export const escapeHtml = (str = '') =>
 // Version (?v=) de tous les assets chargés par l'admin — Cloudflare Pages les met en cache 4h sans
 // possibilité de le changer (voir CLAUDE.md). Valeur écrite par `npm run sync` (empreinte des assets) :
 // ne pas la modifier à la main.
-const ASSETS_VERSION = 'f4d077bdf8';
+const ASSETS_VERSION = '6bb5d72dab';
 const asset = (path) => `${path}?v=${ASSETS_VERSION}`;
 
 // Icônes au trait (viewBox 24, stroke 1.8), même convention que les SVG du site public.
@@ -285,6 +285,7 @@ const ADMIN_NAV_LINKS = [
   { key: 'events', href: '/admin/events', label: 'Événements', icon: 'activity' },
   // top: false = absent de la barre du haut (déjà pleine sur ordinateur), présent dans le menu « Plus » du mobile.
   { key: 'email', href: '/admin/email', label: 'Écrire un e-mail', icon: 'send', top: false },
+  { key: 'presences', href: '/admin/presences', label: 'Présences', icon: 'calendar', top: false },
   { key: 'site', href: '/admin/site', label: 'Site web', icon: 'eye', top: false },
   { key: 'utilisateurs', href: '/admin/utilisateurs', label: 'Utilisateurs', icon: 'users', top: false },
   { key: 'plateforme', href: '/admin/plateforme', label: 'Console plateforme', icon: 'dashboard', top: false },

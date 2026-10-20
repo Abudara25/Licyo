@@ -87,9 +87,10 @@ ${adminShell({
         ${shortcut('/admin/adherents', 'users', 'Adhérents', `${completCount} dossier${completCount > 1 ? 's' : ''} complet${completCount > 1 ? 's' : ''}`)}
         ${shortcut('/admin/reinscription', 'refresh', 'Réinscription', 'Campagne de réinscription prioritaire')}
         ${shortcut('/admin/inscriptions?view=archive', 'trash', 'Corbeille', `${archivedCount} profil${archivedCount > 1 ? 's' : ''} archivé${archivedCount > 1 ? 's' : ''}`)}
+        ${shortcut('/admin/presences', 'calendar', 'Faire l’appel', 'Présences aux séances du jour')}
         ${shortcut('/admin/email', 'send', 'Écrire un e-mail', 'Aux familles, depuis contact@')}
         ${shortcut('/admin/events', 'activity', 'Événements', 'Clics téléphone et formulaire de contact')}
-        ${shortcut('/admin/parametres', 'settings', 'Paramètres', 'Notifications et mot de passe')}
+        ${shortcut('/admin/parametres', 'settings', 'Paramètres', 'Notifications, sport, champs du formulaire')}
       </div>
     </section>
   </div>

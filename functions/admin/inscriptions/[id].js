@@ -2,6 +2,7 @@
 // dépôt manuel du dossier, archivage) et, avec ?edit=1, le formulaire de modification. Liée depuis
 // les cartes de /admin/inscriptions et depuis /admin/reinscription. Les actions sont traitées par
 // functions/admin/inscriptions.js (ou [id]/dossier.js pour le dépôt) et reviennent ici via redirectTo.
+import { attendanceSummary } from '../../_shared/attendance.js';
 import { getCustomFields, displayRows, parseValues, MAX_VALUE_LENGTH } from '../../_shared/custom-fields.js';
 import { syncInscriptionSafe } from '../../_shared/crm.js';
 import { ensureInscriptionsTable, familyHasActionPending, hasBirthPlace, dossierStatus, refusMotifs, archiveReason, PHOTO_REFUS_MOTIFS, photoRefusMotifs, isPhotoToRedo, ageGroup, ageRangesFrom } from '../../_shared/inscriptions-db.js';
@@ -258,6 +259,7 @@ function fichePage(row, { saison, ageCtx, prix, siteUrl, messages, preinscriptio
       ${kv('Naissance', formatBirth(row.naissance))}
       ${kv('Lieu de naissance', escapeHtml([[row.cp_naissance, row.ville_naissance].filter(Boolean).join(' '), row.pays_naissance].filter(Boolean).join(', ') || '—'))}
       ${kv('Catégorie', escapeHtml(row.categorie))}
+      ${row.__attendance?.total ? kv('Présences', `${row.__attendance.present} sur ${row.__attendance.total} séance${row.__attendance.total > 1 ? 's' : ''}${row.__attendance.excused ? ` (${row.__attendance.excused} excusée${row.__attendance.excused > 1 ? 's' : ''})` : ''}`) : ''}
       ${kv('Taille de maillot', escapeHtml(row.taille_maillot || '—'))}
       ${displayRows(row.__customDefs || [], row.custom_fields).map((f) => kv(escapeHtml(f.label), escapeHtml(f.value))).join('')}
       ${kv('Saison', escapeHtml(row.saison || '—'))}
@@ -648,6 +650,7 @@ export async function onRequestGet({ request, env, params }) {
     return new Response('Inscription introuvable.', { status: 404 });
   }
   row.__customDefs = await getCustomFields(env, admin.organizationId);
+  row.__attendance = await attendanceSummary(env.DB, admin.organizationId, row.id);
 
   const url = new URL(request.url);
   const { categories, saison, prix } = await getCategoriesConfig(env, admin.organizationId);

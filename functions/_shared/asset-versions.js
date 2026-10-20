@@ -1,7 +1,7 @@
 // Fichier généré par scripts/build-pages.mjs (npm run pages) : ne pas modifier à la main.
 // Empreinte (?v=) de chaque feuille de style et script public, pour les pages rendues à l'exécution.
 export const ASSET_VERSIONS = Object.freeze({
-  "assets/css/admin.css": "3fe79f5503",
+  "assets/css/admin.css": "9272d8038c",
   "assets/css/erreur.css": "ec4245f37c",
   "assets/css/styles.css": "03b73c8724",
   "assets/css/suivi.css": "b2ad751adc",
@@ -11,6 +11,7 @@ export const ASSET_VERSIONS = Object.freeze({
   "assets/js/admin-inscriptions.js": "f47c030b14",
   "assets/js/admin-login.js": "d3fad3bc91",
   "assets/js/admin-nav.js": "f610e4d377",
+  "assets/js/admin-presences.js": "d251ef3e04",
   "assets/js/admin-session.js": "f4fdc8cde1",
   "assets/js/adresse-autocomplete.js": "7050f97583",
   "assets/js/contact.js": "e6ffff8638",
