@@ -1,5 +1,0 @@
-/* Créneaux d'entraînement générés depuis les données de l'organisation (functions/_shared/page-data.js) :
-   un bloc par créneau quand il y en a plusieurs ; la précision (groupe, lieu) passe en second plan. */
-.org-slot { display: block; }
-.org-slot + .org-slot { margin-top: 4px; }
-.org-slot-meta { font-size: .85em; font-weight: 500; color: var(--color-text-muted); }

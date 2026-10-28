@@ -1,8 +1,0 @@
-p { margin: 0 0 1em; }
-button { font-family: inherit; }
-
-@media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
-}
-

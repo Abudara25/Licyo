@@ -1,23 +1,10 @@
-.vscode/
-.wrangler/
-# Exports de la base (données personnelles) : jamais dans le dépôt, qui est publié tel quel.
-*.sql
-
-# Outils de développement (Playwright) et références visuelles générées localement : jamais publiés.
-node_modules/
-tests/visual/.baseline/
-tests/visual/.results/
-tests/visual/.report/
-
-# Dossier publié par Cloudflare Pages, construit par scripts/build-public.mjs : jamais versionné.
-dist/
-
-# Actualités intégrées aux Functions, générées depuis content/articles.json par scripts/build-news.mjs (build, tests).
-functions/_generated/
-
-# Prototype de console Platform : résultats et captures Playwright générés localement.
-tests/visual/.platform-results/
-tests/visual/.platform-screens/
-
-# Fichier créé par Windows/OneDrive dans chaque dossier : jamais versionné.
-desktop.ini
+node_modules
+.next
+out
+.env
+.env*.local
+*.tsbuildinfo
+next-env.d.ts
+.vercel
+supabase/.temp
+supabase/.branches

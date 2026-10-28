@@ -1,7 +1,0 @@
-{
-  "theme": "dynamic-diagonal",
-  "themeVersion": 1,
-  "palette": "club-demo",
-  "legacyAliases": true,
-  "output": "assets/css/styles.css"
-}

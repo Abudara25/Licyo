@@ -1,72 +1,124 @@
-# AGENTS.md
+# PROJET COMPLET : SAAS MULTI-TENANT DE CREATION DE SITES VITRINES & BACK-OFFICE POUR CLUBS SPORTIFS
 
-Consignes pour Codex (et tout agent de code) sur ce dépôt. **La référence complète est `CLAUDE.md`** : architecture,
-historique des décisions, pièges connus. Lis la section concernée avant de modifier une partie du site. Ce fichier ne
-reprend que l'essentiel ; en cas de doute, `CLAUDE.md` fait foi.
+## 1. INSTRUCTION MAITRE POUR Codex (VS CODE)
 
-## Le projet
+Tu es une équipe complète d'ingénieurs seniors (Architecte Next.js 15 / Supabase, Lead UI/UX Designer Tailwind/Shadcn, Ingénieur Stripe Connect/Billing, et Expert SEO/GEO).
+Ce fichier contient la spécification intégrale et définitive du projet. Tu dois construire l'application complète de A à Z en suivant scrupuleusement cette architecture, sans jamais laisser de fichiers incomplets, de `// TODO` ou de données factices là où une requête Supabase doit exister.
 
-**Licyo** : plateforme site web + CRM pour clubs sportifs de tous sports. Code repris du site Saint-Gratien FC
-(qui reste sur son propre dépôt), avec un **club de démonstration fictif** (« Club Démo », `org_demo`, Sportville).
-Pas encore en production : aucune ressource Cloudflare n'est créée. Voir `CLAUDE.md` (dette à traiter, règles).
+L'application est un SaaS multi-tenant (multi-locataire) reposant sur un seul code source et une seule base de données Supabase, propulsant 4 espaces :
+1. `/(marketing)` : Le site commercial de notre entreprise SaaS (pour vendre la plateforme aux clubs).
+2. `/[domain]` : Le site vitrine public de chaque club sportif client (accessible via sous-domaine `slug.domaine.fr` ou domaine personnalisé `www.nomduclub.fr`).
+3. `/club-admin` : Le back-office ultra-intuitif destiné aux bénévoles du club (président, secrétaire, trésorier, éducateurs/coachs).
+4. `/super-admin` : Le poste de pilotage exclusif du propriétaire du SaaS (création de démos en 1 clic, Mode Miroir, CRM prospects, import CSV/Excel, devis PDF, gestion des abonnements).
 
-- Pages publiques HTML **générées** (moteur `renderer/`, configuration `sites/club-demo/`).
-- Feuille publique `assets/css/styles.css` **générée** depuis `styles/`.
-- Serveur : Pages Functions (`functions/`), base Cloudflare D1 (`DB`), KV (`INSCRIPTION_STATUS`), R2 (`DOSSIERS`).
-- E-mails SMTP / Brevo ; paiements HelloAsso ; Worker programmé `workers/cron/` (relances, récapitulatif).
+---
 
-## Commandes
+## 2. CONFIGURATION DE BASE : PACKAGE.JSON & VARIABLES D'ENVIRONNEMENT
 
+### A. Dépendances obligatoires (`package.json`)
+- Core : `next@^15`, `react@^19`, `react-dom@^19`, `typescript`
+- Supabase : `@supabase/supabase-js`, `@supabase/ssr`
+- UI & Design : `tailwindcss`, `lucide-react`, `framer-motion`, `clsx`, `tailwind-merge`, `class-variance-authority`, `@radix-ui/react-dialog`, `@radix-ui/react-dropdown-menu`, `@radix-ui/react-tabs`, `@radix-ui/react-select`, `@radix-ui/react-switch`, `@radix-ui/react-tooltip`, `sonner`
+- Formulaires & Validation : `react-hook-form`, `@hookform/resolvers`, `zod`
+- Paiements : `stripe`, `@stripe/stripe-js`
+- PDF, Visuels, QR Code & CSV : `@react-pdf/renderer`, `@vercel/og`, `qrcode`, `@types/qrcode`, `papaparse`, `@types/papaparse`
+- Emails (Intégration Hybride Native) : `nodemailer`, `@types/nodemailer`, `googleapis`, `@react-email/components`
+- Dates : `date-fns`
+
+### B. Variables d'environnement
+Voir `.env.example` (source de vérité).
+
+---
+
+## 3. REGLES D'ARCHITECTURE INVIOLABLES
+
+1. Next.js 15 Async APIs : `params`, `searchParams`, `cookies()` et `headers()` sont des Promises. Utiliser TOUJOURS `await`.
+2. Zéro texte sportif en dur : ne jamais écrire "Match", "Joueur", "Stade" en dur dans les composants. Consommer `getSportPreset(club.sport_type).vocabulary` depuis `src/config/sports-presets.ts`.
+3. Contraste dynamique automatique : chaque club définit `primary_color` et `secondary_color`, injectées en variables CSS dans `/[domain]/layout.tsx` ; la couleur du texte (`#FFFFFF` ou `#09090B`) est calculée par la luminance YIQ.
+4. Cache Serveur & Revalidation : les requêtes publiques de `/[domain]` utilisent `unstable_cache` avec le tag `club-${club.slug}`. Chaque Server Action modifiant un club appelle `revalidateTag('club-' + club.slug)`.
+5. Frais Stripe répercutés : quand `club.pass_stripe_fees_to_parents` est `true` :
+   `totalWithFees = Math.ceil(((netAmount + 0.25) / (1 - 0.015)) * 100) / 100`
+   `stripeFeeAdded = Number((totalWithFees - netAmount).toFixed(2))`
+6. Compression client avant upload : toute photo du tunnel d'inscription est compressée côté navigateur via `<canvas>` en `image/webp` (largeur max 1200px, < 300 Ko).
+7. Base générique tous sports : toute valeur par défaut, section ou texte doit convenir à un club de n'importe quel sport.
+
+---
+
+## 4. ARBORESCENCE
+
+```text
+/supabase/migrations/0001_initial_complete_schema.sql   -> tables, index, fonctions, RLS, buckets
+/src
+  /config/sports-presets.ts        -> 12 sports, vocabulaires, données de démo
+  /types/database.ts
+  /lib
+    /supabase   client.ts, server.ts (Mode Miroir), admin.ts (service role), storage.ts
+    /utils      color-contrast.ts, image-compression.ts, impersonation.ts, crypto.ts
+    /stripe     client.ts, fee-calculator.ts
+    /seo-geo    json-ld.ts, metadata.ts
+    /pdf        quote-saas-pdf.tsx, ce-attestation-pdf.tsx, forum-poster-pdf.tsx, ag-municipality-report-pdf.tsx
+    /email      mailer.ts, templates.tsx
+  /actions      super-admin.actions.ts, club-admin.actions.ts, public-club.actions.ts
+  /components   /ui, /marketing, /vitrine, /club-admin
+  /app
+    /(marketing)        page.tsx, tarifs/page.tsx
+    /(auth)             login/page.tsx, auth/callback/route.ts
+    /super-admin        page, demo-generator, clubs (Mode Miroir), crm, import
+    /club-admin         page, inscriptions, tresorerie, appel, sportif, contenus, parametres
+    /[domain]           vitrine publique + tunnel d'inscription + llms.txt + sitemap
+    /api                webhooks/stripe-saas, webhooks/stripe-connect, og/social-card, email/google/*, pdf/*
+  middleware.ts         -> routage multi-tenant par hôte
 ```
-npm run pages   # régénère les pages HTML depuis sites/ et renderer/
-npm run css     # régénère assets/css/styles.css depuis styles/
-npm run sync    # empreintes ?v= des assets + pages (après toute modification de assets/css ou assets/js)
-npm run build   # dossier publié dist/ (allowlist) + modules générés de functions/_generated/
-npm run check   # vérifie que tout est à jour, puis lance tous les tests (node:test, D1 simulée par node:sqlite)
-npm test        # tests seuls
-```
 
-Serveur local complet : `npm run build`, puis
-`npx wrangler pages dev dist --d1 DB --kv INSCRIPTION_STATUS --r2 DOSSIERS --binding SETUP_SECRET=<test>`, puis `/admin/premier-acces`.
+---
 
-## Règles impératives
+## 5. MODELE DE DONNEES
 
-1. **Ne jamais modifier à la main** les pages HTML de la racine, `assets/css/styles.css`,
-   `functions/_shared/asset-versions.js` ni `functions/_generated/` : modifier la source puis `npm run pages` /
-   `npm run css` / `npm run sync`. `npm run check` échoue sinon.
-2. **Données des adhérents non destructibles** : aucune suppression, écrasement, recréation de table, invalidation de
-   jeton ou modification silencieuse de données réelles. Migrations additives uniquement, testées en local puis sur
-   une copie de la production (`scripts/verify-d1-copy.mjs`). Toute opération destructive se propose et attend une
-   validation explicite. Un export de production contient des données de mineurs : jamais commité, supprimé après usage.
-3. **Organisation toujours résolue côté serveur** (domaine ou session), jamais lue dans une requête ; toute requête sur
-   une table de `TENANT_TABLES` filtre `organization_id` (test statique `tests/tenant-scoping.test.mjs`).
-4. **Sécurité** : échapper tout champ saisi par le public (`escapeHtml`), revalider côté serveur ce que le navigateur
-   contrôle, CSRF automatique sur `/admin/*` (jeton injecté côté serveur), aucun mot de passe dans un e-mail, aucune
-   pièce jointe fournie par le navigateur.
-5. **Club de démo fictif** : aucune vraie ville, adresse ou personne en exemple ; inscription jamais présentée comme
-   définitive avant paiement ; pas de déduction fiscale sur les dons.
-6. **Front-end** : afficher la page et vérifier le rendu à 360 px et 768 px (gouttières, débordements, cibles tactiles
-   ≥ 44 px, champs à 16 px), pas seulement des assertions.
-7. **Git** : ne jamais committer, pousser ni fusionner sans demande explicite ; ne jamais forcer un push ni sauter les
-   hooks. Répondre en français, de façon courte et directe.
+Le schéma complet est dans `supabase/migrations/0001_initial_complete_schema.sql` (clubs, staff_members, facilities, categories, schedules, club_products, family_registrations, payment_installments, members, member_product_orders, attendances, events, event_convocations, posts, sponsors, sponsor_leads, anonymous_page_views, saas_prospects, platform_announcements). Les migrations suivantes sont additives (`0002_...`), jamais réécrites.
 
-## Où trouver quoi
+---
 
-| Sujet | Fichiers |
-|---|---|
-| Formulaire d'inscription | `renderer/registration.js`, `sites/club-demo/content/inscription.js`, `assets/js/inscription.js`, `functions/api/inscriptions.js` |
-| Pré-inscription U10 | `functions/_shared/preinscriptions.js`, `functions/api/preinscriptions.js`, `functions/admin/preinscriptions.js`, `renderer/preregistration.js`, `assets/js/preinscription.js` |
-| Aides à la saisie (communes, adresses) | `assets/js/naissance-autocomplete.js`, `assets/js/adresse-autocomplete.js` (géocodage IGN) |
-| Admin (habillage, session, CSRF) | `functions/_shared/admin-auth.js`, `functions/_shared/csrf.js`, `assets/css/admin.css` |
-| Fiche, vérification du dossier | `functions/admin/inscriptions/[id].js`, `[id]/apercu.js`, `[id]/verification.js`, `functions/_shared/admin-dossier.js` |
-| Schéma D1 et migrations | `functions/_shared/schema.js`, `functions/_shared/inscriptions-db.js` (`ensureSchema`, raccourci par build) |
-| Ouvert / fermé | `functions/_shared/settings-kv.js` (`getEffectiveInscriptionStatus`), revérifié par `functions/api/inscriptions.js` |
-| E-mails | `functions/_shared/confirmation-email.js`, journal `functions/_shared/email-log.js` |
-| Tâches programmées | `functions/api/cron.js`, `functions/_shared/automations.js`, `workers/cron/` |
-| Fichiers jamais servis | `functions/_shared/internal-paths.js` (tout nouveau fichier interne à la racine doit y être ajouté) |
+## 6. ARCHITECTURE EMAIL HYBRIDE
 
-## Tests
+Dans `/club-admin/parametres`, le club choisit son mode d'envoi :
+1. **Défaut** : SMTP de la plateforme (Nodemailer), `Reply-To` = e-mail du club.
+2. **Google OAuth (« Connecter Gmail »)** : le refresh token est stocké chiffré et l'envoi passe par l'API Gmail.
+3. **SMTP privé (OVH, Infomaniak…)** : paramètres stockés chiffrés.
 
-Toute correction ou fonctionnalité s'accompagne d'un test dans `tests/` (D1 en mémoire, services externes simulés,
-aucune donnée réelle). Tests visuels séparés : `tests/visual/` (Playwright, voir son README), références régénérées
-seulement avant une modification voulue du rendu.
+Routeur : `src/lib/email/mailer.ts` (Gmail → SMTP privé → SMTP plateforme).
+
+---
+
+## 7. FONCTIONNALITES
+
+### A. Back-office du club
+- **Validation split-screen** (`/club-admin/inscriptions`) : liste à gauche, aperçu de la pièce à droite ; « Valider » ou « Refuser une pièce » → envoi d'un lien magique de correction.
+- **Feuille d'appel mobile** (`/club-admin/appel`) : présences cochées sur smartphone, liste, numéros d'urgence et autorisation de sortie seul gardés dans `localStorage` (hors ligne).
+- **Rapports PDF** : attestation CE (logo, RNA, SIRET, signature du président) ; bilan AG & Mairie (mineurs/majeurs, % habitant la commune, livre des recettes par méthode de paiement).
+- **Suivi des chèques** : échéancier avec dates de dépôt prévues (Oct/Nov/Déc).
+
+### B. Site vitrine & tunnel d'inscription
+- **Majeur/Mineur** : âge calculé en temps réel ; à 18 ans et plus, les champs parent et autorisation de sortie disparaissent.
+- **Fratries & Stripe** : inscription de toute la famille ; si `pass_stripe_fees_to_parents`, le total inclut la formule inversée (+1,5 % + 0,25 €).
+- **Route GEO** : `/[domain]/llms.txt` renvoie un Markdown des horaires et tarifs.
+
+### C. Super-admin
+- **Générateur de démo** : club + 4 catégories + 6 créneaux + 2 événements + 3 actualités à partir des presets.
+- **Mode Miroir** : « Prendre le contrôle » pose le cookie signé `impersonated_club_id` et ouvre le back-office du club.
+- **Import CSV** : `papaparse` pour les anciens fichiers (Footclubs/Ten'Up).
+
+---
+
+## 8. ECARTS ASSUMES PAR RAPPORT A LA SPEC D'ORIGINE (sécurité)
+
+- **Secrets e-mail hors de `clubs`** : la table `clubs` est lisible publiquement (vitrine). Le refresh token Gmail et le mot de passe SMTP privé sont donc dans `club_mail_credentials` (RLS sans politique = service role uniquement), chiffrés AES-256-GCM (`EMAIL_CREDENTIALS_ENCRYPTION_KEY`).
+- **OAuth Gmail sans next-auth** : flux OAuth direct via `googleapis` (`/api/email/google/start` et `/callback`, `state` signé HMAC). next-auth aurait ajouté une seconde session concurrente de Supabase Auth.
+- **Formulaires publics via Server Actions** : pas d'`INSERT` anonyme en RLS. Inscriptions, essais et contacts sponsors passent par des Server Actions qui valident (zod) et **recalculent les montants côté serveur** avant d'écrire avec le client service role. Un client ne fixe jamais un prix ni un statut de paiement.
+- **Webhooks Stripe idempotents** : signature vérifiée, statut de paiement relu dans l'objet Stripe.
+- **Tables de l'espace privé** : les colonnes de statut ont des `CHECK`, les tables multi-tenant ont un index sur `club_id`.
+
+## 9. REGLES DE TRAVAIL
+
+- Ne jamais committer ni pousser sans demande explicite.
+- Ne pas créer de ressources cloud (Supabase, Vercel, Stripe) sans demande.
+- Vérifier `npm run build` (zéro erreur TypeScript) et le rendu à ~360 px et ~768 px avant d'annoncer une page terminée.

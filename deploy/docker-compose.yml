@@ -1,0 +1,33 @@
+# Déploiement sur un VPS (OVH, Scaleway…) : application + proxy HTTPS.
+# Supabase : projet cloud région Paris, ou auto-hébergé (https://supabase.com/docs/guides/self-hosting/docker).
+# Usage : cp ../.env.example ../.env, compléter, puis `docker compose up -d --build`.
+services:
+  app:
+    build:
+      context: ..
+      args:
+        NEXT_PUBLIC_ROOT_DOMAIN: ${NEXT_PUBLIC_ROOT_DOMAIN}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
+    env_file: ../.env
+    restart: unless-stopped
+    expose: ['3000']
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports: ['80:80', '443:443']
+    environment:
+      ROOT_DOMAIN: ${NEXT_PUBLIC_ROOT_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:-admin@licyo.fr}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [app]
+
+volumes:
+  caddy_data:
+  caddy_config:

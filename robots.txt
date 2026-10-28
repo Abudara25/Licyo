@@ -1,7 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /admin/
-Disallow: /api/
-Disallow: /depot/
-
-Sitemap: https://clubdemo.licyo.fr/sitemap.xml

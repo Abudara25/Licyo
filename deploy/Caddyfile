@@ -1,0 +1,20 @@
+{
+	email {$ACME_EMAIL}
+	# Certificat émis à la demande, seulement si l'application confirme que le
+	# domaine appartient à un club (évite les abus).
+	on_demand_tls {
+		ask http://app:3000/api/domains/check
+	}
+}
+
+# Domaine de la plateforme, sous-domaines des clubs et domaines personnalisés.
+https:// {
+	tls {
+		on_demand
+	}
+	encode zstd gzip
+	reverse_proxy app:3000 {
+		header_up Host {host}
+		header_up X-Forwarded-For {remote_host}
+	}
+}

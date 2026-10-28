@@ -1,9 +1,0 @@
-/* ---------- Grille des actualités (index.html, actualites.html) ---------- */
-/* Flex et non grid : tant qu'il y a moins de 3 cartes (ou après un filtre qui en masque), elles
-   restent centrées au lieu de laisser une colonne vide à droite. */
-.news-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 28px; }
-.news-grid[hidden] { display: none; }
-.news-grid > * { flex: 0 1 calc((100% - 56px) / 3); min-width: 0; }
-@media (max-width: 900px) { .news-grid > * { flex-basis: calc((100% - 28px) / 2); } }
-@media (max-width: 620px) { .news-grid > * { flex-basis: 100%; } }
-
