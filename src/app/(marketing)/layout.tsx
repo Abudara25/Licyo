@@ -1,23 +1,57 @@
 import Link from 'next/link';
-
-export default function MarketingLayout({ children }: { children: React.ReactNode }) {
+import { Brand } from '@/components/platform/Brand';
+export default function MarketingLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-30 border-b bg-white/90 backdrop-blur">
-        <div className="page-container flex min-h-16 items-center justify-between gap-3">
-          <Link href="/" className="flex min-h-11 items-center text-xl font-extrabold">Licyo</Link>
-          <nav aria-label="Navigation principale" className="flex items-center gap-1 text-sm font-medium">
-            <Link href="/#fonctionnalites" className="hidden min-h-11 items-center rounded-lg px-3 hover:bg-accent sm:flex">Fonctionnalités</Link>
-            <Link href="/tarifs" className="flex min-h-11 items-center rounded-lg px-3 hover:bg-accent">Tarifs</Link>
-            <Link href="/login" className="flex min-h-11 items-center rounded-lg bg-zinc-900 px-4 text-white hover:bg-zinc-700">Connexion</Link>
+    <div className="marketing">
+      <header className="marketing-header">
+        <div className="page-container">
+          <Brand />
+          <nav aria-label="Navigation principale">
+            <Link className="desktop-link" href="/#fonctionnalites">
+              La plateforme
+            </Link>
+            <Link className="desktop-link" href="/modeles">
+              Les modèles
+            </Link>
+            <Link href="/tarifs">Tarifs</Link>
+            <Link href="/login">Connexion</Link>
+            <Link className="pill-button small desktop-link" href="/commencer">
+              Créer mon club ↗
+            </Link>
           </nav>
         </div>
       </header>
-      <main className="flex-1">{children}</main>
-      <footer className="border-t bg-zinc-50">
-        <div className="page-container flex flex-wrap justify-between gap-3 py-8 text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} Licyo - Le site et la gestion des clubs sportifs.</p>
-          <p>Données hébergées dans l'Union européenne - Aucun cookie publicitaire.</p>
+      <main>{children}</main>
+      <footer className="marketing-footer">
+        <div className="page-container">
+          <div>
+            <Brand />
+            <p>
+              Moins de gestion.
+              <br />
+              Plus de vie dans votre club.
+            </p>
+          </div>
+          <div>
+            <b>Votre prochain chapitre</b>
+            <Link href="/commencer">Créer mon espace club</Link>
+            <Link href="/modeles">Choisir un modèle</Link>
+            <Link href="/espace-adherent">Espace adhérent</Link>
+          </div>
+          <div>
+            <b>La plateforme</b>
+            <Link href="/tarifs">Une offre à votre taille</Link>
+            <Link href="/decouvrir/club">Découvrir le back-office</Link>
+            <Link href="/login?next=/super-admin">Administration Licyo</Link>
+          </div>
+        </div>
+        <div className="page-container footer-bottom">
+          <span>© {new Date().getFullYear()} Licyo</span>
+          <span>Pour tous les sports. Pour chaque association.</span>
         </div>
       </footer>
     </div>

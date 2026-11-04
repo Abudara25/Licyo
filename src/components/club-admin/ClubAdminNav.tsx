@@ -1,8 +1,22 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { ClipboardCheck, ExternalLink, FileText, Home, LogOut, Newspaper, Settings, Trophy, Wallet } from 'lucide-react';
+import {
+  ClipboardCheck,
+  ExternalLink,
+  FileText,
+  Home,
+  LogOut,
+  Newspaper,
+  Settings,
+  Trophy,
+  Wallet,
+  SlidersHorizontal,
+  MessageSquare,
+  Image,
+} from 'lucide-react';
 import { AdminShell, type ShellLink } from './AdminShell';
+import { moduleEnabled } from '@/lib/platform';
 import type { StaffRole } from '@/types/database';
 
 export function ClubAdminNav({
@@ -11,6 +25,7 @@ export function ClubAdminNav({
   role,
   siteUrl,
   attendanceEnabled,
+  modules,
   banner,
   signOutAction,
   children,
@@ -20,6 +35,7 @@ export function ClubAdminNav({
   role: StaffRole;
   siteUrl: string;
   attendanceEnabled: boolean;
+  modules: Record<string, boolean>;
   banner: ReactNode;
   signOutAction: () => Promise<void>;
   children: ReactNode;
@@ -27,12 +43,67 @@ export function ClubAdminNav({
   const manager = role !== 'coach';
   const links: ShellLink[] = [
     { href: '/club-admin', label: 'Tableau de bord', icon: Home },
-    ...(manager ? [{ href: '/club-admin/inscriptions', label: 'Inscriptions', icon: FileText }] : []),
-    ...(manager ? [{ href: '/club-admin/tresorerie', label: 'Trésorerie', icon: Wallet }] : []),
-    ...(attendanceEnabled ? [{ href: '/club-admin/appel', label: "Feuille d'appel", icon: ClipboardCheck }] : []),
+    ...(manager && moduleEnabled(modules, 'inscriptions')
+      ? [
+          {
+            href: '/club-admin/inscriptions',
+            label: 'Inscriptions',
+            icon: FileText,
+          },
+        ]
+      : []),
+    ...(manager && moduleEnabled(modules, 'payments')
+      ? [{ href: '/club-admin/tresorerie', label: 'Trésorerie', icon: Wallet }]
+      : []),
+    ...(attendanceEnabled
+      ? [
+          {
+            href: '/club-admin/appel',
+            label: "Feuille d'appel",
+            icon: ClipboardCheck,
+          },
+        ]
+      : []),
     { href: '/club-admin/sportif', label: 'Sportif', icon: Trophy },
-    ...(manager ? [{ href: '/club-admin/contenus', label: 'Site et contenus', icon: Newspaper }] : []),
-    ...(manager ? [{ href: '/club-admin/parametres', label: 'Paramètres', icon: Settings }] : []),
+    ...(manager
+      ? [
+          {
+            href: '/club-admin/contenus',
+            label: 'Site et contenus',
+            icon: Newspaper,
+          },
+        ]
+      : []),
+    ...(manager && moduleEnabled(modules, 'private_lessons')
+      ? [
+          {
+            href: '/club-admin/demandes',
+            label: 'Demandes de cours',
+            icon: MessageSquare,
+          },
+        ]
+      : []),
+    ...(manager && moduleEnabled(modules, 'gallery')
+      ? [{ href: '/club-admin/galerie', label: 'Galerie', icon: Image }]
+      : []),
+    ...(['president', 'secretary', 'super_admin'].includes(role)
+      ? [
+          {
+            href: '/club-admin/modules',
+            label: 'Modules et modèle',
+            icon: SlidersHorizontal,
+          },
+        ]
+      : []),
+    ...(manager
+      ? [
+          {
+            href: '/club-admin/parametres',
+            label: 'Paramètres',
+            icon: Settings,
+          },
+        ]
+      : []),
   ];
   return (
     <AdminShell
@@ -42,11 +113,19 @@ export function ClubAdminNav({
       banner={banner}
       footer={
         <div className="grid gap-1 text-sm">
-          <a href={siteUrl} target="_blank" rel="noopener noreferrer" className="flex min-h-11 items-center gap-3 rounded-lg px-3 hover:bg-white/10">
+          <a
+            href={siteUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex min-h-11 items-center gap-3 rounded-lg px-3 hover:bg-white/10"
+          >
             <ExternalLink className="size-5" aria-hidden /> Voir le site
           </a>
           <form action={signOutAction}>
-            <button type="submit" className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 hover:bg-white/10">
+            <button
+              type="submit"
+              className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 hover:bg-white/10"
+            >
               <LogOut className="size-5" aria-hidden /> Se déconnecter
             </button>
           </form>

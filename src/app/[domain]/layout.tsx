@@ -1,3 +1,4 @@
+import { resolveTemplate, moduleEnabled } from '@/lib/platform';
 import type { CSSProperties } from 'react';
 import type { Metadata } from 'next';
 import { loadClubOr404, sitePrefix } from '@/lib/tenant';
@@ -25,14 +26,38 @@ export default async function ClubLayout({ children, params }: Props) {
   const { club } = data;
   const preset = getSportPreset(club.sport_type);
   const prefix = sitePrefix(domain);
-  const links = buildNav(prefix, preset.vocabulary, { trials: club.enabled_modules.trials, sponsors: club.enabled_modules.sponsors });
+  const links = buildNav(prefix, preset.vocabulary, {
+    trials: club.enabled_modules.trials,
+    sponsors: club.enabled_modules.sponsors,
+    events: moduleEnabled(club.enabled_modules, 'events'),
+    gallery: moduleEnabled(club.enabled_modules, 'gallery'),
+    private_lessons: moduleEnabled(club.enabled_modules, 'private_lessons'),
+    member_portal: moduleEnabled(club.enabled_modules, 'member_portal'),
+  });
 
   return (
-    <div style={clubCssVariables(club.primary_color, club.secondary_color) as CSSProperties} className="flex min-h-dvh flex-col">
-      <a href="#contenu" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:p-2 focus:text-black">
+    <div
+      data-template={resolveTemplate(club.theme_preset)}
+      style={
+        clubCssVariables(
+          club.primary_color,
+          club.secondary_color,
+        ) as CSSProperties
+      }
+      className="flex min-h-dvh flex-col"
+    >
+      <a
+        href="#contenu"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:p-2 focus:text-black"
+      >
         Aller au contenu
       </a>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(sportsClubJsonLd(data)) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: serializeJsonLd(sportsClubJsonLd(data)),
+        }}
+      />
       <ClubHeader
         name={club.name}
         logoUrl={club.logo_url}
@@ -41,7 +66,9 @@ export default async function ClubLayout({ children, params }: Props) {
         showRegister={club.enabled_modules.inscriptions}
         isDemo={club.status === 'demo'}
       />
-      <MatchEventTicker events={data.events} vocab={preset.vocabulary} />
+      {moduleEnabled(club.enabled_modules, 'events') ? (
+        <MatchEventTicker events={data.events} vocab={preset.vocabulary} />
+      ) : null}
       <main id="contenu" className="flex-1">
         {children}
       </main>

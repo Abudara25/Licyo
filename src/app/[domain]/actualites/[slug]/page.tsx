@@ -1,3 +1,4 @@
+import { moduleEnabled } from '@/lib/platform';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -13,26 +14,52 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { club, posts } = await loadClubOr404(domain);
   const post = posts.find((p) => p.slug === slug);
   if (!post) return {};
-  return clubMetadata(club, { title: post.title, description: post.content.slice(0, 155), path: `/actualites/${post.slug}` });
+  return clubMetadata(club, {
+    title: post.title,
+    description: post.content.slice(0, 155),
+    path: `/actualites/${post.slug}`,
+  });
 }
 
 export default async function PostPage({ params }: Props) {
   const { domain, slug } = await params;
   const data = await loadClubOr404(domain);
+  if (!moduleEnabled(data.club.enabled_modules, 'news')) notFound();
   const post = data.posts.find((p) => p.slug === slug);
   if (!post) notFound();
   const prefix = sitePrefix(domain);
   return (
     <article className="page-container mt-8 max-w-3xl">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(articleJsonLd(post, data)) }} />
-      <Link href={prefix || '/'} className="inline-flex min-h-11 items-center text-sm font-semibold underline">← Retour à l'accueil</Link>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: serializeJsonLd(articleJsonLd(post, data)),
+        }}
+      />
+      <Link
+        href={prefix || '/'}
+        className="inline-flex min-h-11 items-center text-sm font-semibold underline"
+      >
+        ← Retour à l'accueil
+      </Link>
       <h1 className="mt-2 text-3xl font-extrabold">{post.title}</h1>
-      <time className="text-sm text-muted-foreground" dateTime={post.published_at}>
-        {new Date(post.published_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+      <time
+        className="text-sm text-muted-foreground"
+        dateTime={post.published_at}
+      >
+        {new Date(post.published_at).toLocaleDateString('fr-FR', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        })}
       </time>
       {post.cover_image_url ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={post.cover_image_url} alt="" className="mt-6 aspect-video w-full rounded-xl object-cover" />
+        <img
+          src={post.cover_image_url}
+          alt=""
+          className="mt-6 aspect-video w-full rounded-xl object-cover"
+        />
       ) : null}
       <div className="mt-6 text-lg">
         <PlainText text={post.content} />

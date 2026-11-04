@@ -8,3 +8,11 @@ next-env.d.ts
 .vercel
 supabase/.temp
 supabase/.branches
+
+.qa/
+
+.next-build/
+
+.next-preview/
+build-verify/
+build-github/

@@ -1,23 +1,53 @@
+import { requireModule } from '@/lib/module-access';
 import { requireClubContext, createClient } from '@/lib/supabase/server';
 import { DAY_LABELS } from '@/config/sports-presets';
 import { PageHeader } from '@/components/club-admin/AdminShell';
-import { OfflineAttendanceSheet, type RosterSlot } from '@/components/club-admin/OfflineAttendanceSheet';
+import {
+  OfflineAttendanceSheet,
+  type RosterSlot,
+} from '@/components/club-admin/OfflineAttendanceSheet';
 import { todayIso } from '@/lib/season';
 
 export default async function AttendancePage() {
+  await requireModule('attendance');
   const ctx = await requireClubContext();
   const { club } = ctx;
   const supabase = await createClient();
-  const [{ data: schedules }, { data: categories }, { data: members }, { data: families }] = await Promise.all([
-    supabase.from('schedules').select('*').eq('club_id', club.id).order('day_of_week').order('start_time'),
+  const [
+    { data: schedules },
+    { data: categories },
+    { data: members },
+    { data: families },
+  ] = await Promise.all([
+    supabase
+      .from('schedules')
+      .select('*')
+      .eq('club_id', club.id)
+      .order('day_of_week')
+      .order('start_time'),
     supabase.from('categories').select('id, name').eq('club_id', club.id),
-    supabase.from('members').select('id, first_name, last_name, category_id, family_id, is_minor, consent_autonomous_exit').eq('club_id', club.id).eq('season', club.current_season).eq('dossier_status', 'validated').order('last_name'),
-    supabase.from('family_registrations').select('id, emergency_contact_name, emergency_contact_phone').eq('club_id', club.id).eq('season', club.current_season),
+    supabase
+      .from('coach_roster')
+      .select(
+        'id, first_name, last_name, category_id, family_id, is_minor, consent_autonomous_exit',
+      )
+      .eq('club_id', club.id)
+      .eq('season', club.current_season)
+      .eq('dossier_status', 'validated')
+      .order('last_name'),
+    supabase
+      .from('coach_contacts')
+      .select('id, emergency_contact_name, emergency_contact_phone')
+      .eq('club_id', club.id)
+      .eq('season', club.current_season),
   ]);
 
   // Un éducateur avec des groupes attribués ne voit que ses groupes.
   const membership = ctx.auth.memberships.find((m) => m.club_id === club.id);
-  const assigned = ctx.role === 'coach' && membership?.assigned_category_ids.length ? new Set(membership.assigned_category_ids) : null;
+  const assigned =
+    ctx.role === 'coach' && membership?.assigned_category_ids.length
+      ? new Set(membership.assigned_category_ids)
+      : null;
   const catName = new Map((categories ?? []).map((c) => [c.id, c.name]));
   const famById = new Map((families ?? []).map((f) => [f.id, f]));
 
@@ -44,8 +74,15 @@ export default async function AttendancePage() {
 
   return (
     <>
-      <PageHeader title="Feuille d'appel" description="Fonctionne aussi sans réseau une fois la page ouverte." />
-      <OfflineAttendanceSheet clubId={club.id} initialSlots={slots} today={todayIso()} />
+      <PageHeader
+        title="Feuille d'appel"
+        description="Fonctionne aussi sans réseau une fois la page ouverte."
+      />
+      <OfflineAttendanceSheet
+        clubId={club.id}
+        initialSlots={slots}
+        today={todayIso()}
+      />
     </>
   );
 }

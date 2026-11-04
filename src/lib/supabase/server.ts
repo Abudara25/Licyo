@@ -4,23 +4,32 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createServerClient } from '@supabase/ssr';
 import type { Club, Database, StaffMember, StaffRole } from '@/types/database';
-import { IMPERSONATION_COOKIE, verifyImpersonation } from '@/lib/utils/impersonation';
+import {
+  IMPERSONATION_COOKIE,
+  verifyImpersonation,
+} from '@/lib/utils/impersonation';
 
 /** Client serveur lié à la session de l'utilisateur (cookies), soumis à la RLS. */
 export async function createClient() {
   const cookieStore = await cookies();
-  return createServerClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-    cookies: {
-      getAll: () => cookieStore.getAll(),
-      setAll: (toSet) => {
-        try {
-          toSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
-        } catch {
-          // Appelé depuis un Server Component : le middleware rafraîchit la session.
-        }
+  return createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => cookieStore.getAll(),
+        setAll: (toSet) => {
+          try {
+            toSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options),
+            );
+          } catch {
+            // Appelé depuis un Server Component : le middleware rafraîchit la session.
+          }
+        },
       },
     },
-  });
+  );
 }
 
 export type AuthContext = {
@@ -32,12 +41,20 @@ export type AuthContext = {
 
 /** Utilisateur connecté et ses rattachements (mémorisé pour la durée de la requête). */
 export const getAuthContext = cache(async (): Promise<AuthContext | null> => {
+  if (
+    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  )
+    return null;
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return null;
-  const { data } = await supabase.from('staff_members').select('*').eq('user_id', user.id);
+  const { data } = await supabase
+    .from('staff_members')
+    .select('*')
+    .eq('user_id', user.id);
   const memberships = data ?? [];
   return {
     userId: user.id,
@@ -55,7 +72,12 @@ export type ClubContext = {
   impersonating: boolean;
 };
 
-export const MANAGER_ROLES: StaffRole[] = ['president', 'secretary', 'treasurer', 'super_admin'];
+export const MANAGER_ROLES: StaffRole[] = [
+  'president',
+  'secretary',
+  'treasurer',
+  'super_admin',
+];
 
 /**
  * Club courant du back-office.
@@ -69,9 +91,16 @@ export const getClubContext = cache(async (): Promise<ClubContext | null> => {
   const cookieStore = await cookies();
 
   if (auth.isSuperAdmin) {
-    const clubId = await verifyImpersonation(cookieStore.get(IMPERSONATION_COOKIE)?.value, auth.userId);
+    const clubId = await verifyImpersonation(
+      cookieStore.get(IMPERSONATION_COOKIE)?.value,
+      auth.userId,
+    );
     if (clubId) {
-      const { data: club } = await supabase.from('clubs').select('*').eq('id', clubId).maybeSingle();
+      const { data: club } = await supabase
+        .from('clubs')
+        .select('*')
+        .eq('id', clubId)
+        .maybeSingle();
       if (club) return { auth, club, role: 'super_admin', impersonating: true };
     }
   }
@@ -79,20 +108,30 @@ export const getClubContext = cache(async (): Promise<ClubContext | null> => {
   const clubMemberships = auth.memberships.filter((m) => m.club_id);
   if (clubMemberships.length === 0) return null;
   const preferred = cookieStore.get('active_club')?.value;
-  const membership = clubMemberships.find((m) => m.club_id === preferred) ?? clubMemberships[0];
-  const { data: club } = await supabase.from('clubs').select('*').eq('id', membership.club_id!).maybeSingle();
+  const membership =
+    clubMemberships.find((m) => m.club_id === preferred) ?? clubMemberships[0];
+  const { data: club } = await supabase
+    .from('clubs')
+    .select('*')
+    .eq('id', membership.club_id!)
+    .maybeSingle();
   if (!club) return null;
   return { auth, club, role: membership.role, impersonating: false };
 });
 
 /** Exige un club courant (et éventuellement un rôle), sinon redirige. */
-export async function requireClubContext(allowedRoles?: StaffRole[]): Promise<ClubContext> {
+export async function requireClubContext(
+  allowedRoles?: StaffRole[],
+): Promise<ClubContext> {
   const ctx = await getClubContext();
   if (!ctx) {
     const auth = await getAuthContext();
-    redirect(auth?.isSuperAdmin ? '/super-admin/clubs' : '/login?next=/club-admin');
+    redirect(
+      auth?.isSuperAdmin ? '/super-admin/clubs' : '/login?next=/club-admin',
+    );
   }
-  if (allowedRoles && !allowedRoles.includes(ctx.role)) redirect('/club-admin?erreur=droits');
+  if (allowedRoles && !allowedRoles.includes(ctx.role))
+    redirect('/club-admin?erreur=droits');
   return ctx;
 }
 

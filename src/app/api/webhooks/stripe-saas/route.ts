@@ -17,25 +17,39 @@ export async function POST(req: Request) {
   if (!signature) return new Response('Signature manquante', { status: 400 });
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(await req.text(), signature, requireEnv('STRIPE_WEBHOOK_SECRET_SAAS'));
+    event = stripe.webhooks.constructEvent(
+      await req.text(),
+      signature,
+      requireEnv('STRIPE_WEBHOOK_SECRET_SAAS'),
+    );
   } catch {
     return new Response('Signature invalide', { status: 400 });
   }
 
   const admin = createAdminClient();
 
-  async function syncSubscription(subscriptionId: string, fallbackClubId?: string) {
+  async function syncSubscription(
+    subscriptionId: string,
+    fallbackClubId?: string,
+  ) {
     const sub = await stripe.subscriptions.retrieve(subscriptionId);
     const clubId = sub.metadata.club_id || fallbackClubId;
     if (!clubId) return;
+    const { data: matchedTier } = await admin
+      .from('membership_tiers')
+      .select('id')
+      .eq('stripe_price_id', sub.items.data[0]?.price.id ?? '')
+      .maybeSingle();
     const plan = sub.metadata.plan === 'vitrine' ? 'vitrine' : 'integral';
     const live = ['active', 'trialing', 'past_due'].includes(sub.status);
     const { data: club } = await admin
       .from('clubs')
       .update({
-        stripe_customer_id: typeof sub.customer === 'string' ? sub.customer : sub.customer.id,
+        stripe_customer_id:
+          typeof sub.customer === 'string' ? sub.customer : sub.customer.id,
         stripe_subscription_id: sub.id,
         subscription_plan: plan,
+        membership_tier_id: matchedTier?.id || sub.metadata.tier_id || null,
         status: live ? 'active' : 'suspended',
         demo_expires_at: null,
       })
@@ -49,7 +63,12 @@ export async function POST(req: Request) {
     case 'checkout.session.completed': {
       const session = event.data.object;
       if (session.mode === 'subscription' && session.subscription) {
-        await syncSubscription(typeof session.subscription === 'string' ? session.subscription : session.subscription.id, session.metadata?.club_id ?? session.client_reference_id ?? undefined);
+        await syncSubscription(
+          typeof session.subscription === 'string'
+            ? session.subscription
+            : session.subscription.id,
+          session.metadata?.club_id ?? session.client_reference_id ?? undefined,
+        );
       }
       break;
     }

@@ -1,15 +1,38 @@
+## Lecture prioritaire — vision actualisée le 4 novembre 2026
+
+Avant de concevoir ou coder, lire intégralement, dans cet ordre :
+1. `docs/VISION_ET_CROISSANCE.md` : vision produit, future équipe Licyo, permissions, exploitation et lots.
+2. `docs/HISTORIQUE_ET_REPRISE.md` : sources et interfaces historiques effectivement retrouvées.
+3. `docs/REFONTE.md` : état local, migrations, vérifications et limites.
+
+Ces documents font partie des consignes du projet. Les demandes récentes du propriétaire et ce bloc priment sur les spécifications initiales ci-dessous en cas de contradiction. Distinguer exigences futures et capacités réellement implémentées. Ne pas supposer que le prototype historique ou le code local constitue un design validé ou un service prêt pour la production.
+
+- Concevoir un produit pour tous les sports avec cinq expériences distinctes : marketing, vitrine client, back-office club, espace adhérent/famille, console de l’équipe Licyo.
+- Le propriétaire doit pouvoir recruter et déléguer. Les salariés ont des comptes nominatifs, des rôles plateforme et des périmètres explicites ; ne jamais leur attribuer tous les pouvoirs de `super_admin` par facilité.
+- Préparer dès les lots concernés : invitations/révocation, MFA plateforme, permissions vérifiées côté serveur, assistance temporaire, journal et protection du propriétaire.
+- Aller au-delà du besoin immédiat en anticipant les parcours, la charge, les échecs et les besoins de l’équipe. Proposer les améliorations utiles et les traiter en lots cohérents, sans surdimensionner ni inventer des validations historiques.
+- Reprendre comme référence la console historique claire à accents indigo et la force des vitrines historiques, puis améliorer les parcours. Prévoir trois modèles réellement distincts, des pages/blocs composables et un cycle brouillon/aperçu/publication versionné.
+- Aucun tarif n’est fixé. La tarification selon l’effectif doit être administrable et les conditions acceptées versionnées.
+- Les améliorations locales autorisées ne nécessitent pas de micro-validation. Aucun commit, push, service cloud, envoi externe ou déploiement n’est autorisé par ces seules consignes.
+
+Le dossier de travail est le dépôt contenant ce fichier : vérifier son chemin, son état et son diff avant édition. Préserver les modifications présentes. Ne pas confondre cette copie avec une autre copie locale de Licyo. Les références externes et les aperçus locaux peuvent manquer sur une autre machine : utiliser les liens Git immuables du document historique et signaler une source réellement inaccessible.
+
+---
+
 # PROJET COMPLET : SAAS MULTI-TENANT DE CREATION DE SITES VITRINES & BACK-OFFICE POUR CLUBS SPORTIFS
 
 ## 1. INSTRUCTION MAITRE POUR Codex (VS CODE)
 
 Tu es une équipe complète d'ingénieurs seniors (Architecte Next.js 15 / Supabase, Lead UI/UX Designer Tailwind/Shadcn, Ingénieur Stripe Connect/Billing, et Expert SEO/GEO).
-Ce fichier contient la spécification intégrale et définitive du projet. Tu dois construire l'application complète de A à Z en suivant scrupuleusement cette architecture, sans jamais laisser de fichiers incomplets, de `// TODO` ou de données factices là où une requête Supabase doit exister.
+Ce qui suit décrit le socle initial du projet. La vision actualisée et les priorités sont définies dans les lectures obligatoires ci-dessus. Ne jamais faire passer des données de démonstration pour des données métier réelles.
 
-L'application est un SaaS multi-tenant (multi-locataire) reposant sur un seul code source et une seule base de données Supabase, propulsant 4 espaces :
+L'application est un SaaS multi-tenant (multi-locataire) reposant sur un seul code source et une seule base de données Supabase, propulsant les espaces suivants :
 1. `/(marketing)` : Le site commercial de notre entreprise SaaS (pour vendre la plateforme aux clubs).
 2. `/[domain]` : Le site vitrine public de chaque club sportif client (accessible via sous-domaine `slug.domaine.fr` ou domaine personnalisé `www.nomduclub.fr`).
 3. `/club-admin` : Le back-office ultra-intuitif destiné aux bénévoles du club (président, secrétaire, trésorier, éducateurs/coachs).
-4. `/super-admin` : Le poste de pilotage exclusif du propriétaire du SaaS (création de démos en 1 clic, Mode Miroir, CRM prospects, import CSV/Excel, devis PDF, gestion des abonnements).
+4. `/super-admin` : La console du propriétaire et de l’équipe Licyo, avec des rôles plateforme et des périmètres distincts des rôles club (création de démos en 1 clic, Mode Miroir, CRM prospects, import CSV/Excel, devis PDF, gestion des abonnements).
+
+5. `/espace-adherent` : L’espace personnel des adhérents et familles, limité aux dossiers explicitement autorisés.
 
 ---
 
@@ -49,7 +72,7 @@ Voir `.env.example` (source de vérité).
 ```text
 /supabase/migrations/0001_initial_complete_schema.sql   -> tables, index, fonctions, RLS, buckets
 /src
-  /config/sports-presets.ts        -> 12 sports, vocabulaires, données de démo
+  /config/sports-presets.ts        -> presets multisports, vocabulaires, données de démo
   /types/database.ts
   /lib
     /supabase   client.ts, server.ts (Mode Miroir), admin.ts (service role), storage.ts
@@ -93,7 +116,7 @@ Routeur : `src/lib/email/mailer.ts` (Gmail → SMTP privé → SMTP plateforme).
 
 ### A. Back-office du club
 - **Validation split-screen** (`/club-admin/inscriptions`) : liste à gauche, aperçu de la pièce à droite ; « Valider » ou « Refuser une pièce » → envoi d'un lien magique de correction.
-- **Feuille d'appel mobile** (`/club-admin/appel`) : présences cochées sur smartphone, liste, numéros d'urgence et autorisation de sortie seul gardés dans `localStorage` (hors ligne).
+- **Feuille d'appel mobile** (`/club-admin/appel`) : présences cochées sur smartphone, mode hors ligne limité au besoin de la séance, isolé par utilisateur et club, avec expiration et effacement à la déconnexion ; ne pas conserver de dossiers complets ou documents sensibles dans le stockage du navigateur.
 - **Rapports PDF** : attestation CE (logo, RNA, SIRET, signature du président) ; bilan AG & Mairie (mineurs/majeurs, % habitant la commune, livre des recettes par méthode de paiement).
 - **Suivi des chèques** : échéancier avec dates de dépôt prévues (Oct/Nov/Déc).
 
@@ -111,7 +134,7 @@ Routeur : `src/lib/email/mailer.ts` (Gmail → SMTP privé → SMTP plateforme).
 
 ## 8. ECARTS ASSUMES PAR RAPPORT A LA SPEC D'ORIGINE (sécurité)
 
-- **Secrets e-mail hors de `clubs`** : la table `clubs` est lisible publiquement (vitrine). Le refresh token Gmail et le mot de passe SMTP privé sont donc dans `club_mail_credentials` (RLS sans politique = service role uniquement), chiffrés AES-256-GCM (`EMAIL_CREDENTIALS_ENCRYPTION_KEY`).
+- **Secrets e-mail hors de `clubs`** : les données publiques de vitrine doivent provenir d’une projection limitée ; ne pas exposer la table interne `clubs` en entier. Le refresh token Gmail et le mot de passe SMTP privé sont donc dans `club_mail_credentials` (RLS sans politique = service role uniquement), chiffrés AES-256-GCM (`EMAIL_CREDENTIALS_ENCRYPTION_KEY`).
 - **OAuth Gmail sans next-auth** : flux OAuth direct via `googleapis` (`/api/email/google/start` et `/callback`, `state` signé HMAC). next-auth aurait ajouté une seconde session concurrente de Supabase Auth.
 - **Formulaires publics via Server Actions** : pas d'`INSERT` anonyme en RLS. Inscriptions, essais et contacts sponsors passent par des Server Actions qui valident (zod) et **recalculent les montants côté serveur** avant d'écrire avec le client service role. Un client ne fixe jamais un prix ni un statut de paiement.
 - **Webhooks Stripe idempotents** : signature vérifiée, statut de paiement relu dans l'objet Stripe.
