@@ -4,6 +4,7 @@ Avant de concevoir ou coder, lire intégralement, dans cet ordre :
 1. `docs/VISION_ET_CROISSANCE.md` : vision produit, future équipe Licyo, permissions, exploitation et lots.
 2. `docs/HISTORIQUE_ET_REPRISE.md` : sources et interfaces historiques effectivement retrouvées.
 3. `docs/REFONTE.md` : état local, migrations, vérifications et limites.
+4. `docs/REFERENCES_CLUBS_PILOTES.md` : références concrètes ASC Muay Thaï / Saint-Gratien FC et traduction multisport.
 
 Ces documents font partie des consignes du projet. Les demandes récentes du propriétaire et ce bloc priment sur les spécifications initiales ci-dessous en cas de contradiction. Distinguer exigences futures et capacités réellement implémentées. Ne pas supposer que le prototype historique ou le code local constitue un design validé ou un service prêt pour la production.
 

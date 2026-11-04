@@ -4,10 +4,11 @@ Plateforme multisport : site commercial, vitrines de clubs, gestion des associat
 
 ## Reprendre dans VS Code avec Claude Code
 
-Lire d’abord `CLAUDE.md` et `AGENTS.md`, puis les trois documents obligatoires :
+Lire d’abord `CLAUDE.md` et `AGENTS.md`, puis les quatre documents obligatoires :
 - [Vision et croissance](docs/VISION_ET_CROISSANCE.md) : équipe Licyo, permissions, produit et priorités.
 - [Historique et reprise](docs/HISTORIQUE_ET_REPRISE.md) : références originales et direction visuelle.
 - [État de la refonte](docs/REFONTE.md) : code livré, migrations, validations et limites.
+- [Clubs pilotes](docs/REFERENCES_CLUBS_PILOTES.md) : exemples ASC Muay Thaï et Saint-Gratien FC, parcours et scénarios de recette.
 
 Cette version est une base de travail à poursuivre. Les droits des futurs salariés, le retour au niveau du prototype historique et le moteur complet de publication sont documentés comme travaux à réaliser ; ils ne sont pas tous implémentés.
 
