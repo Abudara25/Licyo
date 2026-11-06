@@ -129,3 +129,21 @@ Ne pas publier d’extraits de code privés ou d’informations de dossiers dans
 - Les modèles et tâches respectent rôles, périmètres, isolation entre clubs et préférences de mouvement.
 
 Ces scénarios deviennent des critères de reprise concrets pour Claude Code et Codex. Ils décrivent une cible et ne prouvent pas sa livraison actuelle.
+
+## 8. Sports et photos à prévoir au lancement
+
+Le catalogue de lancement vise sept packs photo : football, muay thaï, boxe anglaise, handball, basketball, judo et karaté. Les pilotes football et muay thaï ouvrent la recette. Les autres packs sont activés à mesure que leurs visuels et leurs parcours sont prêts. Judo et karaté appartiennent à la famille Arts martiaux, avec des visuels et réglages distincts. Les trois modèles Club, Arena et Studio restent disponibles pour chaque sport.
+
+Objectif de départ : 20 photos par sport et 12 images communes, soit 152 images à sélectionner. Pour chaque discipline, prévoir au moins quatre images montrant des enfants, quatre des adolescents, quatre des femmes adultes et quatre des hommes adultes, ainsi que quatre photos de matériel ou de lieux. Varier filles et garçons, séances mixtes, entraînement loisir et compétition selon la réalité de la discipline. Les recadrages d’une même photo ne comptent pas comme des images supplémentaires.
+
+L’éditeur propose Mes photos et Bibliothèque Licyo dans chaque emplacement compatible. Filtrer par discipline, public représenté, usage (couverture, activité, galerie) et orientation. Proposer des couvertures utilisables sur mobile et ordinateur pour plusieurs publics de chaque sport. Garder les photos d’illustration distinctes des portraits des équipes, des entraîneurs et des événements réels du club.
+
+Conserver source, auteur, licence, crédit et statut des autorisations avant publication, en particulier pour les mineurs reconnaissables. Vérifier la discipline et l’équipement visibles pour éviter les images génériques mal classées.
+
+Exemples de recherche :
+- [Mini-handball enfants, Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Kids_playing_Mini_handball_02.jpg), CC BY-SA 4.0.
+- [Basketball féminin, Pexels](https://www.pexels.com/photo/group-of-athletes-playing-basketball-on-the-court-6767214/).
+- [Judo enfants, Pexels](https://www.pexels.com/photo/kids-during-judo-class-19437725/).
+- [Judo adulte en binôme, Pexels](https://www.pexels.com/photo/woman-and-man-training-on-combat-sports-6765028/).
+- [Karaté féminin, Pexels](https://www.pexels.com/photo/two-women-training-martial-arts-6005457/).
+

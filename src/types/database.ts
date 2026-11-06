@@ -1,34 +1,34 @@
 // Types alignés sur supabase/migrations/0001_initial_complete_schema.sql.
 // À régénérer avec `supabase gen types typescript` une fois le projet Supabase créé.
 
-export type ClubStatus = 'demo' | 'active' | 'suspended' | 'archived';
-export type SubscriptionPlan = 'vitrine' | 'integral';
-export type EmailProvider = 'platform' | 'gmail' | 'smtp';
+export type ClubStatus = "demo" | "active" | "suspended" | "archived";
+export type SubscriptionPlan = "vitrine" | "integral";
+export type EmailProvider = "platform" | "gmail" | "smtp";
 export type StaffRole =
-  'super_admin' | 'president' | 'secretary' | 'treasurer' | 'coach';
+  "super_admin" | "president" | "secretary" | "treasurer" | "coach";
 export type MedicalRequirement =
-  'health_questionnaire' | 'medical_cert_standard' | 'medical_cert_competition';
-export type PaymentStatus = 'unpaid' | 'partial' | 'paid' | 'refunded';
+  "health_questionnaire" | "medical_cert_standard" | "medical_cert_competition";
+export type PaymentStatus = "unpaid" | "partial" | "paid" | "refunded";
 export type PaymentMethod =
-  'card' | 'check' | 'cash' | 'transfer' | 'pass_sport' | 'mixed';
+  "card" | "check" | "cash" | "transfer" | "pass_sport" | "mixed";
 export type InstallmentType =
-  'card' | 'check' | 'cash' | 'transfer' | 'pass_sport' | 'caf' | 'other_aid';
-export type InstallmentStatus = 'pending' | 'deposited' | 'cashed' | 'rejected';
-export type RegistrationType = 'full' | 'trial' | 'renewal' | 'import';
+  "card" | "check" | "cash" | "transfer" | "pass_sport" | "caf" | "other_aid";
+export type InstallmentStatus = "pending" | "deposited" | "cashed" | "rejected";
+export type RegistrationType = "full" | "trial" | "renewal" | "import";
 export type DossierStatus =
-  | 'pending_review'
-  | 'needs_correction'
-  | 'validated'
-  | 'rejected'
-  | 'trial_requested'
-  | 'trial_done';
+  | "pending_review"
+  | "needs_correction"
+  | "validated"
+  | "rejected"
+  | "trial_requested"
+  | "trial_done";
 export type EventType =
-  'competition' | 'tournament' | 'training_camp' | 'club_event' | 'meeting';
-export type ConvocationStatus = 'pending' | 'present' | 'absent';
+  "competition" | "tournament" | "training_camp" | "club_event" | "meeting";
+export type ConvocationStatus = "pending" | "present" | "absent";
 export type ProspectStage =
-  'lead' | 'contacted' | 'demo' | 'quote_sent' | 'won' | 'lost';
-export type DeliveryStatus = 'to_order' | 'ordered' | 'received' | 'delivered';
-export type SponsorLeadStatus = 'new' | 'contacted' | 'won' | 'lost';
+  "lead" | "contacted" | "demo" | "quote_sent" | "won" | "lost";
+export type DeliveryStatus = "to_order" | "ordered" | "received" | "delivered";
+export type SponsorLeadStatus = "new" | "contacted" | "won" | "lost";
 
 export type SocialLinks = {
   facebook?: string;
@@ -40,7 +40,7 @@ export type SiblingDiscountRules = {
   enabled: boolean;
   second_member_discount: number;
   third_member_discount: number;
-  discount_type: 'fixed_euros' | 'percent';
+  discount_type: "fixed_euros" | "percent";
 };
 
 export type EnabledModules = {
@@ -139,7 +139,7 @@ export type Category = {
   name: string;
   min_birth_year: number;
   max_birth_year: number;
-  gender_filter: 'mixed' | 'M' | 'F';
+  gender_filter: "mixed" | "M" | "F";
   annual_price: number;
   max_capacity: number;
   medical_requirement: MedicalRequirement;
@@ -217,7 +217,7 @@ export type Member = {
   last_name: string;
   birth_date: string;
   is_minor: boolean;
-  gender: 'M' | 'F' | 'X';
+  gender: "M" | "F" | "X";
   photo_storage_path: string | null;
   medical_doc_storage_path: string | null;
   id_doc_storage_path: string | null;
@@ -356,39 +356,48 @@ type TableDef<Row, Required extends keyof Row> = {
 export type Database = {
   public: {
     Tables: {
+      club_site_media: TableDef<
+        {
+          club_id: string;
+          section: string;
+          stock_id: string | null;
+          photo_id: string | null;
+        },
+        "club_id" | "section"
+      >;
       club_site_settings: TableDef<
         { club_id: string; sections: string[] },
-        'club_id'
+        "club_id"
       >;
       membership_tiers: TableDef<
-        import('../lib/platform').MembershipTier,
-        'id' | 'name' | 'min_members'
+        import("../lib/platform").MembershipTier,
+        "id" | "name" | "min_members"
       >;
       public_clubs: TableDef<Club, never>;
       coach_roster: TableDef<
         Pick<
           Member,
-          | 'id'
-          | 'club_id'
-          | 'family_id'
-          | 'category_id'
-          | 'season'
-          | 'first_name'
-          | 'last_name'
-          | 'is_minor'
-          | 'consent_autonomous_exit'
-          | 'dossier_status'
+          | "id"
+          | "club_id"
+          | "family_id"
+          | "category_id"
+          | "season"
+          | "first_name"
+          | "last_name"
+          | "is_minor"
+          | "consent_autonomous_exit"
+          | "dossier_status"
         >,
         never
       >;
       coach_contacts: TableDef<
         Pick<
           FamilyRegistration,
-          | 'id'
-          | 'club_id'
-          | 'season'
-          | 'emergency_contact_name'
-          | 'emergency_contact_phone'
+          | "id"
+          | "club_id"
+          | "season"
+          | "emergency_contact_name"
+          | "emergency_contact_phone"
         >,
         never
       >;
@@ -399,7 +408,7 @@ export type Database = {
           user_id: string;
           created_at: string;
         },
-        'club_id' | 'family_id' | 'user_id'
+        "club_id" | "family_id" | "user_id"
       >;
       club_requests: TableDef<
         {
@@ -412,7 +421,7 @@ export type Database = {
           status: string;
           created_at: string;
         },
-        'club_id' | 'kind' | 'first_name' | 'email' | 'message'
+        "club_id" | "kind" | "first_name" | "email" | "message"
       >;
       club_gallery: TableDef<
         {
@@ -422,7 +431,7 @@ export type Database = {
           image_url: string;
           created_at: string;
         },
-        'club_id' | 'title' | 'image_url'
+        "club_id" | "title" | "image_url"
       >;
       audit_events: TableDef<
         {
@@ -433,93 +442,93 @@ export type Database = {
           object_id: string | null;
           created_at: string;
         },
-        'action'
+        "action"
       >;
       clubs: TableDef<
         Club,
-        'name' | 'slug' | 'city' | 'postal_code' | 'contact_email'
+        "name" | "slug" | "city" | "postal_code" | "contact_email"
       >;
-      club_mail_credentials: TableDef<ClubMailCredentials, 'club_id'>;
+      club_mail_credentials: TableDef<ClubMailCredentials, "club_id">;
       staff_members: TableDef<
         StaffMember,
-        'user_id' | 'full_name' | 'email' | 'role'
+        "user_id" | "full_name" | "email" | "role"
       >;
       facilities: TableDef<
         Facility,
-        'club_id' | 'name' | 'address' | 'city' | 'postal_code'
+        "club_id" | "name" | "address" | "city" | "postal_code"
       >;
       categories: TableDef<
         Category,
-        | 'club_id'
-        | 'name'
-        | 'min_birth_year'
-        | 'max_birth_year'
-        | 'annual_price'
+        | "club_id"
+        | "name"
+        | "min_birth_year"
+        | "max_birth_year"
+        | "annual_price"
       >;
       schedules: TableDef<
         Schedule,
-        'club_id' | 'category_id' | 'day_of_week' | 'start_time' | 'end_time'
+        "club_id" | "category_id" | "day_of_week" | "start_time" | "end_time"
       >;
-      club_products: TableDef<ClubProduct, 'club_id' | 'name' | 'price'>;
+      club_products: TableDef<ClubProduct, "club_id" | "name" | "price">;
       family_registrations: TableDef<
         FamilyRegistration,
-        | 'club_id'
-        | 'season'
-        | 'payer_first_name'
-        | 'payer_last_name'
-        | 'payer_email'
-        | 'payer_phone'
-        | 'emergency_contact_name'
-        | 'emergency_contact_phone'
-        | 'address'
-        | 'city'
-        | 'postal_code'
+        | "club_id"
+        | "season"
+        | "payer_first_name"
+        | "payer_last_name"
+        | "payer_email"
+        | "payer_phone"
+        | "emergency_contact_name"
+        | "emergency_contact_phone"
+        | "address"
+        | "city"
+        | "postal_code"
       >;
       payment_installments: TableDef<
         PaymentInstallment,
-        'club_id' | 'family_id' | 'amount' | 'payment_type'
+        "club_id" | "family_id" | "amount" | "payment_type"
       >;
       members: TableDef<
         Member,
-        'club_id' | 'season' | 'first_name' | 'last_name' | 'birth_date'
+        "club_id" | "season" | "first_name" | "last_name" | "birth_date"
       >;
       member_product_orders: TableDef<
         MemberProductOrder,
-        | 'club_id'
-        | 'member_id'
-        | 'product_id'
-        | 'selected_size'
-        | 'price_at_order'
+        | "club_id"
+        | "member_id"
+        | "product_id"
+        | "selected_size"
+        | "price_at_order"
       >;
       attendances: TableDef<
         Attendance,
-        'club_id' | 'schedule_id' | 'member_id'
+        "club_id" | "schedule_id" | "member_id"
       >;
       events: TableDef<
         ClubEvent,
-        'club_id' | 'event_type' | 'title' | 'event_date'
+        "club_id" | "event_type" | "title" | "event_date"
       >;
       event_convocations: TableDef<
         EventConvocation,
-        'club_id' | 'event_id' | 'member_id'
+        "club_id" | "event_id" | "member_id"
       >;
-      posts: TableDef<Post, 'club_id' | 'title' | 'slug' | 'content'>;
-      sponsors: TableDef<Sponsor, 'club_id' | 'company_name' | 'logo_url'>;
+      posts: TableDef<Post, "club_id" | "title" | "slug" | "content">;
+      sponsors: TableDef<Sponsor, "club_id" | "company_name" | "logo_url">;
       sponsor_leads: TableDef<
         SponsorLead,
-        'club_id' | 'company_name' | 'contact_name' | 'phone' | 'email'
+        "club_id" | "company_name" | "contact_name" | "phone" | "email"
       >;
       anonymous_page_views: TableDef<
         AnonymousPageView,
-        'club_id' | 'view_month' | 'page_path'
+        "club_id" | "view_month" | "page_path"
       >;
       saas_prospects: TableDef<
         SaasProspect,
-        'club_name' | 'sport_type' | 'city'
+        "club_name" | "sport_type" | "city"
       >;
       platform_announcements: TableDef<
         PlatformAnnouncement,
-        'title' | 'message'
+        "title" | "message"
       >;
     };
     Views: { [_ in never]: never };

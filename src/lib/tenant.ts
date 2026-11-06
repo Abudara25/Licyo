@@ -1,8 +1,13 @@
-import 'server-only';
-import { unstable_cache } from 'next/cache';
-import { notFound } from 'next/navigation';
-import { rootDomain } from '@/lib/env';
-import { createPublicClient } from '@/lib/supabase/public';
+import "server-only";
+import { unstable_cache } from "next/cache";
+import { notFound } from "next/navigation";
+import {
+  resolveMedia,
+  type MediaSection,
+  type SiteImage,
+} from "@/lib/site-media";
+import { rootDomain } from "@/lib/env";
+import { createPublicClient } from "@/lib/supabase/public";
 import type {
   Category,
   Club,
@@ -12,9 +17,9 @@ import type {
   Post,
   Schedule,
   Sponsor,
-} from '@/types/database';
+} from "@/types/database";
 
-export const DOMAINS_TAG = 'club-domains';
+export const DOMAINS_TAG = "club-domains";
 export const clubTag = (slug: string) => `club-${slug}`;
 const REVALIDATE_SECONDS = 3600;
 
@@ -26,12 +31,12 @@ export function parseDomainParam(raw: string): {
   slug?: string;
   customDomain?: string;
 } {
-  const host = decodeURIComponent(raw).toLowerCase().replace(/:\d+$/, '');
-  const root = rootDomain().replace(/:\d+$/, '');
+  const host = decodeURIComponent(raw).toLowerCase().replace(/:\d+$/, "");
+  const root = rootDomain().replace(/:\d+$/, "");
   if (host.endsWith(`.${root}`))
     return { slug: host.slice(0, -(root.length + 1)) };
-  if (!host.includes('.')) return { slug: host };
-  return { customDomain: host.replace(/^www\./, '') };
+  if (!host.includes(".")) return { slug: host };
+  return { customDomain: host.replace(/^www\./, "") };
 }
 
 const resolveSlug = unstable_cache(
@@ -40,26 +45,27 @@ const resolveSlug = unstable_cache(
     const supabase = createPublicClient();
     if (slug) {
       const { data } = await supabase
-        .from('public_clubs')
-        .select('slug')
-        .eq('slug', slug)
+        .from("public_clubs")
+        .select("slug")
+        .eq("slug", slug)
         .maybeSingle();
       return data?.slug ?? null;
     }
     const { data } = await supabase
-      .from('public_clubs')
-      .select('slug')
-      .in('custom_domain', [customDomain!, `www.${customDomain}`])
+      .from("public_clubs")
+      .select("slug")
+      .in("custom_domain", [customDomain!, `www.${customDomain}`])
       .maybeSingle();
     return data?.slug ?? null;
   },
-  ['resolve-club-slug'],
+  ["resolve-club-slug"],
   { tags: [DOMAINS_TAG], revalidate: REVALIDATE_SECONDS },
 );
 
 export type PublicClubData = {
   club: Club;
   siteSections?: string[];
+  siteImages?: Partial<Record<MediaSection, SiteImage>>;
   categories: Category[];
   schedules: Schedule[];
   facilities: Facility[];
@@ -77,9 +83,9 @@ export function getPublicClubData(
     async () => {
       const supabase = createPublicClient();
       const { data: club } = await supabase
-        .from('public_clubs')
-        .select('*')
-        .eq('slug', slug)
+        .from("public_clubs")
+        .select("*")
+        .eq("slug", slug)
         .maybeSingle();
       if (!club) return null;
       const id = club.id;
@@ -92,50 +98,68 @@ export function getPublicClubData(
         sponsors,
         products,
         composition,
+        media,
       ] = await Promise.all([
         supabase
-          .from('categories')
-          .select('*')
-          .eq('club_id', id)
-          .order('display_order')
-          .order('max_birth_year', { ascending: false }),
+          .from("categories")
+          .select("*")
+          .eq("club_id", id)
+          .order("display_order")
+          .order("max_birth_year", { ascending: false }),
         supabase
-          .from('schedules')
-          .select('*')
-          .eq('club_id', id)
-          .order('day_of_week')
-          .order('start_time'),
-        supabase.from('facilities').select('*').eq('club_id', id).order('name'),
+          .from("schedules")
+          .select("*")
+          .eq("club_id", id)
+          .order("day_of_week")
+          .order("start_time"),
+        supabase.from("facilities").select("*").eq("club_id", id).order("name"),
         supabase
-          .from('events')
-          .select('*')
-          .eq('club_id', id)
-          .order('event_date'),
+          .from("events")
+          .select("*")
+          .eq("club_id", id)
+          .order("event_date"),
         supabase
-          .from('posts')
-          .select('*')
-          .eq('club_id', id)
-          .order('published_at', { ascending: false })
+          .from("posts")
+          .select("*")
+          .eq("club_id", id)
+          .order("published_at", { ascending: false })
           .limit(50),
         supabase
-          .from('sponsors')
-          .select('*')
-          .eq('club_id', id)
-          .order('display_order'),
+          .from("sponsors")
+          .select("*")
+          .eq("club_id", id)
+          .order("display_order"),
         supabase
-          .from('club_products')
-          .select('*')
-          .eq('club_id', id)
-          .order('name'),
+          .from("club_products")
+          .select("*")
+          .eq("club_id", id)
+          .order("name"),
         supabase
-          .from('club_site_settings')
-          .select('sections')
-          .eq('club_id', id)
+          .from("club_site_settings")
+          .select("sections")
+          .eq("club_id", id)
           .maybeSingle(),
+        supabase
+          .from("club_site_media")
+          .select("section,stock_id,photo_id")
+          .eq("club_id", id),
       ]);
+      const photoIds = (media.data ?? []).flatMap((row) =>
+        row.photo_id ? [row.photo_id] : [],
+      );
+      const photos = photoIds.length
+        ? ((
+            await supabase
+              .from("club_gallery")
+              .select("id,title,image_url")
+              .eq("club_id", id)
+              .in("id", photoIds)
+          ).data ?? [])
+        : [];
       return {
         club,
         siteSections: composition.data?.sections,
+        siteImages: resolveMedia(media.data ?? [], photos),
         categories: categories.data ?? [],
         schedules: schedules.data ?? [],
         facilities: facilities.data ?? [],
@@ -145,7 +169,7 @@ export function getPublicClubData(
         products: products.data ?? [],
       };
     },
-    ['public-club-data', slug],
+    ["public-club-data", slug],
     { tags: [clubTag(slug)], revalidate: REVALIDATE_SECONDS },
   )();
 }
@@ -162,5 +186,5 @@ export async function loadClubOr404(domain: string): Promise<PublicClubData> {
 /** Préfixe des liens internes d'un site club : vide sur son hôte, « /slug » en aperçu local. */
 export function sitePrefix(domain: string): string {
   const host = decodeURIComponent(domain);
-  return host.includes('.') ? '' : `/${host}`;
+  return host.includes(".") ? "" : `/${host}`;
 }

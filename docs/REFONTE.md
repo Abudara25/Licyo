@@ -10,7 +10,7 @@ SaintGratienFC : catégories, préinscriptions, dossiers, relances, accès famil
 asc-muaythai : sections, documents parentaux, cotisations, demandes de cours particuliers.
 Aucune donnée personnelle de ces dépôts n’est importée.
 ## Mise en service
-Appliquer 0002 puis 0003 après 0001 sur une copie restaurée. Configurer Supabase Auth (URL du site et callback), les variables .env.example, puis les prix depuis le pilotage. Ne pas appliquer les migrations directement en production sans sauvegarde restaurable.
+Appliquer 0002, 0003 puis 0004 après 0001 sur une copie restaurée. Configurer Supabase Auth (URL du site et callback), les variables .env.example, puis les prix depuis le pilotage. Ne pas appliquer les migrations directement en production sans sauvegarde restaurable.
 Les pages /decouvrir sont des aperçus publics avec données fictives, sans accès à la base ni contournement d’authentification.
 ## Retour arrière
 Revenir au code précédent sans supprimer les nouvelles tables. Désactiver les nouveaux parcours si nécessaire ; ne pas rétablir les anciennes permissions excessives.
@@ -29,3 +29,7 @@ Le pilotage propriétaire utilise ControlShell, indépendant de l’interface cl
 La composition des vitrines appartient à club_site_settings, avec une ligne par club. Sept sections disponibles, ordre personnalisable et activation indépendante. Les sections sans contenu ou dont le module est désactivé ne s’affichent pas. Les gestionnaires président/secrétaire et le propriétaire peuvent enregistrer ; les lecteurs publics n’accèdent qu’aux réglages des clubs publics. Aucun HTML libre n’est accepté. Les trois modèles utilisent la même composition et conservent leur style. Les animations d’apparition sont progressives et respectent prefers-reduced-motion.
 
 Migration 0003 additive : sans réglage enregistré, la composition historique reste utilisée. Retour arrière possible en revenant au code précédent, sans supprimer la table. Contrôles locaux : masquage et déplacement réellement testés dans le navigateur, écriture par un club tiers et par un coach refusée, lecture publique d’un club suspendu interdite. La validation avec Supabase hébergé reste à réaliser.
+
+## Médiathèque de vitrine
+
+La migration 0004 enregistre les choix de photos par section et par club. La première sélection contient 20 références Pexels réparties entre sept sports. La démo permet de tester le catalogue et une photo locale. Le back-office utilise les photos déjà importées dans la galerie du club. La source et le crédit accompagnent les illustrations publiques. Les droits des personnes reconnaissables sont à vérifier avant publication.

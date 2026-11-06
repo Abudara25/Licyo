@@ -1,8 +1,8 @@
 // Vérifie la migration sur un Postgres embarqué (PGlite) et teste l'isolation RLS.
 // Usage : node scripts/check-migration.mjs
-import { PGlite } from '@electric-sql/pglite';
-import { readFileSync, readdirSync } from 'node:fs';
-import assert from 'node:assert/strict';
+import { PGlite } from "@electric-sql/pglite";
+import { readFileSync, readdirSync } from "node:fs";
+import assert from "node:assert/strict";
 
 const db = new PGlite();
 
@@ -22,11 +22,11 @@ await db.exec(`
   GRANT SELECT, INSERT, UPDATE, DELETE ON storage.objects TO anon, authenticated;
 `);
 
-for (const f of readdirSync('supabase/migrations').sort()) {
+for (const f of readdirSync("supabase/migrations").sort()) {
   // pgcrypto absent de PGlite ; gen_random_uuid() est natif depuis PG 13.
-  const sql = readFileSync(`supabase/migrations/${f}`, 'utf8').replace(
+  const sql = readFileSync(`supabase/migrations/${f}`, "utf8").replace(
     /CREATE EXTENSION[^;]*;/g,
-    '',
+    "",
   );
   try {
     await db.exec(sql);
@@ -34,13 +34,13 @@ for (const f of readdirSync('supabase/migrations').sort()) {
     console.error(
       f,
       e.message,
-      'position',
+      "position",
       e.position,
       sql.slice(Number(e.position) - 80, Number(e.position) + 40),
     );
     process.exit(1);
   }
-  console.log('OK', f);
+  console.log("OK", f);
 }
 await db.exec(`GRANT SELECT, INSERT, DELETE ON ALL TABLES IN SCHEMA public TO anon, authenticated;
 GRANT UPDATE ON ALL TABLES IN SCHEMA public TO authenticated;
@@ -48,15 +48,15 @@ REVOKE UPDATE ON clubs FROM authenticated;
 GRANT UPDATE(name) ON clubs TO authenticated;`);
 
 const U = {
-  superA: '00000000-0000-0000-0000-00000000000a',
-  presA: '00000000-0000-0000-0000-0000000000a1',
-  coachA: '00000000-0000-0000-0000-0000000000a2',
-  presB: '00000000-0000-0000-0000-0000000000b1',
+  superA: "00000000-0000-0000-0000-00000000000a",
+  presA: "00000000-0000-0000-0000-0000000000a1",
+  coachA: "00000000-0000-0000-0000-0000000000a2",
+  presB: "00000000-0000-0000-0000-0000000000b1",
 };
 await db.exec(
   `INSERT INTO auth.users(id) VALUES ${Object.values(U)
     .map((u) => `('${u}')`)
-    .join(',')};`,
+    .join(",")};`,
 );
 const {
   rows: [a],
@@ -84,12 +84,12 @@ await db.exec(`
 
 async function as(role, uid, sql) {
   await db.exec(
-    `RESET ROLE; SELECT set_config('request.jwt.claim.sub', '${uid ?? ''}', false); SET ROLE ${role};`,
+    `RESET ROLE; SELECT set_config('request.jwt.claim.sub', '${uid ?? ""}', false); SET ROLE ${role};`,
   );
   try {
     return (await db.query(sql)).rows;
   } finally {
-    await db.exec('RESET ROLE;');
+    await db.exec("RESET ROLE;");
   }
 }
 async function fails(role, uid, sql) {
@@ -103,38 +103,38 @@ async function fails(role, uid, sql) {
 
 // Lecture publique : seul le club actif est visible ; aucun secret, aucun membre.
 assert.deepEqual(
-  (await as('anon', null, 'SELECT slug FROM public_clubs')).map((r) => r.slug),
-  ['club-a'],
+  (await as("anon", null, "SELECT slug FROM public_clubs")).map((r) => r.slug),
+  ["club-a"],
 );
-assert.equal((await as('anon', null, 'SELECT * FROM members')).length, 0);
+assert.equal((await as("anon", null, "SELECT * FROM members")).length, 0);
 assert.equal(
-  (await as('anon', null, 'SELECT * FROM club_mail_credentials')).length,
+  (await as("anon", null, "SELECT * FROM club_mail_credentials")).length,
   0,
 );
 assert.ok(
   await fails(
-    'anon',
+    "anon",
     null,
     `INSERT INTO members (club_id, season, first_name, last_name, birth_date) VALUES ('${a.id}','x','a','b','2015-01-01')`,
   ),
 );
 // Isolation entre clubs.
 assert.deepEqual(
-  (await as('authenticated', U.presA, 'SELECT last_name FROM members')).map(
+  (await as("authenticated", U.presA, "SELECT last_name FROM members")).map(
     (r) => r.last_name,
   ),
-  ['A'],
+  ["A"],
 );
 assert.deepEqual(
-  (await as('authenticated', U.presB, 'SELECT last_name FROM members')).map(
+  (await as("authenticated", U.presB, "SELECT last_name FROM members")).map(
     (r) => r.last_name,
   ),
-  ['B'],
+  ["B"],
 );
 assert.equal(
   (
     await as(
-      'authenticated',
+      "authenticated",
       U.presB,
       `UPDATE clubs SET name='pirate' WHERE id='${a.id}' RETURNING id`,
     )
@@ -142,19 +142,19 @@ assert.equal(
   0,
 );
 assert.equal(
-  (await as('authenticated', U.presA, 'SELECT * FROM club_mail_credentials'))
+  (await as("authenticated", U.presA, "SELECT * FROM club_mail_credentials"))
     .length,
   0,
 );
 // Un coach lit mais ne modifie pas les dossiers ni l'échéancier.
 assert.equal(
-  (await as('authenticated', U.coachA, 'SELECT * FROM members')).length,
+  (await as("authenticated", U.coachA, "SELECT * FROM members")).length,
   0,
 );
 assert.equal(
   (
     await as(
-      'authenticated',
+      "authenticated",
       U.coachA,
       `UPDATE members SET last_name='x' RETURNING id`,
     )
@@ -162,15 +162,15 @@ assert.equal(
   0,
 );
 assert.equal(
-  (await as('authenticated', U.coachA, 'SELECT * FROM family_registrations'))
+  (await as("authenticated", U.coachA, "SELECT * FROM family_registrations"))
     .length,
   0,
 );
-const fid = (await db.query('SELECT id FROM family_registrations LIMIT 1'))
+const fid = (await db.query("SELECT id FROM family_registrations LIMIT 1"))
   .rows[0].id;
 assert.ok(
   await fails(
-    'authenticated',
+    "authenticated",
     U.coachA,
     `INSERT INTO payment_installments (club_id,family_id,amount,payment_type) VALUES ('${a.id}','${fid}',10,'check')`,
   ),
@@ -178,28 +178,28 @@ assert.ok(
 // Personne ne s'octroie super_admin ; un président ne gère que son club.
 assert.ok(
   await fails(
-    'authenticated',
+    "authenticated",
     U.presA,
     `INSERT INTO staff_members (user_id, club_id, full_name, email, role) VALUES ('${U.presA}', NULL, 'x', 'x', 'super_admin')`,
   ),
 );
 assert.ok(
   await fails(
-    'authenticated',
+    "authenticated",
     U.presA,
     `INSERT INTO staff_members (user_id, club_id, full_name, email, role) VALUES ('${U.presA}', '${b.id}', 'x', 'x', 'president')`,
   ),
 );
 // Le super_admin voit tout.
 assert.equal(
-  (await as('authenticated', U.superA, 'SELECT * FROM members')).length,
+  (await as("authenticated", U.superA, "SELECT * FROM members")).length,
   2,
 );
 // Compteur d'audience : appelable anonymement, ignoré pour un club non public.
 for (const id of [a.id, a.id, b.id])
-  await as('anon', null, `SELECT increment_page_view('${id}', '/')`);
+  await as("anon", null, `SELECT increment_page_view('${id}', '/')`);
 const views = (
-  await db.query('SELECT club_id, views_count FROM anonymous_page_views')
+  await db.query("SELECT club_id, views_count FROM anonymous_page_views")
 ).rows;
 assert.deepEqual(views, [{ club_id: a.id, views_count: 2 }]);
 // Stockage privé : seul le bureau du club lit ses pièces.
@@ -207,41 +207,41 @@ await db.exec(
   `INSERT INTO storage.objects (bucket_id, name) VALUES ('club-private-docs', '${a.id}/members/x.webp')`,
 );
 assert.equal(
-  (await as('authenticated', U.presA, 'SELECT * FROM storage.objects')).length,
+  (await as("authenticated", U.presA, "SELECT * FROM storage.objects")).length,
   1,
 );
 assert.equal(
-  (await as('authenticated', U.presB, 'SELECT * FROM storage.objects')).length,
+  (await as("authenticated", U.presB, "SELECT * FROM storage.objects")).length,
   0,
 );
 assert.equal(
-  (await as('anon', null, 'SELECT * FROM storage.objects')).length,
+  (await as("anon", null, "SELECT * FROM storage.objects")).length,
   0,
 );
 
-console.log('RLS : tous les contrôles passent');
+console.log("RLS : tous les contrôles passent");
 
 // Régressions de la refonte : facturation protégée, relations entre tenants, familles vérifiées.
 assert.ok(
   await fails(
-    'authenticated',
+    "authenticated",
     U.presA,
     `UPDATE clubs SET subscription_plan='vitrine' WHERE id='${a.id}'`,
   ),
 );
 assert.ok(
   await fails(
-    'authenticated',
+    "authenticated",
     U.presA,
     `UPDATE clubs SET status='active' WHERE id='${b.id}'`,
   ),
 );
-assert.equal((await as('anon', null, 'SELECT * FROM clubs')).length, 0);
+assert.equal((await as("anon", null, "SELECT * FROM clubs")).length, 0);
 const projection = (
   await as(
-    'anon',
+    "anon",
     null,
-    'SELECT stripe_customer_id,stripe_subscription_id,president_signature_url FROM public_clubs',
+    "SELECT stripe_customer_id,stripe_subscription_id,president_signature_url FROM public_clubs",
   )
 )[0];
 assert.deepEqual(projection, {
@@ -261,7 +261,7 @@ const catB = (
 ).rows[0].id;
 assert.ok(
   await fails(
-    'authenticated',
+    "authenticated",
     U.presA,
     `INSERT INTO schedules(club_id,category_id,day_of_week,start_time,end_time) VALUES('${a.id}','${catB}',1,'18:00','19:00')`,
   ),
@@ -270,45 +270,45 @@ await db.exec(
   `UPDATE members SET category_id='${catA}' WHERE club_id='${a.id}'; UPDATE staff_members SET assigned_category_ids=ARRAY['${catA}'::uuid] WHERE user_id='${U.coachA}';`,
 );
 assert.equal(
-  (await as('authenticated', U.coachA, 'SELECT * FROM coach_roster')).length,
+  (await as("authenticated", U.coachA, "SELECT * FROM coach_roster")).length,
   1,
 );
 assert.equal(
-  (await as('authenticated', U.presB, 'SELECT * FROM coach_roster')).length,
+  (await as("authenticated", U.presB, "SELECT * FROM coach_roster")).length,
   1,
 );
-const parentA = '00000000-0000-0000-0000-0000000000c1';
-const parentB = '00000000-0000-0000-0000-0000000000c2';
+const parentA = "00000000-0000-0000-0000-0000000000c1";
+const parentB = "00000000-0000-0000-0000-0000000000c2";
 await db.exec(
   `INSERT INTO auth.users(id,email,email_confirmed_at) VALUES ('${parentA}','P@x.fr',now()),('${parentB}','other@x.fr',now()); UPDATE members SET family_id='${fid}' WHERE club_id='${a.id}';`,
 );
-await as('authenticated', parentA, 'SELECT claim_family_access()');
-await as('authenticated', parentA, 'SELECT claim_family_access()');
+await as("authenticated", parentA, "SELECT claim_family_access()");
+await as("authenticated", parentA, "SELECT claim_family_access()");
 assert.equal(
-  (await as('authenticated', parentA, 'SELECT * FROM family_access')).length,
+  (await as("authenticated", parentA, "SELECT * FROM family_access")).length,
   1,
 );
 assert.equal(
-  (await as('authenticated', parentA, 'SELECT * FROM family_registrations'))
+  (await as("authenticated", parentA, "SELECT * FROM family_registrations"))
     .length,
   1,
 );
 assert.equal(
-  (await as('authenticated', parentA, 'SELECT * FROM members')).length,
+  (await as("authenticated", parentA, "SELECT * FROM members")).length,
   1,
 );
 assert.equal(
-  (await as('authenticated', parentB, 'SELECT * FROM family_registrations'))
+  (await as("authenticated", parentB, "SELECT * FROM family_registrations"))
     .length,
   0,
 );
 assert.equal(
-  (await as('authenticated', parentB, 'SELECT * FROM members')).length,
+  (await as("authenticated", parentB, "SELECT * FROM members")).length,
   0,
 );
 assert.ok(
   await fails(
-    'authenticated',
+    "authenticated",
     parentB,
     `INSERT INTO family_access(club_id,family_id,user_id) VALUES('${a.id}','${fid}','${parentB}')`,
   ),
@@ -317,24 +317,24 @@ await db.exec(
   `UPDATE auth.users SET email_confirmed_at=NULL WHERE id='${parentB}'`,
 );
 assert.ok(
-  await fails('authenticated', parentB, 'SELECT claim_family_access()'),
+  await fails("authenticated", parentB, "SELECT claim_family_access()"),
 );
 await db.exec(
   `UPDATE auth.users SET email_confirmed_at=now() WHERE id='${parentB}'`,
 );
 const payload = {
-  name: 'Association test',
-  slug: 'nouveau-club',
-  sport: 'Escalade',
-  template: 'studio',
-  city: 'Paris',
-  postalCode: '75000',
-  ownerName: 'Test',
+  name: "Association test",
+  slug: "nouveau-club",
+  sport: "Escalade",
+  template: "studio",
+  city: "Paris",
+  postalCode: "75000",
+  ownerName: "Test",
   memberCount: 101,
 };
 const provisioned = (
   await as(
-    'authenticated',
+    "authenticated",
     parentB,
     `SELECT provision_club('${JSON.stringify(payload)}'::jsonb) AS id`,
   )
@@ -345,14 +345,14 @@ const created = (
   )
 ).rows[0];
 assert.deepEqual(created, {
-  theme_preset: 'studio',
-  membership_tier_id: 'collectif',
-  status: 'demo',
+  theme_preset: "studio",
+  membership_tier_id: "collectif",
+  status: "demo",
 });
 assert.equal(
   (
     await as(
-      'authenticated',
+      "authenticated",
       parentB,
       `SELECT * FROM staff_members WHERE club_id='${provisioned}'`,
     )
@@ -361,44 +361,44 @@ assert.equal(
 );
 assert.ok(
   await fails(
-    'authenticated',
+    "authenticated",
     parentB,
-    `SELECT provision_club('${JSON.stringify({ ...payload, slug: 'admin' })}'::jsonb)`,
+    `SELECT provision_club('${JSON.stringify({ ...payload, slug: "admin" })}'::jsonb)`,
   ),
 );
 assert.ok(
   await fails(
-    'authenticated',
+    "authenticated",
     U.presA,
     `INSERT INTO payment_installments(club_id,family_id,amount,payment_type) VALUES('${b.id}','${fid}',10,'cash')`,
   ),
 );
 assert.equal(
-  (await as('authenticated', parentA, 'SELECT * FROM audit_events')).length,
+  (await as("authenticated", parentA, "SELECT * FROM audit_events")).length,
   0,
 );
 console.log(
-  'Refonte : accès familles, catégories coach, facturation, création atomique et isolation vérifiés',
+  "Refonte : accès familles, catégories coach, facturation, création atomique et isolation vérifiés",
 );
 
 await as(
-  'authenticated',
+  "authenticated",
   U.presA,
   `INSERT INTO club_site_settings(club_id,sections) VALUES('${a.id}',ARRAY['news','hero'])`,
 );
 assert.deepEqual(
   (
     await as(
-      'anon',
+      "anon",
       null,
       `SELECT sections FROM club_site_settings WHERE club_id='${a.id}'`,
     )
   )[0].sections,
-  ['news', 'hero'],
+  ["news", "hero"],
 );
 assert.deepEqual(
   await as(
-    'authenticated',
+    "authenticated",
     U.presB,
     `UPDATE club_site_settings SET sections=ARRAY['hero'] WHERE club_id='${a.id}' RETURNING club_id`,
   ),
@@ -406,7 +406,7 @@ assert.deepEqual(
 );
 assert.deepEqual(
   await as(
-    'authenticated',
+    "authenticated",
     U.coachA,
     `UPDATE club_site_settings SET sections=ARRAY['hero'] WHERE club_id='${a.id}' RETURNING club_id`,
   ),
@@ -415,43 +415,43 @@ assert.deepEqual(
 assert.deepEqual(
   (
     await as(
-      'authenticated',
+      "authenticated",
       U.presA,
       `SELECT sections FROM club_site_settings WHERE club_id='${a.id}'`,
     )
   )[0].sections,
-  ['news', 'hero'],
+  ["news", "hero"],
 );
 assert.ok(
   await fails(
-    'authenticated',
+    "authenticated",
     U.coachA,
     `INSERT INTO club_site_settings(club_id,sections) VALUES('${b.id}',ARRAY['hero'])`,
   ),
 );
 assert.ok(
   await fails(
-    'authenticated',
+    "authenticated",
     U.presA,
     `UPDATE club_site_settings SET sections=ARRAY['hero','hero'] WHERE club_id='${a.id}'`,
   ),
 );
 assert.ok(
   await fails(
-    'authenticated',
+    "authenticated",
     U.presA,
     `UPDATE club_site_settings SET sections=ARRAY['news'] WHERE club_id='${a.id}'`,
   ),
 );
 await as(
-  'authenticated',
+  "authenticated",
   U.presB,
   `INSERT INTO club_site_settings(club_id,sections) VALUES('${b.id}',ARRAY['hero'])`,
 );
 assert.equal(
   (
     await as(
-      'anon',
+      "anon",
       null,
       `SELECT * FROM club_site_settings WHERE club_id='${b.id}'`,
     )
@@ -459,6 +459,37 @@ assert.equal(
   0,
 );
 console.log(
-  'Composition : écriture du dirigeant, accès public, clubs suspendus et isolation vérifiés',
+  "Composition : écriture du dirigeant, accès public, clubs suspendus et isolation vérifiés",
+);
+// Une photo publique d'un autre club ne peut pas être rattachée à la vitrine.
+const [mediaPhoto] = (
+  await db.query(
+    `INSERT INTO club_gallery(club_id,title,image_url) VALUES('${b.id}','Photo','https://example.org/photo.jpg') RETURNING id`,
+  )
+).rows;
+assert.ok(
+  await fails(
+    "authenticated",
+    U.presA,
+    `INSERT INTO club_site_media(club_id,section,photo_id) VALUES('${a.id}','hero','${mediaPhoto.id}')`,
+  ),
+);
+await as(
+  "authenticated",
+  U.presB,
+  `INSERT INTO club_site_media(club_id,section,photo_id) VALUES('${b.id}','hero','${mediaPhoto.id}')`,
+);
+assert.deepEqual(
+  await as(
+    "anon",
+    null,
+    `SELECT * FROM club_site_media WHERE club_id='${b.id}'`,
+  ),
+  [],
+);
+await db.exec(`DELETE FROM club_gallery WHERE id='${mediaPhoto.id}'`);
+assert.equal((await db.query("SELECT * FROM club_site_media")).rows.length, 0);
+console.log(
+  "Médiathèque : liaison entre clubs refusée, confidentialité et suppression vérifiées",
 );
 await db.close();

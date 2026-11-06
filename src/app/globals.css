@@ -2672,3 +2672,162 @@ button:disabled {
     transform: none !important;
   }
 }
+
+/* Media library and published section images */
+.site-media-editor,
+.site-media-actions {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.site-media-fields,
+.site-media-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.site-media-fields label,
+.site-media-file,
+.site-media-sport-nav label {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.site-media-fields select,
+.site-media-file input,
+.site-media-sport-nav select {
+  width: 100%;
+  min-height: 44px;
+  padding-inline: 0.65rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.6rem;
+  background: white;
+  color: #172033;
+  font-size: 16px;
+}
+
+.site-media-file input {
+  padding-block: 0.5rem;
+}
+
+.site-media-grid button {
+  min-height: 44px;
+  min-width: 0;
+  align-self: stretch;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+  border: 2px solid #cbd5e1;
+  border-radius: 0.75rem;
+  background: white;
+  color: #172033;
+  text-align: left;
+  cursor: pointer;
+}
+
+.site-media-grid button[aria-pressed='true'] {
+  border-color: #0f766e;
+  background: #ecfdf5;
+}
+
+.site-media-grid img,
+.site-media-current img,
+.site-section-photo img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+}
+
+.site-media-grid button > span {
+  padding: 0.6rem;
+  font-weight: 600;
+}
+
+.site-media-grid small {
+  display: block;
+  margin-top: 0.25rem;
+  color: #475569;
+}
+
+.site-media-current {
+  display: grid;
+  gap: 0.4rem;
+  max-width: 27rem;
+}
+
+.site-media-current img,
+.site-section-photo img {
+  aspect-ratio: 16 / 9;
+  border-radius: 0.85rem;
+}
+
+.site-section-photo img {
+  max-height: 24rem;
+}
+
+.site-section-photo {
+  margin-block-end: 1rem;
+}
+
+.site-photo-credit,
+.site-media-actions button,
+.site-media-editor a,
+.site-media-sport-nav button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  justify-self: start;
+}
+
+.club-art .site-photo-credit {
+  position: absolute;
+  inset-inline-end: 0.65rem;
+  inset-block-end: 0.65rem;
+  z-index: 3;
+  padding-inline: 0.65rem;
+  border-radius: 0.5rem;
+  background: #111827;
+  color: white;
+  font-size: 0.75rem;
+}
+
+.site-media-sport-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.6rem;
+}
+
+@media (min-width: 768px) {
+  .site-media-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.site-media-publish {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.site-media-publish label {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+  min-height: 44px;
+}
+
+.site-media-publish input {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: none;
+}
+
+@media (max-width: 420px) {
+  .site-media-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

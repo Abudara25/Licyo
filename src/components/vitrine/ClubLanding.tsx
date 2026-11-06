@@ -1,15 +1,30 @@
-import { resolveSections, type SiteSectionId } from '@/lib/site-composition';
-import { LivingSite } from './LivingSite';
-import Link from 'next/link';
-import { ArrowUpRight, CalendarDays } from 'lucide-react';
-import { moduleEnabled } from '@/lib/platform';
-import { getSportPreset } from '@/config/sports-presets';
-import { SlotFinderWidget } from './SlotFinderWidget';
-import { PlainText } from './PageTitle';
-import type { PublicClubData } from '@/lib/tenant';
+import { resolveSections, type SiteSectionId } from "@/lib/site-composition";
+import type { SiteImage } from "@/lib/site-media";
+import { LivingSite } from "./LivingSite";
+import Link from "next/link";
+import { ArrowUpRight, CalendarDays } from "lucide-react";
+import { moduleEnabled } from "@/lib/platform";
+import { getSportPreset } from "@/config/sports-presets";
+import { SlotFinderWidget } from "./SlotFinderWidget";
+import { PlainText } from "./PageTitle";
+import type { PublicClubData } from "@/lib/tenant";
+function PhotoCredit({ image }: { image?: SiteImage }) {
+  if (!image?.source) return null;
+  return (
+    <a
+      className="site-photo-credit"
+      href={image.source}
+      target="_blank"
+      rel="noreferrer"
+    >
+      Photo d’illustration · {image.credit}
+    </a>
+  );
+}
+
 export function ClubLanding({
   data,
-  prefix = '',
+  prefix = "",
   preview = false,
   sections,
 }: {
@@ -18,10 +33,12 @@ export function ClubLanding({
   preview?: boolean;
   sections?: string[];
 }) {
-  const { club, categories, posts, events } = data;
+  const { club, categories, posts, events, siteImages } = data;
+  const cover = siteImages?.hero;
+  const heroUrl = cover?.url ?? club.hero_image_url;
   const v = getSportPreset(club.sport_type).vocabulary;
   const link = (path: string) =>
-    preview ? '/commencer?modele=' + club.theme_preset : prefix + path;
+    preview ? "/commencer?modele=" + club.theme_preset : prefix + path;
   const blocks: Record<SiteSectionId, React.ReactNode> = {
     hero: (
       <>
@@ -34,27 +51,28 @@ export function ClubLanding({
               <h1>{club.name}</h1>
               <p>{v.tagline}</p>
               <div className="hero-actions">
-                {moduleEnabled(club.enabled_modules, 'inscriptions') ? (
-                  <Link className="pill-button" href={link('/inscription')}>
+                {moduleEnabled(club.enabled_modules, "inscriptions") ? (
+                  <Link className="pill-button" href={link("/inscription")}>
                     Rejoindre le club <ArrowUpRight size={18} />
                   </Link>
                 ) : null}
-                {moduleEnabled(club.enabled_modules, 'trials') ? (
-                  <Link className="text-link" href={link('/essai')}>
+                {moduleEnabled(club.enabled_modules, "trials") ? (
+                  <Link className="text-link" href={link("/essai")}>
                     Faire un essai <ArrowUpRight size={17} />
                   </Link>
                 ) : null}
               </div>
             </div>
             <div className="club-art">
-              {club.hero_image_url ? (
+              {heroUrl ? (
                 <img
                   className="club-hero-image"
-                  src={club.hero_image_url}
+                  src={heroUrl}
                   alt=""
                   width={1000}
                   height={700}
                   fetchPriority="high"
+                  referrerPolicy="no-referrer"
                 />
               ) : (
                 <span>
@@ -63,6 +81,7 @@ export function ClubLanding({
                   Ensemble.
                 </span>
               )}
+              <PhotoCredit image={cover} />
             </div>
           </div>
         </section>
@@ -100,12 +119,12 @@ export function ClubLanding({
           schedules={data.schedules}
           facilities={data.facilities}
           vocab={v}
-          prefix={preview ? '/decouvrir/site' : prefix}
+          prefix={preview ? "/decouvrir/site" : prefix}
           trialsEnabled={
-            !preview && moduleEnabled(club.enabled_modules, 'trials')
+            !preview && moduleEnabled(club.enabled_modules, "trials")
           }
           registrationEnabled={
-            !preview && moduleEnabled(club.enabled_modules, 'inscriptions')
+            !preview && moduleEnabled(club.enabled_modules, "inscriptions")
           }
         />
       </section>
@@ -119,11 +138,11 @@ export function ClubLanding({
               <h2 className="mt-4 text-3xl font-semibold">
                 Bien plus qu’un club.
               </h2>
-              <PlainText text={club.club_history_text ?? ''} />
+              <PlainText text={club.club_history_text ?? ""} />
             </div>
             <div className="workspace-card">
               <span className="eyebrow">UN MOT POUR VOUS</span>
-              <PlainText text={club.president_word_text ?? ''} />
+              <PlainText text={club.president_word_text ?? ""} />
               {club.president_name ? (
                 <p className="mt-4 text-sm font-semibold">
                   {club.president_name}
@@ -134,7 +153,7 @@ export function ClubLanding({
         </section>
       ) : null,
     events:
-      moduleEnabled(club.enabled_modules, 'events') && events.length ? (
+      moduleEnabled(club.enabled_modules, "events") && events.length ? (
         <section className="page-container section-space">
           <div className="section-intro">
             <div>
@@ -147,10 +166,10 @@ export function ClubLanding({
               <article className="workspace-card" key={e.id}>
                 <span className="eyebrow">
                   <CalendarDays size={16} />
-                  {new Date(e.event_date).toLocaleDateString('fr-FR', {
-                    day: 'numeric',
-                    month: 'long',
-                    timeZone: 'Europe/Paris',
+                  {new Date(e.event_date).toLocaleDateString("fr-FR", {
+                    day: "numeric",
+                    month: "long",
+                    timeZone: "Europe/Paris",
                   })}
                 </span>
                 <h3 className="mt-4 text-xl font-semibold">{e.title}</h3>
@@ -161,7 +180,7 @@ export function ClubLanding({
         </section>
       ) : null,
     news:
-      moduleEnabled(club.enabled_modules, 'news') && posts.length ? (
+      moduleEnabled(club.enabled_modules, "news") && posts.length ? (
         <section className="page-container pb-16">
           <div className="section-intro">
             <div>
@@ -187,7 +206,7 @@ export function ClubLanding({
                 <Link
                   className="text-link mt-4"
                   href={
-                    preview ? '/commencer' : prefix + '/actualites/' + p.slug
+                    preview ? "/commencer" : prefix + "/actualites/" + p.slug
                   }
                 >
                   Lire la suite <ArrowUpRight size={16} />
@@ -198,7 +217,7 @@ export function ClubLanding({
         </section>
       ) : null,
     sponsors:
-      moduleEnabled(club.enabled_modules, 'sponsors') &&
+      moduleEnabled(club.enabled_modules, "sponsors") &&
       data.sponsors.length ? (
         <section className="page-container pb-16">
           <h2 className="mb-6 text-2xl font-semibold">
@@ -221,13 +240,33 @@ export function ClubLanding({
   };
   return (
     <LivingSite>
-      {resolveSections(sections ?? data.siteSections).map((id) =>
-        blocks[id] ? (
+      {resolveSections(sections ?? data.siteSections).map((id) => {
+        if (!blocks[id]) return null;
+        const photo =
+          id !== "hero" && id !== "numbers" && id !== "sponsors"
+            ? siteImages?.[id]
+            : undefined;
+        return (
           <div key={id} data-site-section={id}>
+            {photo && (
+              <div className="page-container">
+                <figure className="site-section-photo">
+                  <img
+                    src={photo.url}
+                    alt={photo.title}
+                    width={1000}
+                    height={430}
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                  />
+                  <PhotoCredit image={photo} />
+                </figure>
+              </div>
+            )}
             {blocks[id]}
           </div>
-        ) : null,
-      )}
+        );
+      })}
     </LivingSite>
   );
 }
