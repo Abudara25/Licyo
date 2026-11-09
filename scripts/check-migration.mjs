@@ -359,6 +359,28 @@ assert.equal(
   ).length,
   1,
 );
+const heritagePayload = {
+  ...payload,
+  slug: "club-heritage",
+  template: "heritage",
+};
+const [heritage] = await as(
+  "authenticated",
+  parentB,
+  `SELECT provision_club('${JSON.stringify(heritagePayload)}'::jsonb) AS id`,
+);
+assert.equal(
+  (await db.query("SELECT theme_preset FROM clubs WHERE id=$1", [heritage.id]))
+    .rows[0].theme_preset,
+  "heritage",
+);
+assert.ok(
+  await fails(
+    "authenticated",
+    parentB,
+    `SELECT provision_club('${JSON.stringify({ ...payload, slug: "theme-inconnu", template: "inconnu" })}'::jsonb)`,
+  ),
+);
 assert.ok(
   await fails(
     "authenticated",

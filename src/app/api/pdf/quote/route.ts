@@ -77,7 +77,7 @@ export async function GET(req: Request) {
         planName: tier.name + ' · ' + effectif + ' adhérents',
         monthlyPrice: tier.monthly_cents / 100,
         features: [
-          'Un site parmi les modèles Club, Arena et Studio',
+          'Un site parmi les quatre modèles de vitrine',
           'Back-office de gestion du club',
           'Espace adhérent et famille',
           'Modules activables selon vos besoins',

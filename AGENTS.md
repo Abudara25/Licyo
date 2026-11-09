@@ -1,3 +1,5 @@
+Décision visuelle validée le 9 novembre 2026. Les quatre modèles sont Tribune (arena), Maison du club (club), Signal (studio) et Héritage (heritage). Héritage reprend la composition bordeaux/or, les diagonales et la mise en avant du blason de Saint-Gratien FC. Utiliser les contenus et médias du club Licyo. Les identifiants historiques restent compatibles. Les nouvelles vitrines privilégient les angles nets et des compositions distinctes.
+
 ## Lecture prioritaire — vision actualisée le 4 novembre 2026
 
 Avant de concevoir ou coder, lire intégralement, dans cet ordre :

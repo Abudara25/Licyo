@@ -67,7 +67,7 @@ export function PricingConfigurator({ tiers }: { tiers: MembershipTier[] }) {
         </p>
         <ul>
           {[
-            'Un site parmi les trois modèles',
+            'Un site parmi les quatre modèles',
             'Votre back-office de gestion',
             'Un espace pour les adhérents',
             'Les modules selon vos besoins',

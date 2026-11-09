@@ -22,7 +22,7 @@ export function ClubHeader({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <header className="sticky top-0 z-30 bg-club-primary text-club-primary-fg shadow">
+    <header className="direction-header sticky top-0 z-30 bg-club-primary text-club-primary-fg shadow">
       {isDemo ? (
         <p className="bg-black/80 px-4 py-1 text-center text-xs text-white">
           Site de démonstration - les informations sont des exemples.

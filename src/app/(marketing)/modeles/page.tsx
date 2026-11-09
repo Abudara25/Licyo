@@ -6,7 +6,7 @@ export default function ModelsPage() {
       <div className="page-heading">
         <span className="eyebrow">VOTRE STYLE, SANS COMPROMIS</span>
         <h1>
-          Trois regards.
+          Quatre regards.
           <br />
           Une seule passion.
         </h1>

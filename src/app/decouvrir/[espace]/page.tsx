@@ -16,7 +16,11 @@ import { ModulesEditor } from "@/components/platform/ModulesEditor";
 import { MemberWorkspace } from "@/components/platform/MemberWorkspace";
 import { ClubHeader } from "@/components/vitrine/ClubHeader";
 import { ClubFooter } from "@/components/vitrine/ClubFooter";
-import { defaultModules, resolveTemplate } from "@/lib/platform";
+import {
+  defaultModules,
+  resolveTemplate,
+  SITE_TEMPLATES,
+} from "@/lib/platform";
 import { clubCssVariables } from "@/lib/utils/color-contrast";
 import type { PublicClubData } from "@/lib/tenant";
 import { MEDIA_SPORTS } from "@/lib/site-media";
@@ -73,10 +77,7 @@ export default async function Discover({
   if (espace === "site") {
     const club = {
       id: "preview",
-      name:
-        preset.id === "football"
-          ? "Le collectif commence ici."
-          : "Trouvez votre mouvement.",
+      name: "Rives " + preset.label,
       slug: "exemple",
       custom_domain: null,
       sport_type: preset.id,
@@ -211,17 +212,18 @@ export default async function Discover({
         style={clubCssVariables(club.primary_color, club.secondary_color)}
       >
         {banner}
-        <div className="page-container flex flex-wrap gap-4 py-3 text-xs">
+        <div className="page-container direction-preview-nav flex flex-wrap gap-4 py-3 text-xs">
           <Link className="text-link" href="/modeles">
             ← Les modèles
           </Link>
-          {["club", "arena", "studio"].map((t) => (
+          {SITE_TEMPLATES.map((t) => (
             <Link
               className="text-link"
-              key={t}
-              href={"/decouvrir/site?modele=" + t + "&sport=" + preset.id}
+              key={t.id}
+              aria-current={t.id === template ? "page" : undefined}
+              href={"/decouvrir/site?modele=" + t.id + "&sport=" + preset.id}
             >
-              {t}
+              {t.name}
             </Link>
           ))}
           <form action="/decouvrir/site" className="site-media-sport-nav">
@@ -242,14 +244,14 @@ export default async function Discover({
           </form>
         </div>
         <ClubHeader
-          name="Votre club"
+          name={club.name}
           logoUrl={null}
           prefix="/decouvrir/site"
           links={[{ href: "/commencer", label: "Créer mon club" }]}
           showRegister={false}
           isDemo={false}
         />
-        <SitePreview key={preset.id} data={data} />
+        <SitePreview key={template + preset.id} data={data} />
         <ClubFooter club={club} facilities={data.facilities} links={[]} />
       </div>
     );

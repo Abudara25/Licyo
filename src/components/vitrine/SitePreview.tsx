@@ -16,7 +16,10 @@ export function SitePreview({ data }: { data: PublicClubData }) {
   const [images, setImages] = useState<
     Partial<Record<MediaSection, SiteImage>>
   >(() => ({
-    hero: STOCK_PHOTOS.find((photo) => photo.sport === data.club.sport_type),
+    hero:
+      data.club.theme_preset === "heritage"
+        ? undefined
+        : STOCK_PHOTOS.find((photo) => photo.sport === data.club.sport_type),
   }));
   return (
     <>

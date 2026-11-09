@@ -1,5 +1,6 @@
 import { resolveSections, type SiteSectionId } from "@/lib/site-composition";
 import type { SiteImage } from "@/lib/site-media";
+import { ClubHero } from "./ClubHero";
 import { LivingSite } from "./LivingSite";
 import Link from "next/link";
 import { ArrowUpRight, CalendarDays } from "lucide-react";
@@ -34,58 +35,16 @@ export function ClubLanding({
   sections?: string[];
 }) {
   const { club, categories, posts, events, siteImages } = data;
-  const cover = siteImages?.hero;
-  const heroUrl = cover?.url ?? club.hero_image_url;
+  const visibleSections = resolveSections(sections ?? data.siteSections);
   const v = getSportPreset(club.sport_type).vocabulary;
-  const link = (path: string) =>
-    preview ? "/commencer?modele=" + club.theme_preset : prefix + path;
   const blocks: Record<SiteSectionId, React.ReactNode> = {
     hero: (
-      <>
-        <section className="club-hero">
-          <div className="page-container">
-            <div>
-              <span className="eyebrow">
-                {getSportPreset(club.sport_type).label} · {club.city}
-              </span>
-              <h1>{club.name}</h1>
-              <p>{v.tagline}</p>
-              <div className="hero-actions">
-                {moduleEnabled(club.enabled_modules, "inscriptions") ? (
-                  <Link className="pill-button" href={link("/inscription")}>
-                    Rejoindre le club <ArrowUpRight size={18} />
-                  </Link>
-                ) : null}
-                {moduleEnabled(club.enabled_modules, "trials") ? (
-                  <Link className="text-link" href={link("/essai")}>
-                    Faire un essai <ArrowUpRight size={17} />
-                  </Link>
-                ) : null}
-              </div>
-            </div>
-            <div className="club-art">
-              {heroUrl ? (
-                <img
-                  className="club-hero-image"
-                  src={heroUrl}
-                  alt=""
-                  width={1000}
-                  height={700}
-                  fetchPriority="high"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <span>
-                  Le sport.
-                  <br />
-                  Ensemble.
-                </span>
-              )}
-              <PhotoCredit image={cover} />
-            </div>
-          </div>
-        </section>
-      </>
+      <ClubHero
+        data={data}
+        prefix={prefix}
+        preview={preview}
+        sections={visibleSections}
+      />
     ),
     numbers: (
       <div className="page-container">
@@ -240,14 +199,14 @@ export function ClubLanding({
   };
   return (
     <LivingSite>
-      {resolveSections(sections ?? data.siteSections).map((id) => {
+      {visibleSections.map((id) => {
         if (!blocks[id]) return null;
         const photo =
           id !== "hero" && id !== "numbers" && id !== "sponsors"
             ? siteImages?.[id]
             : undefined;
         return (
-          <div key={id} data-site-section={id}>
+          <div key={id} id={"vitrine-" + id} data-site-section={id}>
             {photo && (
               <div className="page-container">
                 <figure className="site-section-photo">

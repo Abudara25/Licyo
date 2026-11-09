@@ -1,6 +1,6 @@
-import Link from 'next/link';
-import { ArrowUpRight } from 'lucide-react';
-import { SITE_TEMPLATES } from '@/lib/platform';
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
+import { SITE_TEMPLATES } from "@/lib/platform";
 export function TemplateCard({
   template,
   index,
@@ -11,9 +11,9 @@ export function TemplateCard({
   return (
     <article className="template-card">
       <Link
-        href={'/decouvrir/site?modele=' + template.id}
-        className={'template-snapshot template-' + template.id}
-        aria-label={'Découvrir le modèle ' + template.name}
+        href={"/decouvrir/site?modele=" + template.id}
+        className={"template-snapshot template-" + template.id}
+        aria-label={"Découvrir le modèle " + template.name}
       >
         <div className="template-mini-nav">
           <b>votre club.</b>
@@ -23,27 +23,9 @@ export function TemplateCard({
         <div className="template-mini-hero">
           <small>{template.eyebrow}</small>
           <strong>
-            {template.id === 'club' ? (
-              <>
-                Une passion.
-                <br />
-                Un collectif.
-              </>
-            ) : template.id === 'arena' ? (
-              <>
-                FAITES
-                <br />
-                VIBRER
-                <br />
-                VOTRE CLUB.
-              </>
-            ) : (
-              <>
-                Le plaisir
-                <br />
-                du mouvement.
-              </>
-            )}
+            {template.headline[0]}
+            <br />
+            {template.headline[1]}
           </strong>
           <span className="template-mini-button">
             Rejoindre le club <ArrowUpRight size={12} />
@@ -69,8 +51,8 @@ export function TemplateCard({
         </div>
         <Link
           className="round-link"
-          href={'/decouvrir/site?modele=' + template.id}
-          aria-label={'Voir ' + template.name}
+          href={"/decouvrir/site?modele=" + template.id}
+          aria-label={"Voir " + template.name}
         >
           <ArrowUpRight size={20} />
         </Link>

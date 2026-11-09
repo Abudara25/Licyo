@@ -130,7 +130,7 @@ export default function Home() {
         <div className="page-container section-space">
           <div className="section-intro">
             <div>
-              <span className="eyebrow">TROIS MODÈLES, VOTRE IDENTITÉ</span>
+              <span className="eyebrow">QUATRE MODÈLES, VOTRE IDENTITÉ</span>
               <h2>
                 Le même club.
                 <br />
@@ -172,7 +172,7 @@ export default function Home() {
               [
                 '02',
                 'Choisissez votre style',
-                'Trois modèles, vos couleurs et les sections utiles à votre association.',
+                'Quatre modèles, vos couleurs et les sections utiles à votre association.',
               ],
               [
                 '03',
@@ -200,7 +200,7 @@ export default function Home() {
             La même ambition pour tous.
           </h2>
           <p>
-            L’abonnement suit votre effectif. Les trois modèles et les modules
+            L’abonnement suit votre effectif. Les quatre modèles et les modules
             sont communs à tous les sports.
           </p>
           <Link className="pill-button light" href="/tarifs">

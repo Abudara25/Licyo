@@ -29,7 +29,7 @@ export function ModulesEditor({
     <div>
       <div className="workspace-card mb-7">
         <h2>L’apparence de votre site</h2>
-        <p>Trois modèles. Les mêmes contenus, le même club.</p>
+        <p>Quatre modèles. Les mêmes contenus, le même club.</p>
         <div className="template-options">
           {SITE_TEMPLATES.map((t) => (
             <label className="template-option" key={t.id}>

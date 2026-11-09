@@ -27,7 +27,7 @@ Pour les parcours connectés, créer localement `.env.local` à partir de `.env.
 
 ## Base de données et services
 
-Les migrations se trouvent dans `supabase/migrations/` et s’appliquent dans l’ordre 0001 à 0004 sur un environnement de recette avant toute mise en service. Si 0001 est déjà appliquée, ne pas la rejouer. La livraison du code sur GitHub n’applique aucune migration distante.
+Les migrations se trouvent dans `supabase/migrations/` et s’appliquent dans l’ordre 0001 à 0005 sur un environnement de recette avant toute mise en service. Si 0001 est déjà appliquée, ne pas la rejouer. La livraison du code sur GitHub n’applique aucune migration distante.
 
 Les tarifs restent à définir depuis le pilotage. Les parcours réels Supabase, Stripe et e-mail demandent encore une recette avec leurs services configurés. Aucun paiement réel n’est nécessaire pour consulter les aperçus.
 
@@ -58,3 +58,5 @@ La console Platform et le thème à diagonales restent accessibles dans l’hist
 Voir [deploy/README.md](deploy/README.md). Le déploiement et la configuration distante constituent des opérations distinctes de la publication du code sur GitHub.
 
 La démo [vitrine](/decouvrir/site?modele=arena&sport=handball) permet de tester les images de la bibliothèque et une photo locale. Dans le back-office, la rubrique **Modules → Images de la vitrine** publie les images par section. La migration 0004 conserve les choix de chaque club.
+
+Les vitrines proposent Tribune, Maison du club, Signal et Héritage. La migration 0005 autorise le quatrième modèle lors de la création d’un club.
