@@ -2,15 +2,16 @@
 import { headers } from 'next/headers';
 import { z } from 'zod';
 import { revalidatePath, revalidateTag } from 'next/cache';
-import { createClient, getClubContext } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient, getClubContext } from '@/lib/db/server';
+import { createAdminClient } from '@/lib/db/admin';
 import { moduleEnabled } from '@/lib/platform';
 import { clubTag } from '@/lib/tenant';
 import {
   uploadClubFile,
   PUBLIC_BUCKET,
   publicAssetUrl,
-} from '@/lib/supabase/storage';
+  deletePublicFiles,
+} from '@/lib/storage';
 import { type ActionResult, firstError } from '@/lib/validation';
 const lessonHits = new Map<string, number[]>();
 async function lessonRateLimited() {
@@ -110,7 +111,7 @@ export async function addGalleryPhoto(form: FormData): Promise<ActionResult> {
       .from('club_gallery')
       .insert({ club_id: ctx.club.id, title, image_url: publicAssetUrl(path) });
     if (error) {
-      await createAdminClient().storage.from(PUBLIC_BUCKET).remove([path]);
+      await deletePublicFiles([path]);
       return { ok: false, error: 'Enregistrement impossible.' };
     }
     revalidateTag(clubTag(ctx.club.slug));

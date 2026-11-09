@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { loadClubOr404 } from '@/lib/tenant';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import { PageTitle } from '@/components/vitrine/PageTitle';
 import { CorrectionForm } from '@/components/vitrine/PublicForms';
 

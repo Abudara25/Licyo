@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 
 /**
  * Appelé par Caddy (on_demand_tls « ask ») avant d'émettre un certificat :

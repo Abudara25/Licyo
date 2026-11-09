@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { requireClubContext, createClient } from '@/lib/supabase/server';
+import { requireClubContext, createClient } from '@/lib/db/server';
 import { exitImpersonation, signOut } from '@/actions/club-admin.actions';
 import { getSportPreset } from '@/config/sports-presets';
 import { clubSiteUrl } from '@/lib/env';

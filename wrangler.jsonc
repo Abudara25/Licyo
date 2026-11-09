@@ -1,0 +1,37 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // Licyo : application Next.js sur Cloudflare Workers via OpenNext.
+  "name": "licyo",
+  "account_id": "c49f5a7de0a19465a88ca61bbbe2b89c",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "upload_source_maps": true,
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  // Variables publiques (pas de secret ici : utiliser `wrangler secret put`).
+  // Phase de test : l'hôte workers.dev sert de domaine racine.
+  "vars": {
+    "NEXT_PUBLIC_ROOT_DOMAIN": "licyo.abiweb.workers.dev",
+    "NEXT_PUBLIC_APP_URL": "https://licyo.abiweb.workers.dev"
+  },
+  // Base de données, juridiction UE (fixée à la création).
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "licyo",
+      "database_id": "94923426-6a30-4e44-b602-5f3a74685e01",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // Fichiers, juridiction UE. Public : vitrines ; privé : pièces des dossiers.
+  "r2_buckets": [
+    { "binding": "PUBLIC_ASSETS", "bucket_name": "licyo-public", "jurisdiction": "eu" },
+    { "binding": "PRIVATE_DOCS", "bucket_name": "licyo-private", "jurisdiction": "eu" }
+  ]
+}

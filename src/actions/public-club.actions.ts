@@ -2,13 +2,13 @@
 
 import { headers } from 'next/headers';
 import { createElement } from 'react';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import {
   uploadClubFile,
   deletePrivateFiles,
   PRIVATE_BUCKET,
   UploadError,
-} from '@/lib/supabase/storage';
+} from '@/lib/storage';
 import { getStripe } from '@/lib/stripe/client';
 import { toCents } from '@/lib/stripe/fee-calculator';
 import { computeCart } from '@/lib/pricing';

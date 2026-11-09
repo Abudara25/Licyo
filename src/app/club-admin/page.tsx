@@ -2,7 +2,7 @@ import {
   requireClubContext,
   createClient,
   isManager,
-} from '@/lib/supabase/server';
+} from '@/lib/db/server';
 import { PageHeader } from '@/components/club-admin/AdminShell';
 import { ManagementDashboard } from '@/components/platform/ManagementDashboard';
 export default async function ClubDashboard({

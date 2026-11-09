@@ -46,17 +46,7 @@ export default async function LoginPage({
               Le lien a expiré ou n'est plus valable. Demandez-en un nouveau.
             </p>
           ) : null}
-          {process.env.NEXT_PUBLIC_SUPABASE_URL &&
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? (
-            <LoginForm next={safeNext} />
-          ) : (
-            <p className="notice">
-              La connexion attend la configuration de la plateforme.{' '}
-              <Link href="/decouvrir/club" className="underline">
-                Explorer les espaces
-              </Link>
-            </p>
-          )}
+          <LoginForm next={safeNext} />
         </div>
       </div>
     </main>

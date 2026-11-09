@@ -1,5 +1,5 @@
 import { requireModule } from '@/lib/module-access';
-import { requireClubContext, createClient } from '@/lib/supabase/server';
+import { requireClubContext, createClient } from '@/lib/db/server';
 import { DAY_LABELS } from '@/config/sports-presets';
 import { PageHeader } from '@/components/club-admin/AdminShell';
 import {

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { requireSuperAdmin } from '@/lib/supabase/server';
+import { requireSuperAdmin } from '@/lib/db/server';
 import { signOut } from '@/actions/club-admin.actions';
 import { SuperAdminNav } from '@/components/super-admin/SuperAdminNav';
 

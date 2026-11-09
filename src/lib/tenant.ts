@@ -7,7 +7,7 @@ import {
   type SiteImage,
 } from "@/lib/site-media";
 import { rootDomain } from "@/lib/env";
-import { createPublicClient } from "@/lib/supabase/public";
+import { createPublicClient } from "@/lib/db/public";
 import type {
   Category,
   Club,

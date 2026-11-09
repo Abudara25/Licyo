@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { loadClubOr404 } from '@/lib/tenant';
-import { createPublicClient } from '@/lib/supabase/public';
+import { createPublicClient } from '@/lib/db/public';
 import { moduleEnabled } from '@/lib/platform';
 import { PageTitle } from '@/components/vitrine/PageTitle';
 export default async function Gallery({

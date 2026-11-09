@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { loadClubOr404 } from '@/lib/tenant';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import { getSportPreset } from '@/config/sports-presets';
 import { categoriesForBirthYear } from '@/lib/age';
 import { PageTitle } from '@/components/vitrine/PageTitle';

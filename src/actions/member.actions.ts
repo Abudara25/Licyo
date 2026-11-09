@@ -1,13 +1,14 @@
 'use server';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { createClient } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient } from '@/lib/db/server';
+import { createAdminClient } from '@/lib/db/admin';
 import {
   uploadClubFile,
   PRIVATE_BUCKET,
   signedPrivateUrl,
-} from '@/lib/supabase/storage';
+  deletePrivateFiles,
+} from '@/lib/storage';
 import { moduleEnabled } from '@/lib/platform';
 import { type ActionResult } from '@/lib/validation';
 export async function memberDocument(
@@ -116,7 +117,7 @@ export async function uploadMemberDocument(
       .eq('dossier_status', m.dossier_status)
       .select('id');
     if (error || !updated?.length) {
-      await createAdminClient().storage.from(PRIVATE_BUCKET).remove([path]);
+      await deletePrivateFiles([path]);
       return { ok: false, error: 'Le dossier a changé. Rechargez la page.' };
     }
     revalidatePath('/espace-adherent');

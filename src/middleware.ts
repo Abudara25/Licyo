@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
 
 const RESERVED_SUBDOMAINS = new Set(['www', 'app', 'admin', 'api']);
 
@@ -10,42 +9,21 @@ function rootHost(): string {
 /** Hôte de la plateforme (marketing, back-offices, API) plutôt que d'un club. */
 function isPlatformHost(host: string): boolean {
   const root = rootHost();
-  return host === root || host === `www.${root}` || host.startsWith('127.0.0.1');
+  return host === root || host === `www.${root}` || host.startsWith('127.0.0.1') || host.startsWith('localhost');
 }
 
-/** Rafraîchit la session Supabase (cookies) pour les espaces authentifiés. */
-async function refreshSession(request: NextRequest): Promise<NextResponse> {
-  let response = NextResponse.next({ request });
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) return response;
-  const supabase = createServerClient(url, key, {
-    cookies: {
-      getAll: () => request.cookies.getAll(),
-      setAll: (toSet) => {
-        toSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
-        toSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
-      },
-    },
-  });
-  await supabase.auth.getUser();
-  return response;
-}
-
-export async function middleware(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const host = (request.headers.get('host') ?? '').toLowerCase();
   const { pathname, search } = request.nextUrl;
 
-  if (isPlatformHost(host)) {
-    if (pathname.startsWith('/club-admin') || pathname.startsWith('/super-admin') || pathname.startsWith('/login') || pathname.startsWith('/auth')) {
-      return refreshSession(request);
-    }
+  // La session est vérifiée côté serveur à chaque requête (cookie opaque + D1) :
+  // rien à rafraîchir ici.
+  if (isPlatformHost(host)) return NextResponse.next();
+
+  // API, fichiers et assets restent communs à tous les hôtes.
+  if (pathname.startsWith('/api/') || pathname.startsWith('/_next/') || pathname.startsWith('/media/')) {
     return NextResponse.next();
   }
-
-  // Les API et assets restent communs à tous les hôtes.
-  if (pathname.startsWith('/api/') || pathname.startsWith('/_next/')) return NextResponse.next();
 
   const root = rootHost();
   if (host.endsWith(`.${root}`)) {

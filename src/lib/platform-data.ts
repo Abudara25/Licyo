@@ -1,12 +1,6 @@
 import 'server-only';
-import { createPublicClient } from '@/lib/supabase/public';
-import { INITIAL_TIERS } from '@/lib/platform';
+import { createPublicClient } from '@/lib/db/public';
 export async function getMembershipTiers() {
-  if (
-    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  )
-    return INITIAL_TIERS;
   const { data, error } = await createPublicClient()
     .from('membership_tiers')
     .select('*')

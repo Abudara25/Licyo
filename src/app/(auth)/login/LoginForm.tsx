@@ -1,42 +1,35 @@
 'use client';
 
 import { useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { requestLoginLink } from '@/actions/auth.actions';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/form';
 
 export function LoginForm({ next }: { next: string }) {
   const [email, setEmail] = useState('');
-  const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>(
-    'idle',
-  );
+  const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [message, setMessage] = useState('');
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setState('sending');
-    const { error } = await createClient().auth.signInWithOtp({
-      email: email.trim().toLowerCase(),
-      // Seuls les comptes invités par un club ou par Licyo peuvent se connecter.
-      options: {
-        shouldCreateUser:
-          next.startsWith('/commencer') || next.startsWith('/espace-adherent'),
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-      },
-    });
-    // Même message que l'adresse existe ou non : on ne révèle pas qui a un compte.
-    setState(
-      error && error.status !== 400 && error.status !== 422 ? 'error' : 'sent',
-    );
+    try {
+      const res = await requestLoginLink({ email: email.trim().toLowerCase(), next });
+      if (res.ok) setState('sent');
+      else {
+        setMessage(res.error);
+        setState('error');
+      }
+    } catch {
+      setMessage('Envoi impossible pour le moment. Réessayez dans une minute.');
+      setState('error');
+    }
   }
 
   if (state === 'sent') {
     return (
-      <p
-        role="status"
-        className="mt-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900"
-      >
-        Si un compte existe pour {email}, un lien de connexion vient d'être
-        envoyé. Pensez à vérifier les indésirables.
+      <p role="status" className="mt-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900">
+        Si un compte existe pour {email}, un lien de connexion vient d'être envoyé. Pensez à vérifier les indésirables.
       </p>
     );
   }
@@ -55,7 +48,7 @@ export function LoginForm({ next }: { next: string }) {
       </Field>
       {state === 'error' ? (
         <p role="alert" className="text-sm text-destructive">
-          Envoi impossible pour le moment. Réessayez dans une minute.
+          {message}
         </p>
       ) : null}
       <Button type="submit" size="lg" disabled={state === 'sending'}>

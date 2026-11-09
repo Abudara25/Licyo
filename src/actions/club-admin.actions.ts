@@ -1,5 +1,7 @@
 'use server';
 
+import { ensureUser } from '@/lib/auth/session';
+import { sendLoginLink } from '@/lib/auth/links';
 import { createElement } from 'react';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { cookies } from 'next/headers';
@@ -10,8 +12,8 @@ import {
   getClubContext,
   isManager,
   type ClubContext,
-} from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
+} from '@/lib/db/server';
+import { createAdminClient } from '@/lib/db/admin';
 import {
   deletePrivateFiles,
   PUBLIC_BUCKET,
@@ -19,7 +21,7 @@ import {
   signedPrivateUrl,
   uploadClubFile,
   UploadError,
-} from '@/lib/supabase/storage';
+} from '@/lib/storage';
 import { getStripe } from '@/lib/stripe/client';
 import { encryptSecret } from '@/lib/utils/crypto';
 import { IMPERSONATION_COOKIE } from '@/lib/utils/impersonation';
@@ -1487,22 +1489,7 @@ export async function inviteStaff(input: unknown): Promise<ActionResult> {
     if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
     const v = parsed.data;
     const admin = createAdminClient();
-    const redirectTo = `${appUrl()}/auth/callback?next=/club-admin`;
-    let userId: string | undefined;
-    const invited = await admin.auth.admin.inviteUserByEmail(v.email, {
-      redirectTo,
-    });
-    if (invited.data.user) userId = invited.data.user.id;
-    else {
-      // Compte existant : on récupère son identifiant via un lien de connexion.
-      const link = await admin.auth.admin.generateLink({
-        type: 'magiclink',
-        email: v.email,
-        options: { redirectTo },
-      });
-      userId = link.data.user?.id;
-    }
-    if (!userId) return { ok: false, error: 'Invitation impossible.' };
+    const userId = (await ensureUser(v.email)).id;
     const { error } = await admin.from('staff_members').upsert(
       {
         user_id: userId,
@@ -1515,13 +1502,9 @@ export async function inviteStaff(input: unknown): Promise<ActionResult> {
       { onConflict: 'user_id,club_id' },
     );
     if (error) return { ok: false, error: 'Ajout impossible.' };
+    await sendLoginLink(v.email, '/club-admin', false, `${club.name} vous invite sur Licyo. Pour accepter`);
     revalidatePath('/club-admin/parametres');
-    return {
-      ok: true,
-      message: invited.data.user
-        ? `Invitation envoyée à ${v.email}.`
-        : `${v.email} a déjà un compte : accès ajouté.`,
-    };
+    return { ok: true, message: `Invitation envoyée à ${v.email}.` };
   });
 }
 

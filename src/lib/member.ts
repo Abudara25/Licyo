@@ -1,12 +1,7 @@
 import 'server-only';
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/db/server';
 export async function getMemberContext() {
-  if (
-    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  )
-    redirect('/login?next=/espace-adherent');
   const db = await createClient();
   const {
     data: { user },

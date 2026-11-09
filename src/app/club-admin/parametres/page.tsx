@@ -4,8 +4,8 @@ import {
   requireClubContext,
   createClient,
   MANAGER_ROLES,
-} from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
+} from '@/lib/db/server';
+import { createAdminClient } from '@/lib/db/admin';
 import { clubSiteUrl } from '@/lib/env';
 import { previousSeason } from '@/lib/season';
 import { PageHeader } from '@/components/club-admin/AdminShell';

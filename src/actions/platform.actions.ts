@@ -7,8 +7,8 @@ import {
   createClient,
   getAuthContext,
   getClubContext,
-} from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+} from "@/lib/db/server";
+import { createAdminClient } from "@/lib/db/admin";
 import {
   MODULES,
   SITE_TEMPLATES,
@@ -40,7 +40,7 @@ export async function provisionClub(
     .safeParse(input);
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
   const db = await createClient();
-  const { data, error } = await db.rpc("provision_club", {
+  const { data, error } = await db.rpc<string>("provision_club", {
     payload: parsed.data,
   });
   if (error || !data)

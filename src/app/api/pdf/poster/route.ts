@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { renderToBuffer } from '@react-pdf/renderer';
 import QRCode from 'qrcode';
-import { createClient, getClubContext } from '@/lib/supabase/server';
+import { createClient, getClubContext } from '@/lib/db/server';
 import { ForumPosterPdf } from '@/lib/pdf/forum-poster-pdf';
 import { DAY_LABELS, getSportPreset } from '@/config/sports-presets';
 import { clubSiteUrl } from '@/lib/env';

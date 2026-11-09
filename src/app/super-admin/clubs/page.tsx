@@ -1,5 +1,5 @@
-import { requireSuperAdmin } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { requireSuperAdmin } from '@/lib/db/server';
+import { createAdminClient } from '@/lib/db/admin';
 import { clubSiteUrl } from '@/lib/env';
 import { getSportPreset } from '@/config/sports-presets';
 import { PageHeader } from '@/components/club-admin/AdminShell';

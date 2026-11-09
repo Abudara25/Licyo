@@ -1,6 +1,6 @@
 import { createElement } from 'react';
 import { renderToBuffer } from '@react-pdf/renderer';
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/db/server';
 import { CeAttestationPdf } from '@/lib/pdf/ce-attestation-pdf';
 import { moduleEnabled } from '@/lib/platform';
 export const runtime = 'nodejs';

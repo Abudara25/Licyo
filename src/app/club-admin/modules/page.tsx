@@ -2,8 +2,8 @@ import { SiteMediaEditor } from "@/components/platform/SiteMediaEditor";
 import { resolveMedia } from "@/lib/site-media";
 import { moduleEnabled } from "@/lib/platform";
 import { SiteComposer } from "@/components/platform/SiteComposer";
-import { createClient } from "@/lib/supabase/server";
-import { requireClubContext } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
+import { requireClubContext } from "@/lib/db/server";
 import { PageHeader } from "@/components/club-admin/AdminShell";
 import { ModulesEditor } from "@/components/platform/ModulesEditor";
 export default async function ModulesPage() {

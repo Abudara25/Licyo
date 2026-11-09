@@ -2,7 +2,7 @@
 
 import { revalidateTag, revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createClient, getClubContext } from "@/lib/supabase/server";
+import { createClient, getClubContext } from "@/lib/db/server";
 import { MEDIA_SECTIONS, stockPhoto } from "@/lib/site-media";
 import { clubTag } from "@/lib/tenant";
 import type { ActionResult } from "@/lib/validation";

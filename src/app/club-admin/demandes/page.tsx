@@ -1,5 +1,5 @@
 import { requireModule } from '@/lib/module-access';
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/db/server';
 import { PageHeader } from '@/components/club-admin/AdminShell';
 import { RequestStatus } from '@/components/platform/CommunityForms';
 export default async function Requests() {

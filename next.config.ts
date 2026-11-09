@@ -1,8 +1,5 @@
 import type { NextConfig } from 'next';
-
-const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
-  ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
-  : 'localhost';
+import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare';
 
 const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -19,21 +16,12 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  // Serveur Node autonome : image Docker déployable chez n'importe quel hébergeur.
-  // Docker/Linux conserve le paquet autonome ; Windows utilise next start (copie des traces non supportée dans cet environnement).
-  output: process.platform === 'win32' ? undefined : 'standalone',
-  distDir: process.env.NEXT_DIST_DIR || '.next',
+  // Déployé sur Cloudflare Workers via OpenNext (voir wrangler.jsonc).
   poweredByHeader: false,
-  // @react-pdf/renderer et googleapis restent côté Node, hors du bundle serveur.
-  serverExternalPackages: ['@react-pdf/renderer', 'googleapis', 'nodemailer'],
   images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: supabaseHost,
-        pathname: '/storage/v1/object/public/**',
-      },
-    ],
+    // Les images sont déjà compressées à l'envoi et servies depuis R2 (/media)
+    // avec un cache long : pas de service d'optimisation à facturer.
+    unoptimized: true,
   },
   experimental: {
     serverActions: { bodySizeLimit: '8mb' },
@@ -44,3 +32,6 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+
+// `next dev` : donne accès aux liaisons Cloudflare locales (D1, R2) via getCloudflareContext.
+initOpenNextCloudflareForDev();

@@ -1,6 +1,6 @@
 import { createElement } from 'react';
 import { renderToBuffer } from '@react-pdf/renderer';
-import { createClient, getClubContext, isManager } from '@/lib/supabase/server';
+import { createClient, getClubContext, isManager } from '@/lib/db/server';
 import { AgMunicipalityReportPdf } from '@/lib/pdf/ag-municipality-report-pdf';
 import { buildAgReport } from '@/lib/reports';
 

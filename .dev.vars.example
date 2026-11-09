@@ -1,0 +1,30 @@
+# Copier en .dev.vars pour le développement local (jamais commité).
+# En ligne : `npx wrangler secret put NOM` pour chaque secret.
+
+# Clé HMAC (Mode Miroir, state OAuth, liens de fichiers privés) : 64 caractères aléatoires.
+IMPERSONATION_SECRET_KEY=
+# Clé AES-256 des identifiants e-mail des clubs : 32 octets en base64.
+EMAIL_CREDENTIALS_ENCRYPTION_KEY=
+
+# Local : hôte de l'aperçu. En ligne : défini dans wrangler.jsonc (vars).
+NEXT_PUBLIC_ROOT_DOMAIN=localhost:8787
+NEXT_PUBLIC_APP_URL=http://localhost:8787
+
+# Envoi d'e-mails (Cloudflare Email Service) : adresse d'un domaine vérifié.
+# Vide = e-mails seulement journalisés (phase de test).
+EMAIL_FROM_ADDRESS=
+
+# Stripe (abonnement des clubs à Licyo uniquement)
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET_SAAS=
+STRIPE_WEBHOOK_SECRET_CONNECT=
+STRIPE_PRICE_ID_VITRINE=
+STRIPE_PRICE_ID_INTEGRAL=
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+
+# Google OAuth (bouton « Connecter Gmail » des clubs)
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+# Domaines personnalisés des clubs (Cloudflare for SaaS, plus tard)
+CUSTOM_DOMAIN_CNAME_TARGET=

@@ -1,5 +1,5 @@
 import 'server-only';
-import { getClubContext } from '@/lib/supabase/server';
+import { getClubContext } from '@/lib/db/server';
 import { moduleEnabled } from '@/lib/platform';
 import { redirect } from 'next/navigation';
 export async function requireModule(id: string) {

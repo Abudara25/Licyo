@@ -7,7 +7,7 @@ import { execFileSync } from 'node:child_process';
 
 // Un lien de connexion neuf par contexte (ils sont à usage unique).
 const freshLogin = (email: string) =>
-  execFileSync(process.execPath, ['--experimental-strip-types', '--no-warnings', 'scripts/login-link.ts', email, '/club-admin'], { encoding: 'utf8' }).trim();
+  execFileSync(process.execPath, ['--experimental-strip-types', '--no-warnings', 'scripts/login-link.ts', email], { encoding: 'utf8' }).trim().split(/\r?\n/).pop()!;
 
 const [outDir, loginUrl, ...pages] = process.argv.slice(2);
 mkdirSync(outDir, { recursive: true });

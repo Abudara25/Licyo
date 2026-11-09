@@ -1,4 +1,4 @@
-import { requireClubContext, createClient, MANAGER_ROLES } from '@/lib/supabase/server';
+import { requireClubContext, createClient, MANAGER_ROLES } from '@/lib/db/server';
 import { PageHeader } from '@/components/club-admin/AdminShell';
 import { ContentManager } from '@/components/club-admin/ContentManager';
 

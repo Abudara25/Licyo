@@ -41,3 +41,19 @@ Les modèles validés sont Tribune (identifiant `arena`), Maison du club (`club`
 Vérifications du lot visuel. Les quatre directions ont été regardées à 360 et 768 px. Le catalogue utilise une, deux ou quatre colonnes selon la largeur. Les créneaux de Maison du club et les raccourcis de Signal sont reliés aux contenus du club. La base embarquée valide la création avec Héritage et le refus d’un modèle inconnu. La migration 0005 reste à appliquer sur la recette hébergée.
 
 Référence des conditions d’attribution Pexels vérifiée le 9 novembre 2026. https://www.pexels.com/license/
+
+## Bascule sur Cloudflare (9 novembre 2026)
+
+Décision du propriétaire : tout sur Cloudflare, plus de Supabase. Réalisé et vérifié en local :
+
+- Schéma traduit en SQLite (`migrations/0001_schema_d1.sql`) : contraintes, index, vues publiques et triggers « même club » à la place des clés composées.
+- Règles d'accès de la RLS transcrites dans `src/lib/db/policies.ts`, appliquées à chaque requête par `src/lib/db/query.ts` (API proche de supabase-js, d'où un diff limité dans les pages). Refus par défaut. 11 tests d'isolation dans `tests/db-policies.test.ts` (club A/B, entraîneur, famille, colonnes sensibles, super_admin, upsert, RPC).
+- Fonctions Postgres `provision_club`, `claim_family_access`, `increment_page_view` réécrites dans `src/lib/db/rpc.ts`.
+- Comptes : liens de connexion à usage unique (15 min), sessions de 30 jours, empreintes SHA-256, limitation des demandes. Invitations d'équipe sans Supabase Auth.
+- Fichiers sur R2 : `/media/...` pour les fichiers publics, `/api/files/private` avec jeton signé de 5 min pour les pièces des dossiers.
+- E-mails : Cloudflare Email Service, ou journal tant qu'aucun domaine d'envoi n'existe. Gmail par `fetch`. Le SMTP privé n'est plus utilisable (repli sur la plateforme).
+- Aperçu `wrangler dev` : pages publiques, vitrines `/<slug>`, quatre profils, droits par page, étanchéité entre clubs dans les pages rendues, validation d'un dossier depuis l'interface (écriture D1 et e-mail journalisé), captures à 360 et 768 px.
+
+Ressources créées sur le compte Abiweb : D1 `licyo` (UE, schéma et données fictives appliqués). Restent bloquants avant la mise en ligne de test : activation de R2 dans le tableau de bord, offre Workers payante (Worker de 3,4 Mo compressé, au-dessus de la limite gratuite de 3 Mo), puis secrets et déploiement.
+
+Limites connues : pas de cache incrémental (lectures D1 directes) ; Mode Miroir toujours en écriture complète (lot A) ; SMTP privé indisponible ; **PDF en panne sous Workers** (attestations, bilan AG, affiche, devis) : @react-pdf/pdfkit charge ses polices standard par un require() dynamique absent du bundle (« No such module #standard-fonts/Helvetica »). Les alias vers les builds navigateur cassent le réconciliateur React de @react-pdf. Piste : réécrire les 4 documents avec pdf-lib (pur JS) ; carte sociale (@vercel/og) non testée.

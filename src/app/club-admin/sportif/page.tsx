@@ -3,7 +3,7 @@ import {
   requireClubContext,
   createClient,
   isManager,
-} from '@/lib/supabase/server';
+} from '@/lib/db/server';
 import { getSportPreset } from '@/config/sports-presets';
 import { PageHeader } from '@/components/club-admin/AdminShell';
 import { SportifManager } from '@/components/club-admin/SportifManager';

@@ -1,12 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { google } from 'googleapis';
-import { getAuthContext } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { getAuthContext } from '@/lib/db/server';
+import { createAdminClient } from '@/lib/db/admin';
 import { verifyValue } from '@/lib/utils/impersonation';
 import { encryptSecret } from '@/lib/utils/crypto';
+import { exchangeCode, googleAccountEmail } from '@/lib/email/google';
 import { appUrl } from '@/lib/env';
-
-export const runtime = 'nodejs';
 
 /**
  * Retour de Google : le state signé désigne le club et l'utilisateur qui a
@@ -25,19 +23,17 @@ export async function GET(request: NextRequest) {
   if (!allowed) return back('refuse');
 
   try {
-    const oauth = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, `${appUrl()}/api/email/google/callback`);
-    const { tokens } = await oauth.getToken(code);
+    const tokens = await exchangeCode(code, `${appUrl()}/api/email/google/callback`);
     if (!tokens.refresh_token) return back('sans-jeton');
-    oauth.setCredentials(tokens);
-    const { data: info } = await google.oauth2({ version: 'v2', auth: oauth }).userinfo.get();
+    const email = await googleAccountEmail(tokens.access_token);
     const admin = createAdminClient();
     await admin.from('club_mail_credentials').upsert({
       club_id: clubId,
       google_refresh_token_enc: encryptSecret(tokens.refresh_token),
-      google_account_email: info.email ?? null,
+      google_account_email: email,
       updated_at: new Date().toISOString(),
     });
-    await admin.from('clubs').update({ email_provider: 'gmail', email_sender_address: info.email ?? null }).eq('id', clubId);
+    await admin.from('clubs').update({ email_provider: 'gmail', email_sender_address: email }).eq('id', clubId);
     return back('ok');
   } catch (error) {
     console.error('[gmail] connexion', error instanceof Error ? error.message : error);

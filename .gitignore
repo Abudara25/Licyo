@@ -16,3 +16,9 @@ supabase/.branches
 .next-preview/
 build-verify/
 build-github/
+
+# Cloudflare
+.wrangler/
+.open-next/
+.dev.vars*
+!.dev.vars.example

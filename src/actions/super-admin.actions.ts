@@ -1,11 +1,13 @@
 'use server';
 
+import { ensureUser } from '@/lib/auth/session';
+import { sendLoginLink } from '@/lib/auth/links';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
-import { createAdminClient } from '@/lib/supabase/admin';
-import { getAuthContext } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/db/admin';
+import { getAuthContext } from '@/lib/db/server';
 import {
   IMPERSONATION_COOKIE,
   IMPERSONATION_MAX_AGE,
@@ -350,20 +352,7 @@ export async function inviteClubOwner(
     if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
     const v = parsed.data;
     const admin = createAdminClient();
-    const redirectTo = `${appUrl()}/auth/callback?next=/club-admin`;
-    const invited = await admin.auth.admin.inviteUserByEmail(v.email, {
-      redirectTo,
-    });
-    const userId =
-      invited.data.user?.id ??
-      (
-        await admin.auth.admin.generateLink({
-          type: 'magiclink',
-          email: v.email,
-          options: { redirectTo },
-        })
-      ).data.user?.id;
-    if (!userId) return { ok: false, error: 'Invitation impossible.' };
+    const userId = (await ensureUser(v.email)).id;
     const { error } = await admin.from('staff_members').upsert(
       {
         user_id: userId,
@@ -375,6 +364,7 @@ export async function inviteClubOwner(
       { onConflict: 'user_id,club_id' },
     );
     if (error) return { ok: false, error: 'Ajout impossible.' };
+    await sendLoginLink(v.email, '/club-admin', false, 'L’équipe Licyo vous invite à gérer votre club. Pour accepter');
     revalidatePath('/super-admin/clubs');
     return { ok: true, message: `Accès envoyé à ${v.email}.` };
   });

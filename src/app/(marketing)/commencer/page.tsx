@@ -1,4 +1,4 @@
-import { getAuthContext } from '@/lib/supabase/server';
+import { getAuthContext } from '@/lib/db/server';
 import { LoginForm } from '@/app/(auth)/login/LoginForm';
 import { OnboardingForm } from '@/components/platform/OnboardingForm';
 import { resolveTemplate } from '@/lib/platform';
@@ -14,11 +14,7 @@ export default async function Start({
     Math.min(1000000, Math.floor(Number(p.effectif) || 0)),
   );
   const template = resolveTemplate(p.modele ?? 'club');
-  const configured = Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  );
-  const auth = configured ? await getAuthContext() : null;
+  const auth = await getAuthContext();
   return (
     <div className="page-container section-space">
       <div className="onboarding-steps">
@@ -48,17 +44,9 @@ export default async function Start({
             Un lien sécurisé vous permettra de créer votre association et de
             retrouver votre espace.
           </p>
-          {configured ? (
-            <LoginForm
-              next={'/commencer?effectif=' + count + '&modele=' + template}
-            />
-          ) : (
-            <p className="notice">
-              La connexion sera disponible après configuration du service
-              d’authentification. Vous pouvez déjà explorer les modèles et les
-              espaces de démonstration.
-            </p>
-          )}
+          <LoginForm
+            next={'/commencer?effectif=' + count + '&modele=' + template}
+          />
         </div>
       )}
     </div>

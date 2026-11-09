@@ -1,6 +1,6 @@
 import { ControlDashboard } from '@/components/super-admin/ControlDashboard';
-import { requireSuperAdmin } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { requireSuperAdmin } from '@/lib/db/server';
+import { createAdminClient } from '@/lib/db/admin';
 import { AnnouncementsPanel } from '@/components/super-admin/SuperAdminWidgets';
 import { PLANS } from '@/lib/stripe/client';
 import { formatEuros } from '@/lib/pricing';

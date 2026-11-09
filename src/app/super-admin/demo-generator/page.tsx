@@ -1,5 +1,5 @@
-import { requireSuperAdmin } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { requireSuperAdmin } from '@/lib/db/server';
+import { createAdminClient } from '@/lib/db/admin';
 import { rootDomain } from '@/lib/env';
 import { PageHeader } from '@/components/club-admin/AdminShell';
 import { DemoGeneratorForm } from '@/components/super-admin/SuperAdminWidgets';

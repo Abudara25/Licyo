@@ -1,7 +1,7 @@
 import { revalidateTag } from 'next/cache';
 import type Stripe from 'stripe';
 import { getStripe } from '@/lib/stripe/client';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/db/admin';
 import { clubTag } from '@/lib/tenant';
 import { requireEnv } from '@/lib/env';
 

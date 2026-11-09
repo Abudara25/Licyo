@@ -1,5 +1,5 @@
 import 'server-only';
-import type { createClient } from '@/lib/supabase/server';
+import type { createClient } from '@/lib/db/server';
 import type { AgReportData } from '@/lib/pdf/ag-municipality-report-pdf';
 import type { Club } from '@/types/database';
 
