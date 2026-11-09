@@ -9,6 +9,7 @@ export type SiteImage = {
   title: string;
   credit?: string;
   source?: string;
+  attributionRequired?: boolean;
 };
 export type ClubPhoto = { id: string; title: string; image_url: string };
 export type MediaChoice = { kind: "stock" | "club"; id: string };
@@ -53,6 +54,7 @@ function photo(
     credit,
     audiences,
     license: "Pexels",
+    attributionRequired: false,
     source: "https://www.pexels.com/photo/" + slug + "-" + id + "/",
     url:
       "https://images.pexels.com/photos/" +

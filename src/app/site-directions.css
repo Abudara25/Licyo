@@ -391,6 +391,13 @@
   }
 }
 @media (max-width: 719px) {
+  .direction-fixture {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .direction-fixture > .direction-kicker,
+  .direction-fixture > strong {
+    grid-column: 1 / -1;
+  }
   [data-template="arena"] .direction-copy h1 {
     font-size: clamp(2.35rem, 11vw, 4rem);
   }
@@ -463,4 +470,16 @@
   .template-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+}
+
+/* Required credits stay readable without covering the photograph. */
+[data-template] .living-site .site-photo-credit {
+  max-width: 100%;
+  min-height: 44px;
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  overflow-wrap: anywhere;
 }

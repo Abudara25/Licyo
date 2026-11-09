@@ -32,10 +32,12 @@ Migration 0003 additive : sans réglage enregistré, la composition historique r
 
 ## Médiathèque de vitrine
 
-La migration 0004 enregistre les choix de photos par section et par club. La première sélection contient 20 références Pexels réparties entre sept sports. La démo permet de tester le catalogue et une photo locale. Le back-office utilise les photos déjà importées dans la galerie du club. La source et le crédit accompagnent les illustrations publiques. Les droits des personnes reconnaissables sont à vérifier avant publication.
+La migration 0004 enregistre les choix de photos par section et par club. La première sélection contient 20 références Pexels réparties entre sept sports. La démo permet de tester le catalogue et une photo locale. Le back-office utilise les photos déjà importées dans la galerie du club. Les sources et crédits restent accessibles dans la médiathèque. Les photos Pexels du catalogue ont une attribution facultative, donc leur auteur n’est pas superposé aux vitrines. Une image exigeant un crédit conserve une mention discrète. Les droits des personnes reconnaissables sont à vérifier avant publication.
 
 ## Quatre directions de vitrine
 
 Les modèles validés sont Tribune (identifiant `arena`), Maison du club (`club`) et Signal (`studio`). Héritage (`heritage`) reprend les diagonales, le contraste bordeaux/or et la place du blason de la vitrine Saint-Gratien FC. Les contenus, blasons et données sont ceux du club Licyo. Les identifiants historiques restent valides et la migration 0005 accepte le nouveau modèle à l’inscription. Les sections activées, leur ordre et les images du club suivent le même moteur pour les quatre directions.
 
 Vérifications du lot visuel. Les quatre directions ont été regardées à 360 et 768 px. Le catalogue utilise une, deux ou quatre colonnes selon la largeur. Les créneaux de Maison du club et les raccourcis de Signal sont reliés aux contenus du club. La base embarquée valide la création avec Héritage et le refus d’un modèle inconnu. La migration 0005 reste à appliquer sur la recette hébergée.
+
+Référence des conditions d’attribution Pexels vérifiée le 9 novembre 2026. https://www.pexels.com/license/

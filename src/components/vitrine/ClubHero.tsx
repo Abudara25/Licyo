@@ -55,7 +55,7 @@ export function ClubHero({
         fetchPriority="high"
         referrerPolicy="no-referrer"
       />
-      {image?.source && (
+      {image?.source && image.attributionRequired !== false && (
         <a
           href={image.source}
           target="_blank"

@@ -10,7 +10,7 @@ import { SlotFinderWidget } from "./SlotFinderWidget";
 import { PlainText } from "./PageTitle";
 import type { PublicClubData } from "@/lib/tenant";
 function PhotoCredit({ image }: { image?: SiteImage }) {
-  if (!image?.source) return null;
+  if (!image?.source || image.attributionRequired === false) return null;
   return (
     <a
       className="site-photo-credit"
