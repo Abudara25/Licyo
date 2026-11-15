@@ -290,6 +290,7 @@ export async function submitRegistration(
             signerQuality: pa.signerQuality,
             signedAt,
             templateHash: hash,
+            channel: 'inscription' as const,
           }
         : null;
   }
@@ -594,7 +595,7 @@ export async function requestTrial(input: unknown): Promise<ActionResult> {
     .single();
   if (error || !family)
     return { ok: false, error: 'Enregistrement impossible.' };
-  await admin.from('members').insert({
+  const { data: trialMember } = await admin.from('members').insert({
     club_id: club.id,
     family_id: family.id,
     category_id: category.id,
@@ -606,7 +607,12 @@ export async function requestTrial(input: unknown): Promise<ActionResult> {
     gender: t.gender,
     registration_type: 'trial',
     dossier_status: 'trial_requested',
-  });
+  }).select('magic_action_token').single();
+  // Mineur : le lien de l'autorisation parentale part avec la confirmation (à signer avant la séance).
+  const authorizationLink =
+    trialMember && ageOn(t.birthDate) < 18 && parseParentalAuthorization(club.registration_form).enabled
+      ? `${clubSiteUrl(club)}/autorisation/${trialMember.magic_action_token}`
+      : undefined;
 
   await sendClubEmailSafely({
     club,
@@ -624,6 +630,7 @@ export async function requestTrial(input: unknown): Promise<ActionResult> {
       venue: facility
         ? `${facility.name}, ${facility.address} ${facility.city}`
         : club.city,
+      authorizationLink,
     }),
   });
   return {

@@ -129,6 +129,13 @@ export function RetentionPanel({
         </div>
         {dirty ? <p className="text-xs text-muted-foreground">Enregistrez d’abord pour voir l’effet des nouvelles durées et pouvoir les appliquer.</p> : null}
 
+        <p className="text-sm">
+          <a href="/club-admin/registre-rgpd" className="inline-flex min-h-11 items-center font-medium underline">
+            Voir le registre des traitements du club
+          </a>{' '}
+          <span className="text-muted-foreground">(pré-rempli à partir de vos réglages, à imprimer).</span>
+        </p>
+
         {runs.length ? (
           <div className="grid gap-1">
             <p className="text-sm font-medium">Derniers passages</p>

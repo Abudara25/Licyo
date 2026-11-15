@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { createClient, requireClubContext } from '@/lib/db/server';
 import { requireModule } from '@/lib/module-access';
 import { SIGNER_QUALITIES, parseSignedAuthorization } from '@/config/parental-authorization';
-import { PrintButton } from './PrintButton';
+import { PrintButton } from '@/components/club-admin/PrintButton';
 
 type Props = { params: Promise<{ id: string; memberId: string }> };
 
@@ -49,7 +49,9 @@ export default async function AuthorizationPage({ params }: Props) {
             {a.signerName} ({SIGNER_QUALITIES[a.signerQuality]})
           </dd>
           <dt className="font-medium">Le</dt>
-          <dd>{dateTime.format(new Date(a.signedAt))}, en ligne, lors de l’inscription</dd>
+          <dd>
+            {dateTime.format(new Date(a.signedAt))}, en ligne, {a.channel === 'lien' ? 'par le lien personnel envoyé à la famille' : 'lors de l’inscription'}
+          </dd>
           {a.templateHash ? (
             <>
               <dt className="font-medium">Empreinte du modèle</dt>
@@ -57,11 +59,11 @@ export default async function AuthorizationPage({ params }: Props) {
             </>
           ) : null}
         </dl>
-        {m.signature_data_url?.startsWith('data:image/png;base64,') ? (
+        {(a.signatureDataUrl ?? m.signature_data_url)?.startsWith('data:image/png;base64,') ? (
           <figure className="grid gap-1">
             <figcaption className="font-medium">Signature</figcaption>
             {/* eslint-disable-next-line @next/next/no-img-element -- image en ligne (data URL), pas d'optimisation possible */}
-            <img src={m.signature_data_url} alt={`Signature de ${a.signerName}`} className="h-28 w-auto max-w-full rounded border bg-white object-contain" />
+            <img src={(a.signatureDataUrl ?? m.signature_data_url)!} alt={`Signature de ${a.signerName}`} className="h-28 w-auto max-w-full rounded border bg-white object-contain" />
           </figure>
         ) : null}
       </article>

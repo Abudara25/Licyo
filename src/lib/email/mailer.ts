@@ -84,6 +84,7 @@ export type EmailKind =
   | 'relance_correction'
   | 'relance_paiement'
   | 'newsletter'
+  | 'autorisation_parentale'
   | 'test'
   | 'autre';
 

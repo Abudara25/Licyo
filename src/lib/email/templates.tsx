@@ -75,12 +75,31 @@ export function DossierValidatedEmail({ club, memberName, categoryName }: { club
   );
 }
 
-export function TrialConfirmationEmail({ club, memberName, slotLabel, venue }: { club: ClubBrand; memberName: string; slotLabel: string; venue: string }) {
+export function TrialConfirmationEmail({ club, memberName, slotLabel, venue, authorizationLink }: { club: ClubBrand; memberName: string; slotLabel: string; venue: string; authorizationLink?: string }) {
   return (
     <Layout club={club} preview={`Séance d'essai pour ${memberName}`}>
       <Heading as="h1" style={{ fontSize: 22 }}>Séance d'essai enregistrée</Heading>
       <Text style={p}><strong>{memberName}</strong> est attendu(e) au créneau suivant : <strong>{slotLabel}</strong>.</Text>
       <Text style={p}>Lieu : {venue}. Prévoyez une tenue de sport et une bouteille d'eau.</Text>
+      {authorizationLink ? (
+        <>
+          <Text style={p}>Avant la séance, le club a besoin de l'autorisation parentale signée par un responsable légal. Cela prend une minute :</Text>
+          <CallToAction club={club} href={authorizationLink} label="Signer l'autorisation parentale" />
+          <Text style={{ ...p, color: '#71717A', fontSize: 13 }}>Ce lien est personnel : ne le transférez pas.</Text>
+        </>
+      ) : null}
+    </Layout>
+  );
+}
+
+export function ParentalAuthorizationRequestEmail({ club, firstName, memberName, link }: { club: ClubBrand; firstName: string; memberName: string; link: string }) {
+  return (
+    <Layout club={club} preview={`Autorisation parentale à signer pour ${memberName}`}>
+      <Heading as="h1" style={{ fontSize: 22 }}>Autorisation parentale à signer</Heading>
+      <Text style={p}>Bonjour {firstName},</Text>
+      <Text style={p}>Le club a besoin de l'autorisation parentale de <strong>{memberName}</strong> pour la saison. Lisez-la et signez-la en ligne, cela prend une minute.</Text>
+      <CallToAction club={club} href={link} label="Lire et signer" />
+      <Text style={{ ...p, color: '#71717A', fontSize: 13 }}>Ce lien est personnel : ne le transférez pas.</Text>
     </Layout>
   );
 }

@@ -6,6 +6,7 @@ import { getDatabase } from '@/lib/db/d1';
 import { PageHeader } from '@/components/club-admin/AdminShell';
 import { PersonNotes } from '@/components/club-admin/PersonNotes';
 import { PersonalDataPanel } from '@/components/club-admin/PersonalDataPanel';
+import { RequestAuthorizationButton } from '@/components/club-admin/RequestAuthorizationButton';
 import { Badge, Card, CardBody, CardHeader } from '@/components/ui/card';
 import { describeAnswers, parseFormConfig } from '@/config/registration-fields';
 import { ageOn } from '@/lib/age';
@@ -14,7 +15,7 @@ import { DUPLICATE_LABELS, possibleDuplicates } from '@/lib/people';
 import { formatEuros } from '@/lib/pricing';
 import { REMINDER_KIND_LABELS, clubDocuments, missingDocuments } from '@/lib/reminders';
 import { documentLabel, parseDocumentsConfig } from '@/config/registration-documents';
-import { SIGNER_QUALITIES, parseSignedAuthorization } from '@/config/parental-authorization';
+import { SIGNER_QUALITIES, authorizationPending, parseParentalAuthorization, parseSignedAuthorization } from '@/config/parental-authorization';
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -168,7 +169,12 @@ export default async function PersonPage({ params }: Props) {
                             </Link>
                           </p>
                         ) : (
-                          <p className="text-muted-foreground">Autorisation parentale : non signée en ligne pour cette saison.</p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-muted-foreground">Autorisation parentale : non signée en ligne pour cette saison.</p>
+                            {authorizationPending(m, club.current_season) && parseParentalAuthorization(club.registration_form).enabled && can(ctx, 'members.write') ? (
+                              <RequestAuthorizationButton memberId={m.id} label="Demander à la famille" />
+                            ) : null}
+                          </div>
                         );
                       })()
                     ) : null}

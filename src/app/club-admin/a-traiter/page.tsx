@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { authorizationPending, parseParentalAuthorization } from '@/config/parental-authorization';
+import { RequestAuthorizationButton } from '@/components/club-admin/RequestAuthorizationButton';
 import { requireModule } from '@/lib/module-access';
 import { can, createClient, requireClubContext } from '@/lib/db/server';
 import { PageHeader } from '@/components/club-admin/AdminShell';
@@ -111,6 +113,21 @@ export default async function ToDoPage() {
   const waiting = (requests ?? []).filter((r) => r.status === 'waiting').length;
   const expired = (requests ?? []).filter((r) => r.status === 'expired').length;
   const policy = parseReminderPolicy(club.reminder_policy);
+  const authorization = parseParentalAuthorization(club.registration_form);
+  const { data: unsigned } = authorization.enabled
+    ? await db
+        .from('members')
+        .select('id, first_name, last_name, person_id, dossier_status, registration_type, is_minor, season, anonymized_at, parental_authorization')
+        .eq('club_id', club.id)
+        .eq('season', club.current_season)
+        .eq('is_minor', true)
+        .is('parental_authorization', null)
+        .order('last_name')
+        .limit(300)
+    : { data: [] };
+  const missingAuthorizations: Item[] = (unsigned ?? [])
+    .filter((m) => authorizationPending(m, club.current_season))
+    .map((m) => ({ id: m.id, title: `${m.first_name} ${m.last_name}`, detail: m.registration_type === 'trial' ? 'Séance d’essai' : 'Inscrit sans autorisation en ligne' }));
 
   return (
     <>
@@ -127,6 +144,23 @@ export default async function ToDoPage() {
         <Section title="Corrections en attente" description="Pièces refusées, pas encore remplacées." items={corrections} href="/club-admin/inscriptions" linkLabel="Voir les dossiers" empty="Aucune correction en attente." />
         {can(ctx, 'finance.read') ? (
           <Section title="Paiements en attente" description="Reste à payer, hors chèques déjà remis." items={payments} href="/club-admin/tresorerie" linkLabel="Trésorerie" empty="Aucun paiement en attente." />
+        ) : null}
+        {authorization.enabled ? (
+          <div className="grid gap-2">
+            <Section
+              title="Autorisations parentales à signer"
+              description="Mineurs de la saison sans autorisation signée en ligne (inscrits avant son activation, séances d’essai, dossiers saisis par le bureau)."
+              items={missingAuthorizations}
+              href="/club-admin/adherents"
+              linkLabel="Adhérents"
+              empty="Toutes les autorisations sont signées."
+            />
+            {missingAuthorizations.length && can(ctx, 'members.write') ? (
+              <div>
+                <RequestAuthorizationButton label={`Demander aux familles (${missingAuthorizations.length})`} />
+              </div>
+            ) : null}
+          </div>
         ) : null}
         <Section
           title="Liste d’attente"

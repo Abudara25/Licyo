@@ -83,6 +83,10 @@ export type SignedAuthorization = {
   signedAt: string;
   /** Empreinte SHA-256 du modèle du club au moment de la signature. */
   templateHash: string;
+  /** Où elle a été signée : à l'inscription, ou plus tard par le lien envoyé à la famille. */
+  channel: 'inscription' | 'lien';
+  /** Signature tracée sur le lien (à l'inscription, c'est celle du dossier : members.signature_data_url). */
+  signatureDataUrl?: string;
 };
 
 export function parseSignedAuthorization(raw: unknown): SignedAuthorization | null {
@@ -90,7 +94,15 @@ export function parseSignedAuthorization(raw: unknown): SignedAuthorization | nu
   if (!o || typeof o !== 'object') return null;
   const r = o as Record<string, unknown>;
   if (typeof r.text !== 'string' || typeof r.signerName !== 'string' || !isSignerQuality(r.signerQuality) || typeof r.signedAt !== 'string') return null;
-  return { text: r.text, signerName: r.signerName, signerQuality: r.signerQuality, signedAt: r.signedAt, templateHash: typeof r.templateHash === 'string' ? r.templateHash : '' };
+  return {
+    text: r.text,
+    signerName: r.signerName,
+    signerQuality: r.signerQuality,
+    signedAt: r.signedAt,
+    templateHash: typeof r.templateHash === 'string' ? r.templateHash : '',
+    channel: r.channel === 'lien' ? 'lien' : 'inscription',
+    signatureDataUrl: typeof r.signatureDataUrl === 'string' && r.signatureDataUrl.startsWith('data:image/png;base64,') ? r.signatureDataUrl : undefined,
+  };
 }
 
 function safeJson(s: string): unknown {
@@ -104,4 +116,29 @@ function safeJson(s: string): unknown {
 export async function templateHash(template: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(template));
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Copie figée à enregistrer, rendue à partir du modèle du club (jamais du texte envoyé par le navigateur). */
+export async function buildSignedAuthorization(
+  template: string,
+  vars: AuthorizationVars,
+  opts: { now: Date; channel: SignedAuthorization['channel']; signatureDataUrl?: string },
+): Promise<SignedAuthorization> {
+  return {
+    text: renderAuthorization(template, vars),
+    signerName: vars.signerName.trim(),
+    signerQuality: vars.signerQuality,
+    signedAt: opts.now.toISOString(),
+    templateHash: await templateHash(template),
+    channel: opts.channel,
+    ...(opts.signatureDataUrl ? { signatureDataUrl: opts.signatureDataUrl } : {}),
+  };
+}
+
+/** L'adhérent attend-il une autorisation ? Mineur, saison en cours, dossier actif, pas encore signée. */
+export function authorizationPending(
+  m: { is_minor: boolean; anonymized_at: string | null; parental_authorization: unknown; season: string; dossier_status: string } | null,
+  currentSeason: string,
+): boolean {
+  return Boolean(m && m.is_minor && !m.anonymized_at && !m.parental_authorization && m.season === currentSeason && m.dossier_status !== 'rejected');
 }

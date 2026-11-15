@@ -404,10 +404,7 @@ Apport du CRM d'ASC Muay Thai.
     signature, aperçu d'impression ;
   - texte personnalisé enregistré puis relu ; texte trop court refusé ;
   - 360 et 768 px (champs à 16 px, sélecteur à 44 px, sans débordement).
-- **Reste à faire** :
-  - autorisation pour les séances d'essai (formulaire séparé) ;
-  - nouvelle signature demandée aux dossiers déjà inscrits sans autorisation en ligne (aujourd'hui : signalés
-    « non signée en ligne »).
+- **Complété au lot 12** : séances d'essai et dossiers déjà inscrits (signature par lien).
 
 ## Lot 11 — connexion directe à HelloAsso (réalisé le 2026-11-15, non déployé)
 
@@ -441,6 +438,33 @@ Apport du CRM d'ASC Muay Thai.
 - **Reste à faire** :
   - remboursements HelloAsso (paiement passé en « Refunded » après import) ;
   - jeton renouvelé par `refresh_token` plutôt que redemandé à chaque passage (un passage par jour aujourd'hui).
+
+## Lot 12 — registre RGPD et autorisation demandée après l'inscription (réalisé le 2026-11-15)
+
+- **Registre des traitements** (art. 30, page `/club-admin/registre-rgpd`, lien depuis Paramètres > Conservation,
+  réservé à `club.admin`, imprimable), construit par `src/lib/processing-register.ts` à partir des réglages réels :
+  - responsable : nom, représentant, RNA ou SIRET (signalés « à compléter » s'ils manquent) ;
+  - une fiche par activité, selon les modules actifs (adhésions, pièces et santé, autorisation parentale,
+    trésorerie, pré-inscriptions, essais, présences, communication, accès du bureau) : finalité, base légale,
+    personnes, données (champs activés par le club compris), destinataires (nombre de personnes par rôle ayant
+    le droit), durée (celle de la conservation, avec alerte si elle n'est pas activée) ;
+  - données de santé signalées (certificat, et champs du formulaire comme « allergies ou traitement ») ;
+  - sous-traitants (Licyo, Cloudflare, e-mail, Stripe et HelloAsso s'ils sont connectés), transferts, mesures de
+    sécurité, droits des personnes et moyen de les exercer.
+  - Présenté comme pré-rempli : le club le relit, le complète et le tient à jour.
+- **Autorisation parentale après l'inscription** :
+  - page publique `/[domain]/autorisation/[token]` (lien personnel de l'adhérent), avec le même texte rendu par
+    le serveur ; nom, qualité, acceptation, signature tracée, protection anti-robot ;
+  - copie figée avec `channel: 'lien'` et la signature tracée ; une seule signature (écriture conditionnelle) ;
+  - « À traiter » : section des mineurs de la saison sans autorisation, avec envoi groupé ; fiche adhérent :
+    bouton « Demander à la famille » ; pas de nouvel envoi avant 3 jours ;
+  - séance d'essai d'un mineur : le lien de signature part avec l'e-mail de confirmation.
+- **Vérifié** :
+  - 112 tests passent ; `tsc` et `next build` sans erreur ;
+  - en local : 6 mineurs listés, demande envoyée puis bloquée 3 jours, signature par le lien (refus si
+    incomplet, puis succès), lien refusé une fois signé ;
+  - preuve « par le lien personnel envoyé à la famille » avec signature, e-mail d'essai avec le lien ;
+  - registre (13 sections), refusé à l'entraîneur ; 360 et 768 px.
 
 ## Lots proposés (ordre recommandé)
 
