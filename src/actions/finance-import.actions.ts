@@ -9,6 +9,7 @@ import { grantsCan } from '@/lib/permissions';
 import { normalizeRows, suggestMatch } from '@/lib/financial-import';
 import { familyCandidates } from '@/lib/finance-candidates';
 import type { ActionResult } from '@/lib/validation';
+import { insertTransactions } from '@/lib/financial-store';
 
 const SOURCE = z.enum(['helloasso', 'bank', 'sumup', 'stripe', 'other']);
 const PAYMENT_TYPE = z.enum(['card', 'check', 'cash', 'transfer', 'pass_sport', 'caf', 'other_aid']);
@@ -52,27 +53,11 @@ export async function importFinancialFile(input: unknown): Promise<ActionResult<
     const { transactions, rejected } = normalizeRows(v.rows, v.mapping, v.source);
     if (!transactions.length) return { ok: false, error: rejected[0]?.reason ?? 'Aucune opération lisible dans ce fichier.' };
 
-    const db = getDatabase();
-    const importId = crypto.randomUUID();
-    await db
-      .prepare('INSERT INTO financial_imports (id, club_id, source, file_name, row_count, imported_by) VALUES (?, ?, ?, ?, ?, ?)')
-      .bind(importId, ctx.club.id, v.source, v.fileName?.slice(0, 200) ?? null, v.rows.length, ctx.auth.userId)
-      .run();
-    let inserted = 0;
-    for (let i = 0; i < transactions.length; i += 100) {
-      const chunk = transactions.slice(i, i + 100).map((t) =>
-        db
-          .prepare(
-            `INSERT INTO financial_transactions (id, club_id, import_id, source, dedup_key, external_ref, occurred_on, amount_cents, payer_name, payer_email, label, payment_type)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (club_id, dedup_key) DO NOTHING RETURNING id`,
-          )
-          .bind(crypto.randomUUID(), ctx.club.id, importId, v.source, t.dedupKey, t.externalRef, t.occurredOn, t.amountCents, t.payerName, t.payerEmail, t.label, v.paymentType),
-      );
-      const results = await db.batch(chunk);
-      inserted += results.reduce((n, r) => n + (r.results?.length ?? 0), 0);
-    }
-    const duplicates = transactions.length - inserted;
-    await db.prepare('UPDATE financial_imports SET inserted_count = ?, duplicate_count = ? WHERE id = ?').bind(inserted, duplicates, importId).run();
+    const { inserted, duplicates } = await insertTransactions(
+      getDatabase(),
+      { clubId: ctx.club.id, source: v.source, paymentType: v.paymentType, fileName: v.fileName ?? null, rowCount: v.rows.length, importedBy: ctx.auth.userId },
+      transactions,
+    );
     revalidatePath(PATH);
     return {
       ok: true,

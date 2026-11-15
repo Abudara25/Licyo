@@ -10,6 +10,7 @@ import { processNewsletters } from '@/lib/newsletter';
 import { makeNewsletterSender } from '@/lib/newsletter-mail';
 import { runRetention } from '@/lib/retention';
 import { deletePrivateFilesVerified } from '@/lib/storage';
+import { runAllHelloAssoSyncs } from '@/lib/helloasso-connection';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -47,6 +48,13 @@ const retentionTask: Task = {
   run: (db, now) => runRetention(db, now, deletePrivateFilesVerified),
 };
 
+/** Paiements HelloAsso des clubs connectés, ajoutés à l'import financier (src/lib/helloasso.ts). */
+const helloAssoTask: Task = {
+  name: 'helloasso',
+  slot: daily,
+  run: (db, now) => runAllHelloAssoSyncs(db, now),
+};
+
 /**
  * Point d'entrée des tâches planifiées. Appelé par le Cron Trigger du Worker (worker.ts, `scheduled`) avec
  * « Authorization: Bearer <CRON_SECRET> ». Sans secret configuré, la route est fermée.
@@ -59,7 +67,7 @@ export async function POST(req: Request) {
 
   // Déclenchement des 15 minutes : newsletter seulement. Déclenchement quotidien (ou appel manuel) : toutes les tâches.
   const frequent = req.headers.get('x-licyo-cron') === '*/15 * * * *';
-  const tasks = frequent ? [newsletterTask] : [...TASKS, waitlistTask, remindersTask, newsletterTask, retentionTask];
+  const tasks = frequent ? [newsletterTask] : [...TASKS, waitlistTask, remindersTask, newsletterTask, retentionTask, helloAssoTask];
   const results = await runScheduledTasks(getDatabase(), new Date(), tasks);
   const failed = results.filter((r) => r.status === 'failed');
   for (const r of results) console.log(`[cron] ${r.task} : ${r.status} - ${r.detail}`);

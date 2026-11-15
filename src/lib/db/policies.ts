@@ -125,7 +125,7 @@ const POLICIES: Partial<Record<TableName, Policy[]>> = {
     superAdminAll,
   ],
   public_clubs: [{ cmd: 'select', to: 'public', using: () => '1' }],
-  // club_mail_credentials : service uniquement.
+  // club_mail_credentials, club_integrations : service uniquement (secrets chiffrés).
   staff_members: [
     { cmd: 'select', to: 'authenticated', using: (c, h) => `(${c('user_id')} = ${h.uid} OR ${h.isClubStaff(c('club_id'))})` },
     {

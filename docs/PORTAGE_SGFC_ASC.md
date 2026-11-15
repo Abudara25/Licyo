@@ -269,7 +269,7 @@ d'information financière.
     écarté), réimport (2 déjà connues), rattachement manuel et annulation (règlement de la famille recalculé),
     mise de côté ; 360 et 768 px.
 - **Reste à faire** :
-  - connexion directe à l'API HelloAsso (identifiants chiffrés par club) ;
+  - connexion directe à l'API HelloAsso : faite (lot 11) ;
   - fichiers Excel `.xlsx` (aujourd'hui : exporter en CSV) ;
   - remboursements (montants négatifs) à rattacher.
 
@@ -408,6 +408,39 @@ Apport du CRM d'ASC Muay Thai.
   - autorisation pour les séances d'essai (formulaire séparé) ;
   - nouvelle signature demandée aux dossiers déjà inscrits sans autorisation en ligne (aujourd'hui : signalés
     « non signée en ligne »).
+
+## Lot 11 — connexion directe à HelloAsso (réalisé le 2026-11-15, non déployé)
+
+- **Connexion** (carte « Connexion HelloAsso » en haut de Trésorerie > Import, droit `finance.write`) :
+  - le club colle l'adresse de sa page HelloAsso (ou son identifiant), puis l'identifiant et le secret de sa clé
+    API ;
+  - Licyo essaie avant d'enregistrer : jeton OAuth2 `client_credentials`, puis lecture d'une page de paiements ;
+  - secret chiffré (AES-256-GCM, même clé que les identifiants e-mail), jamais renvoyé au navigateur ; table
+    `club_integrations` (migration `0014`) inaccessible aux clients utilisateurs ;
+  - connexion et déconnexion tracées dans `audit_events`.
+- **Synchronisation** (`src/lib/helloasso.ts`) : chaque nuit (tâche `helloasso`) ou à la demande.
+  - Lecture de `GET /v5/organizations/{slug}/payments` : paiements « Authorized », pages de 100, du plus ancien
+    au plus récent.
+  - Première fois : 400 jours ; ensuite depuis le dernier passage, avec 3 jours de recouvrement. Au-delà de
+    50 pages, la reprise se fait à la date du dernier paiement lu.
+  - Opération normalisée : montant en centimes, date à l'heure de Paris, payeur, libellé (« Adhésion -
+    formulaire - formule »), type carte.
+  - Pas de doublon : clé `helloasso:payment:<id>`. Un paiement déjà importé par fichier CSV (référence = n° de
+    paiement ou de commande) est écarté.
+  - Écriture commune avec l'import CSV (`src/lib/financial-store.ts`). Le rapprochement est inchangé
+    (suggestions, correspondances sûres).
+  - Erreurs lisibles enregistrées et affichées : identifiants refusés, droits insuffisants, association
+    introuvable, HelloAsso indisponible.
+- **Réglage** : `HELLOASSO_API_URL` (facultatif) pour le bac à sable HelloAsso ; production par défaut.
+- **Vérifié** :
+  - 109 tests passent ; `tsc` et `next build` sans erreur ;
+  - en local avec un faux serveur HelloAsso : mauvais secret refusé, connexion, 3 paiements importés puis 0 au
+    second passage (fenêtre de 3 jours), opérations visibles « à rapprocher » ;
+  - secret absent de la page, déconnexion ; 360 et 768 px.
+- **Pas encore essayé avec un vrai compte HelloAsso** : il faudra une clé API d'association (ou du bac à sable).
+- **Reste à faire** :
+  - remboursements HelloAsso (paiement passé en « Refunded » après import) ;
+  - jeton renouvelé par `refresh_token` plutôt que redemandé à chaque passage (un passage par jour aujourd'hui).
 
 ## Lots proposés (ordre recommandé)
 

@@ -6,6 +6,9 @@ import { FinancialImportUploader, TransactionsList, type TransactionRow } from '
 import { familyCandidates } from '@/lib/finance-candidates';
 import { SOURCES, suggestMatch } from '@/lib/financial-import';
 import { formatEuros } from '@/lib/pricing';
+import { getDatabase } from '@/lib/db/d1';
+import { getConnection } from '@/lib/helloasso-connection';
+import { HelloAssoConnection, type HelloAssoState } from '@/components/club-admin/HelloAssoConnection';
 
 type Props = { searchParams: Promise<{ vue?: string }> };
 
@@ -51,6 +54,18 @@ export default async function FinancialImportPage({ searchParams }: Props) {
     })
     .sort((a, b) => a.label.localeCompare(b.label));
   const canWrite = can(ctx, 'finance.write');
+  // Connexion HelloAsso : seuls des indicateurs non sensibles sortent de club_integrations (jamais le secret).
+  const conn = await getConnection(getDatabase(), club.id);
+  const helloAsso: HelloAssoState = conn
+    ? {
+        organization: conn.account_ref,
+        clientId: conn.client_id,
+        status: conn.status,
+        lastSyncAt: conn.last_sync_at,
+        lastError: conn.last_error,
+        lastNew: conn.last_counts ? (Number(JSON.parse(conn.last_counts).nouveaux) || 0) : null,
+      }
+    : null;
 
   return (
     <>
@@ -64,6 +79,7 @@ export default async function FinancialImportPage({ searchParams }: Props) {
         }
       />
       <div className="grid gap-6">
+        <HelloAssoConnection state={helloAsso} canWrite={canWrite} />
         {canWrite ? <FinancialImportUploader /> : null}
         <nav aria-label="Opérations" className="flex flex-wrap gap-2">
           {(Object.entries(VIEWS) as [string, string][]).map(([slug, status]) => (

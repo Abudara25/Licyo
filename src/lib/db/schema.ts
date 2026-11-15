@@ -38,6 +38,7 @@ export const TABLES = {
   clubs: { json: CLUB_JSON, bool: CLUB_BOOL, generated: ['id'] },
   public_clubs: { json: CLUB_JSON, bool: CLUB_BOOL, view: true },
   club_mail_credentials: {},
+  club_integrations: {},
   staff_members: { json: ['assigned_category_ids', 'permissions'], generated: ['id'] },
   facilities: { generated: ['id'] },
   categories: { bool: ['auto_invite'], generated: ['id'] },
