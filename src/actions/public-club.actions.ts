@@ -112,16 +112,20 @@ export async function submitRegistration(
   }
 
   // Renouvellement : le jeton doit désigner un adhérent de ce club.
+  // Elle rattache l'inscription à la même personne et lui donne la priorité sur les places (pas sur « fermé »).
+  let renewal: { person_id: string | null; birth_date: string } | null = null;
   if (input.renewalToken) {
     const { data: previous } = await admin
       .from('members')
-      .select('id')
+      .select('id, person_id, birth_date, season')
       .eq('club_id', club.id)
       .eq('magic_action_token', input.renewalToken)
       .maybeSingle();
-    if (!previous)
+    if (!previous || previous.season === season)
       return { ok: false, error: 'Lien de réinscription invalide.' };
+    renewal = previous;
   }
+  const renewedIndex = renewal ? input.members.findIndex((m) => m.birthDate === renewal!.birth_date) : -1;
 
   // Champs du formulaire activés par le club (relus côté serveur, jamais fournis par le navigateur).
   const formFields = resolveForm(
@@ -199,8 +203,12 @@ export async function submitRegistration(
     const category = categoryById.get(categoryId)!;
     const state = availability.get(categoryId)!;
     const invited = invitation?.category_id === categoryId;
+    const renewed = renewedIndex >= 0 && input.members[renewedIndex].categoryId === categoryId;
     const wanted = input.members.filter((m) => m.categoryId === categoryId).length;
-    if (state.mode !== 'open' && !invited) {
+    if (state.mode === 'closed' && !invited) {
+      return { ok: false, error: `Les inscriptions sont fermées pour « ${category.name} ».` };
+    }
+    if (state.mode !== 'open' && !invited && !renewed) {
       return {
         ok: false,
         error: state.mode === 'preregistration'
@@ -208,7 +216,8 @@ export async function submitRegistration(
           : `Les inscriptions sont fermées pour « ${category.name} ».`,
       };
     }
-    if (wanted > state.remaining + (invited ? 1 : 0))
+    // Place réservée (invitation) ou prioritaire (réinscription) : ne dépend pas des places libres.
+    if (wanted > state.remaining + (invited ? 1 : 0) + (renewed ? 1 : 0))
       return {
         ok: false,
         error: `La section « ${category.name} » est complète : rejoignez la liste d’attente depuis la page Pré-inscription.`,
@@ -342,6 +351,8 @@ export async function submitRegistration(
       ageOn(m.birthDate) >= 18 ? true : m.consentAutonomousExit,
     signature_data_url: m.signatureDataUrl,
     extra_fields: extraByMember[i] ?? {},
+    // Réinscription : même personne que la saison précédente ; sinon la base rattache (prénom, nom, naissance).
+    person_id: i === renewedIndex ? (renewal?.person_id ?? null) : null,
     registration_type: input.renewalToken
       ? ('renewal' as const)
       : ('full' as const),

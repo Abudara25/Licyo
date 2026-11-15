@@ -267,6 +267,8 @@ const POLICIES: Partial<Record<TableName, Policy[]>> = {
   preregistrations: [permRead('members.read'), permAll('members.write'), superAdminAll],
   // Relances envoyées : lues par le bureau qui suit les dossiers ; écrites uniquement par la tâche planifiée.
   reminder_log: [permRead('members.read'), superAdminAll],
+  // Fiches adhérents permanentes : comme les dossiers.
+  people: [permRead('members.read'), permAll('members.write'), superAdminAll],
   // scheduled_runs : service et équipe Licyo uniquement.
   scheduled_runs: [{ cmd: 'select', to: 'authenticated', using: (_c, h) => h.isSuperAdmin }],
 };

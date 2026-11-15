@@ -159,6 +159,19 @@ export type Category = {
 };
 
 export type RegistrationMode = "open" | "preregistration" | "closed";
+
+/** Personne permanente d'un club : ses inscriptions de chaque saison sont dans members (person_id). */
+export type Person = {
+  id: string;
+  club_id: string;
+  first_name: string;
+  last_name: string;
+  birth_date: string;
+  gender: "M" | "F" | "X";
+  match_key: string;
+  notes: string | null;
+  created_at: string;
+};
 export type PreregistrationStatus = "waiting" | "invited" | "registered" | "declined" | "expired" | "cancelled";
 
 export type Preregistration = {
@@ -269,6 +282,8 @@ export type Member = {
   magic_action_token: string;
   /** Réponses aux champs activés par le club (validées par validateExtraAnswers). */
   extra_fields: Record<string, string | number | boolean>;
+  /** Personne suivie d'une saison à l'autre (people) ; renseignée par la base à l'insertion. */
+  person_id: string | null;
   created_at: string;
 };
 
@@ -520,6 +535,7 @@ export type Database = {
         Facility,
         "club_id" | "name" | "address" | "city" | "postal_code"
       >;
+      people: TableDef<Person, "club_id" | "first_name" | "last_name" | "birth_date" | "match_key">;
       reminder_log: TableDef<
         {
           id: string;

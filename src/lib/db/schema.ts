@@ -43,6 +43,7 @@ export const TABLES = {
   categories: { bool: ['auto_invite'], generated: ['id'] },
   preregistrations: { generated: ['id'] },
   reminder_log: { generated: ['id'] },
+  people: { generated: ['id'] },
   schedules: { generated: ['id'] },
   club_products: { json: ['available_sizes'], generated: ['id'] },
   family_registrations: { bool: ['is_adult_self_registration'], generated: ['id'] },

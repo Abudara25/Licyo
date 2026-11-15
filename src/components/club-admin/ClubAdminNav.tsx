@@ -16,6 +16,7 @@ import {
   Mail,
   Hourglass,
   Inbox,
+  Users,
   MessageSquare,
   Image,
 } from 'lucide-react';
@@ -59,6 +60,9 @@ export function ClubAdminNav({
             icon: FileText,
           },
         ]
+      : []),
+    ...(may('members.read') && moduleEnabled(modules, 'inscriptions')
+      ? [{ href: '/club-admin/adherents', label: 'Adhérents', icon: Users }]
       : []),
     ...(may('members.read') && moduleEnabled(modules, 'inscriptions')
       ? [{ href: '/club-admin/a-traiter', label: 'À traiter', icon: Inbox }]

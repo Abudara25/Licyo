@@ -66,7 +66,7 @@ export default async function EmailLogPage({ searchParams }: Props) {
         </label>
         <label className="grid gap-1.5 text-sm font-medium" htmlFor="statut">
           Statut
-          <select id="statut" name="statut" defaultValue={statut} className="min-h-11 rounded-lg border bg-white px-3 text-base font-normal">
+          <select id="statut" name="statut" defaultValue={statut} className="min-h-11 w-full min-w-0 rounded-lg border bg-white px-3 text-base font-normal">
             <option value="">Tous</option>
             <option value="sent">Envoyés</option>
             <option value="logged">Non envoyés</option>

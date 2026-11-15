@@ -182,6 +182,35 @@ Reste à faire :
   - en local : activation depuis l'écran, cron (« envoyees=1 »), lien de complément, photo déposée, dossier passé
     en « à valider », ancien lien invalidé ; écrans regardés à 360 et 768 px.
 
+## Lot 4 — fiche adhérent suivie d'une saison à l'autre (réalisé le 2026-11-15, non déployé)
+
+- **Personne permanente** (`people`, migration `0008`) : une fiche par club, à laquelle chaque inscription de
+  saison est rattachée (`members.person_id`).
+- **Rapprochement conservateur** par un déclencheur SQL à chaque nouvelle inscription : même prénom, nom et date de
+  naissance exacte (casse et espaces ignorés). Il vaut pour tous les chemins : tunnel, essai, import, données de
+  démo.
+- **Réinscription** : le lien rattache explicitement à la personne de la saison précédente, même si l'orthographe a
+  changé. Il n'est accepté que s'il vient d'une saison antérieure.
+- **Priorité de réinscription** : la personne réinscrite par le lien du club passe outre « complet » et
+  « pré-inscription », mais jamais « fermé ».
+- **Reprise de l'existant** par la migration : identifiant généré ligne par ligne (le test a révélé qu'une
+  sous-requête aurait donné le même identifiant à toutes les fiches). Vérifiée sur la base locale : 6 inscriptions,
+  5 fiches, aucune inscription sans fiche.
+- **Doublons possibles** (`src/lib/people.ts`) : même prénom et nom avec une date différente, même nom et même date
+  (jumeaux ?), même prénom et même date. Ils sont signalés dans la liste et sur la fiche, jamais fusionnés.
+- **Écrans** (droit `members.read`) :
+  - `/club-admin/adherents` : recherche insensible aux accents ; saison courante, anciens adhérents non
+    réinscrits, ou toutes les saisons ;
+  - `/club-admin/adherents/<id>` : responsable légal, saisons (catégorie, statut, pièces, réponses au formulaire,
+    règlement si `finance.read`, relances), e-mails envoyés à la famille, doublons possibles, notes internes
+    (`members.write`).
+- **Vérifié** :
+  - 69 tests passent ; `tsc` et `next build` sans erreur ;
+  - écrans regardés à 360 et 768 px ; notes enregistrées puis relues.
+- **Reste à faire** :
+  - fusion manuelle de deux fiches par le bureau, avec journal ;
+  - rattacher plusieurs responsables à une même personne (aujourd'hui, le payeur de chaque saison).
+
 ## Lots proposés (ordre recommandé)
 
 1. **Socle de fiabilité** : journal des e-mails par club, Turnstile sur les formulaires publics, Cron Trigger du
