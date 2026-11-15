@@ -3,6 +3,7 @@
 import { revalidateTag, revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient, getClubContext } from "@/lib/db/server";
+import { grantsCan } from "@/lib/permissions";
 import { MEDIA_SECTIONS, stockPhoto } from "@/lib/site-media";
 import { clubTag } from "@/lib/tenant";
 import type { ActionResult } from "@/lib/validation";
@@ -19,7 +20,7 @@ export async function saveSiteImage(
   input: unknown,
 ): Promise<ActionResult> {
   const ctx = await getClubContext();
-  if (!ctx || !["president", "secretary", "super_admin"].includes(ctx.role)) {
+  if (!ctx || !grantsCan(ctx.grants, "content.write")) {
     return { ok: false, error: "Accès réservé à la direction du club." };
   }
   const parsed = choiceSchema.safeParse(input);

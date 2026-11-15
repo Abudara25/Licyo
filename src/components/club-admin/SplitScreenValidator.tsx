@@ -26,6 +26,8 @@ export type ReviewItem = {
   consentImage: boolean;
   consentExit: boolean;
   rejectionReason: string | null;
+  /** Réponses aux champs du formulaire choisis par le club. */
+  extra: { label: string; value: string }[];
   docs: { photo: boolean; medical: boolean; id: boolean };
   payer: { name: string; email: string; phone: string; city: string } | null;
   paymentStatus: string | null;
@@ -193,6 +195,9 @@ export function SplitScreenValidator({ items }: { items: ReviewItem[] }) {
                   </dd>
                 </div>
               ) : null}
+              {selected.extra.map((x) => (
+                <div key={x.label}><dt className="font-medium">{x.label}</dt><dd className="whitespace-pre-line break-words">{x.value}</dd></div>
+              ))}
               {selected.rejectionReason ? <div><dt className="font-medium">Dernière demande</dt><dd>{selected.rejectionReason}</dd></div> : null}
             </dl>
           </div>

@@ -1,5 +1,6 @@
 import { requireModule } from '@/lib/module-access';
 import { requireClubContext, createClient } from '@/lib/db/server';
+import { grantsCan } from '@/lib/permissions';
 import { DAY_LABELS } from '@/config/sports-presets';
 import { PageHeader } from '@/components/club-admin/AdminShell';
 import {
@@ -42,11 +43,11 @@ export default async function AttendancePage() {
       .eq('season', club.current_season),
   ]);
 
-  // Un éducateur avec des groupes attribués ne voit que ses groupes.
-  const membership = ctx.auth.memberships.find((m) => m.club_id === club.id);
+  // L'encadrement (éducateur, dirigeant d'équipe, bénévole) ne voit que ses catégories rattachées ;
+  // les règles d'accès SQL appliquent la même limite (policies.ts, canInCategory).
   const assigned =
-    ctx.role === 'coach' && membership?.assigned_category_ids.length
-      ? new Set(membership.assigned_category_ids)
+    !grantsCan(ctx.grants, 'sport.manage')
+      ? new Set(ctx.categoryIds)
       : null;
   const catName = new Map((categories ?? []).map((c) => [c.id, c.name]));
   const famById = new Map((families ?? []).map((f) => [f.id, f]));

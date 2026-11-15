@@ -21,7 +21,7 @@ const clubs: ControlClub[] = [
   {
     id: '3',
     name: 'La Traversée',
-    sport_type: 'Natation',
+    sport_type: 'Handball',
     status: 'demo',
     declared_member_count: 320,
     demo_expires_at: '2026-11-05',
@@ -29,7 +29,7 @@ const clubs: ControlClub[] = [
   {
     id: '4',
     name: 'Altitude',
-    sport_type: 'Escalade',
+    sport_type: 'Karaté',
     status: 'suspended',
     declared_member_count: 92,
     demo_expires_at: null,
@@ -88,9 +88,9 @@ export function ControlPreview({ view = '0' }: { view?: string }) {
             {index === 2 ? (
               <div className="control-demo-list">
                 {[
-                  'Nouvelle demande · Club Horizon · Tennis · 120 adhérents',
-                  'Démonstration en cours · La Traversée · Natation · 320 adhérents',
-                  'Devis à préparer · Association Tempo · Danse · 85 adhérents',
+                  'Nouvelle demande · Club Horizon · Basket · 120 adhérents',
+                  'Démonstration en cours · La Traversée · Handball · 320 adhérents',
+                  'Devis à préparer · Association Tempo · Taekwondo · 85 adhérents',
                 ].map((t) => (
                   <p key={t}>{t}</p>
                 ))}

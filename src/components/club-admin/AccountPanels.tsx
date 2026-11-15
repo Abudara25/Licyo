@@ -1,13 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Trash2, UserPlus } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import {
-  inviteStaff,
   openBillingPortal,
   purgeOldSeasons,
   refreshStripeConnectStatus,
-  removeStaff,
   setCustomDomain,
   startStripeConnect,
   startSubscriptionCheckout,
@@ -16,17 +14,9 @@ import { Button } from '@/components/ui/button';
 import { Badge, Card, CardBody, CardHeader } from '@/components/ui/card';
 import { Field, Input, Select } from '@/components/ui/form';
 import { Dialog } from '@/components/ui/dialog';
-import type { StaffMember } from '@/types/database';
 import { startMembershipCheckout } from '@/actions/platform.actions';
 import { useAction } from './useAction';
 
-const ROLE_LABELS = {
-  president: 'Président(e)',
-  secretary: 'Secrétaire',
-  treasurer: 'Trésorier(e)',
-  coach: 'Éducateur / coach',
-  super_admin: 'Administrateur Licyo',
-} as const;
 
 function go(
   fn: () => Promise<{ ok: boolean; data?: { url: string }; error?: string }>,
@@ -179,159 +169,6 @@ export function BillingPanel({
         </CardBody>
       </Card>
     </div>
-  );
-}
-
-export function StaffPanel({
-  staff,
-  currentUserId,
-  canManage,
-  categories,
-}: {
-  staff: StaffMember[];
-  currentUserId: string;
-  canManage: boolean;
-  categories: { id: string; name: string }[];
-}) {
-  const [open, setOpen] = useState(false);
-  const [v, setV] = useState({
-    email: '',
-    fullName: '',
-    role: 'coach',
-    categoryIds: [] as string[],
-  });
-  const { pending, run } = useAction();
-  return (
-    <Card>
-      <CardHeader
-        title="Équipe du club"
-        description="Accès au back-office"
-        action={
-          canManage ? (
-            <Button size="sm" onClick={() => setOpen(true)}>
-              <UserPlus aria-hidden /> Inviter
-            </Button>
-          ) : undefined
-        }
-      />
-      <ul className="divide-y">
-        {staff.map((s) => (
-          <li
-            key={s.id}
-            className="flex items-center justify-between gap-2 p-3"
-          >
-            <div className="min-w-0">
-              <p className="truncate font-medium">{s.full_name}</p>
-              <p className="truncate text-sm text-muted-foreground">
-                {s.email} - {ROLE_LABELS[s.role]}
-              </p>
-            </div>
-            {canManage && s.user_id !== currentUserId ? (
-              <Button
-                size="icon"
-                variant="ghost"
-                aria-label={`Retirer ${s.full_name}`}
-                onClick={() =>
-                  confirm(`Retirer l'accès de ${s.full_name} ?`) &&
-                  run(() => removeStaff(s.id))
-                }
-              >
-                <Trash2 aria-hidden />
-              </Button>
-            ) : null}
-          </li>
-        ))}
-      </ul>
-      <Dialog
-        open={open}
-        onOpenChange={setOpen}
-        title="Inviter un membre du bureau"
-        description="Un e-mail de connexion lui est envoyé."
-      >
-        <form
-          className="grid gap-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            run(
-              () => inviteStaff(v),
-              () => {
-                setOpen(false);
-                setV({
-                  email: '',
-                  fullName: '',
-                  role: 'coach',
-                  categoryIds: [],
-                });
-              },
-            );
-          }}
-        >
-          <Field id="iv-n" label="Nom et prénom">
-            <Input
-              id="iv-n"
-              required
-              value={v.fullName}
-              onChange={(e) => setV({ ...v, fullName: e.target.value })}
-            />
-          </Field>
-          <Field id="iv-e" label="E-mail">
-            <Input
-              id="iv-e"
-              type="email"
-              required
-              value={v.email}
-              onChange={(e) => setV({ ...v, email: e.target.value })}
-            />
-          </Field>
-          <Field id="iv-r" label="Rôle">
-            <Select
-              id="iv-r"
-              value={v.role}
-              onChange={(e) => setV({ ...v, role: e.target.value })}
-            >
-              {(['president', 'secretary', 'treasurer', 'coach'] as const).map(
-                (r) => (
-                  <option key={r} value={r}>
-                    {ROLE_LABELS[r]}
-                  </option>
-                ),
-              )}
-            </Select>
-          </Field>
-          {v.role === 'coach' && categories.length ? (
-            <fieldset>
-              <legend className="mb-1 text-sm font-medium">
-                Groupes encadrés (feuille d'appel)
-              </legend>
-              {categories.map((c) => (
-                <label
-                  key={c.id}
-                  className="flex min-h-10 items-center gap-2 text-sm"
-                >
-                  <input
-                    type="checkbox"
-                    className="size-5"
-                    checked={v.categoryIds.includes(c.id)}
-                    onChange={(e) =>
-                      setV({
-                        ...v,
-                        categoryIds: e.target.checked
-                          ? [...v.categoryIds, c.id]
-                          : v.categoryIds.filter((x) => x !== c.id),
-                      })
-                    }
-                  />
-                  {c.name}
-                </label>
-              ))}
-            </fieldset>
-          ) : null}
-          <Button type="submit" size="lg" disabled={pending}>
-            Envoyer l'invitation
-          </Button>
-        </form>
-      </Dialog>
-    </Card>
   );
 }
 

@@ -70,6 +70,7 @@ export default async function ClubAdminLayout({
       clubName={ctx.club.name}
       subtitle={`${preset.label} - saison ${ctx.club.current_season}`}
       role={ctx.role}
+      grants={ctx.grants}
       siteUrl={clubSiteUrl(ctx.club)}
       modules={ctx.club.enabled_modules}
       attendanceEnabled={ctx.club.enabled_modules.attendance}

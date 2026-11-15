@@ -10,9 +10,11 @@ import { z } from 'zod';
 import {
   createClient,
   getClubContext,
-  isManager,
+  isOffice,
   type ClubContext,
 } from '@/lib/db/server';
+import { CLUB_ROLES, ROLE_LABELS, effectiveGrants, grantsCan, normalizeGrants, type Grant, type Permission } from '@/lib/permissions';
+import { parseFormConfig } from '@/config/registration-fields';
 import { createAdminClient } from '@/lib/db/admin';
 import {
   deletePrivateFiles,
@@ -54,19 +56,19 @@ type Ctx = ClubContext & { supabase: Awaited<ReturnType<typeof createClient>> };
 
 /** Contexte du club courant + contrôle de rôle. Lève une erreur lisible sinon. */
 async function requireCtx(
-  roles?: StaffRole[],
+  permission?: Permission,
   moduleId?: string,
 ): Promise<Ctx> {
   const ctx = await getClubContext();
   if (!ctx) throw new Error('Session expirée : reconnectez-vous.');
   if (moduleId && !moduleEnabled(ctx.club.enabled_modules, moduleId))
     throw new Error('Ce module est désactivé.');
-  if (roles && !roles.includes(ctx.role) && ctx.role !== 'super_admin')
-    throw new Error('Action réservée au bureau du club.');
+  // Sans permission demandée, l'action reste filtrée par les règles d'accès SQL (catégories rattachées).
+  if (permission && !grantsCan(ctx.grants, permission))
+    throw new Error(`Action non autorisée pour le rôle « ${ROLE_LABELS[ctx.role]} ».`);
   return { ...ctx, supabase: await createClient() };
 }
 
-const MANAGERS: StaffRole[] = ['president', 'secretary', 'treasurer'];
 
 async function run<T>(
   fn: () => Promise<ActionResult<T>>,
@@ -102,7 +104,7 @@ export async function getMemberDocumentUrl(
   kind: 'photo' | 'medical' | 'id',
 ): Promise<ActionResult<{ url: string; isPdf: boolean }>> {
   return run(async () => {
-    const { supabase } = await requireCtx(MANAGERS, 'inscriptions');
+    const { supabase } = await requireCtx('members.read', 'inscriptions');
     // La lecture passe par la RLS : un identifiant d'un autre club ne renvoie rien.
     const { data: member } = await supabase
       .from('members')
@@ -127,7 +129,7 @@ export async function getMemberDocumentUrl(
 
 export async function validateMember(memberId: string): Promise<ActionResult> {
   return run(async () => {
-    const { supabase, club } = await requireCtx(MANAGERS, 'inscriptions');
+    const { supabase, club } = await requireCtx('members.write', 'inscriptions');
     const { data: member, error } = await supabase
       .from('members')
       .update({ dossier_status: 'validated', rejection_reason: null })
@@ -174,7 +176,7 @@ export async function requestCorrection(
   reason: string,
 ): Promise<ActionResult> {
   return run(async () => {
-    const { supabase, club } = await requireCtx(MANAGERS, 'inscriptions');
+    const { supabase, club } = await requireCtx('members.write', 'inscriptions');
     const cleanReason = z
       .string()
       .trim()
@@ -224,7 +226,7 @@ export async function rejectMember(
   reason: string,
 ): Promise<ActionResult> {
   return run(async () => {
-    const { supabase, club } = await requireCtx(MANAGERS, 'inscriptions');
+    const { supabase, club } = await requireCtx('members.write', 'inscriptions');
     const { error } = await supabase
       .from('members')
       .update({
@@ -257,7 +259,7 @@ export async function verifyPassSport(
   verified: boolean,
 ): Promise<ActionResult> {
   return run(async () => {
-    const { supabase, club } = await requireCtx(MANAGERS, 'inscriptions');
+    const { supabase, club } = await requireCtx('members.write', 'inscriptions');
     await supabase
       .from('members')
       .update({ pass_sport_verified: verified })
@@ -335,7 +337,7 @@ async function syncFamilyPaid(supabase: Ctx['supabase'], familyId: string) {
 
 export async function addInstallment(input: unknown): Promise<ActionResult> {
   return run(async () => {
-    const { supabase, club } = await requireCtx(MANAGERS, 'payments');
+    const { supabase, club } = await requireCtx('finance.write', 'payments');
     const parsed = installmentSchema.safeParse(input);
     if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
     const v = parsed.data;
@@ -364,7 +366,7 @@ export async function updateInstallment(
   },
 ): Promise<ActionResult> {
   return run(async () => {
-    const { supabase, club } = await requireCtx(MANAGERS, 'payments');
+    const { supabase, club } = await requireCtx('finance.write', 'payments');
     const v = z
       .object({
         status: z
@@ -401,7 +403,7 @@ export async function updateInstallment(
 
 export async function deleteInstallment(id: string): Promise<ActionResult> {
   return run(async () => {
-    const { supabase, club } = await requireCtx(MANAGERS, 'payments');
+    const { supabase, club } = await requireCtx('finance.write', 'payments');
     const { data } = await supabase
       .from('payment_installments')
       .delete()
@@ -420,7 +422,7 @@ export async function updateOrderStatus(
   status: 'to_order' | 'ordered' | 'received' | 'delivered',
 ): Promise<ActionResult> {
   return run(async () => {
-    const { supabase, club } = await requireCtx(MANAGERS, 'payments');
+    const { supabase, club } = await requireCtx('finance.write', 'payments');
     await supabase
       .from('member_product_orders')
       .update({
@@ -500,7 +502,7 @@ const categorySchema = z.object({
 
 export async function upsertCategory(input: unknown): Promise<ActionResult> {
   return run(async () => {
-    const { supabase, club } = await requireCtx(MANAGERS);
+    const { supabase, club } = await requireCtx('organization.manage');
     const parsed = categorySchema.safeParse(input);
     if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
     const { id, ...v } = parsed.data;
@@ -531,7 +533,7 @@ export async function upsertCategory(input: unknown): Promise<ActionResult> {
 
 export async function deleteCategory(id: string): Promise<ActionResult> {
   return run(async () => {
-    const { supabase, club } = await requireCtx(MANAGERS);
+    const { supabase, club } = await requireCtx('organization.manage');
     const { error } = await supabase
       .from('categories')
       .delete()
@@ -555,7 +557,7 @@ const scheduleSchema = z.object({
 
 export async function upsertSchedule(input: unknown): Promise<ActionResult> {
   return run(async () => {
-    const { supabase, club } = await requireCtx(MANAGERS);
+    const { supabase, club } = await requireCtx('organization.manage');
     const parsed = scheduleSchema.safeParse(input);
     if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
     const { id, ...v } = parsed.data;
@@ -581,7 +583,7 @@ export async function upsertSchedule(input: unknown): Promise<ActionResult> {
 
 export async function deleteSchedule(id: string): Promise<ActionResult> {
   return run(async () => {
-    const { supabase, club } = await requireCtx(MANAGERS);
+    const { supabase, club } = await requireCtx('organization.manage');
     await supabase
       .from('schedules')
       .delete()
@@ -609,7 +611,7 @@ const facilitySchema = z.object({
 
 export async function upsertFacility(input: unknown): Promise<ActionResult> {
   return run(async () => {
-    const { supabase, club } = await requireCtx(MANAGERS);
+    const { supabase, club } = await requireCtx('organization.manage');
     const parsed = facilitySchema.safeParse(input);
     if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
     const { id, ...v } = parsed.data;
@@ -638,7 +640,7 @@ export async function upsertFacility(input: unknown): Promise<ActionResult> {
 
 export async function deleteFacility(id: string): Promise<ActionResult> {
   return run(async () => {
-    const { supabase, club } = await requireCtx(MANAGERS);
+    const { supabase, club } = await requireCtx('organization.manage');
     await supabase
       .from('facilities')
       .delete()
@@ -827,7 +829,7 @@ export async function sendConvocations(
 
 export async function updateClubTexts(input: unknown): Promise<ActionResult> {
   return run(async () => {
-    const { supabase, club } = await requireCtx(MANAGERS);
+    const { supabase, club } = await requireCtx('content.write');
     const v = z
       .object({
         club_history_text: z.string().trim().max(5000),
@@ -860,7 +862,7 @@ const postSchema = z.object({
 
 export async function upsertPost(input: unknown): Promise<ActionResult> {
   return run(async () => {
-    const { supabase, club } = await requireCtx(MANAGERS, 'news');
+    const { supabase, club } = await requireCtx('content.write', 'news');
     const parsed = postSchema.safeParse(input);
     if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
     const { id, ...v } = parsed.data;
@@ -899,7 +901,7 @@ export async function upsertPost(input: unknown): Promise<ActionResult> {
 
 export async function deletePost(id: string): Promise<ActionResult> {
   return run(async () => {
-    const { supabase, club } = await requireCtx(MANAGERS, 'news');
+    const { supabase, club } = await requireCtx('content.write', 'news');
     await supabase
       .from('posts')
       .delete()
@@ -922,7 +924,7 @@ const sponsorSchema = z.object({
 
 export async function upsertSponsor(input: unknown): Promise<ActionResult> {
   return run(async () => {
-    const { supabase, club } = await requireCtx(MANAGERS, 'sponsors');
+    const { supabase, club } = await requireCtx('partners.manage', 'sponsors');
     const parsed = sponsorSchema.safeParse(input);
     if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
     const { id, ...v } = parsed.data;
@@ -948,7 +950,7 @@ export async function upsertSponsor(input: unknown): Promise<ActionResult> {
 
 export async function deleteSponsor(id: string): Promise<ActionResult> {
   return run(async () => {
-    const { supabase, club } = await requireCtx(MANAGERS, 'sponsors');
+    const { supabase, club } = await requireCtx('partners.manage', 'sponsors');
     await supabase
       .from('sponsors')
       .delete()
@@ -965,7 +967,7 @@ export async function updateSponsorLead(
   status: 'new' | 'contacted' | 'won' | 'lost',
 ): Promise<ActionResult> {
   return run(async () => {
-    const { supabase, club } = await requireCtx(MANAGERS, 'sponsors');
+    const { supabase, club } = await requireCtx('partners.manage', 'sponsors');
     await supabase
       .from('sponsor_leads')
       .update({
@@ -988,7 +990,7 @@ const productSchema = z.object({
 
 export async function upsertProduct(input: unknown): Promise<ActionResult> {
   return run(async () => {
-    const { supabase, club } = await requireCtx(MANAGERS, 'boutique');
+    const { supabase, club } = await requireCtx('organization.manage', 'boutique');
     const parsed = productSchema.safeParse(input);
     if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
     const { id, ...v } = parsed.data;
@@ -1025,7 +1027,7 @@ export async function upsertProduct(input: unknown): Promise<ActionResult> {
 
 export async function deleteProduct(id: string): Promise<ActionResult> {
   return run(async () => {
-    const { supabase, club } = await requireCtx(MANAGERS, 'boutique');
+    const { supabase, club } = await requireCtx('organization.manage', 'boutique');
     const { error } = await supabase
       .from('club_products')
       .delete()
@@ -1047,7 +1049,7 @@ export async function uploadClubImage(
   formData: FormData,
 ): Promise<ActionResult<{ url: string }>> {
   return run(async () => {
-    const { supabase, club } = await requireCtx(MANAGERS);
+    const { supabase, club } = await requireCtx('content.write');
     const kind = z
       .enum(['logo', 'hero', 'signature', 'post', 'sponsor', 'product'])
       .parse(formData.get('kind'));
@@ -1130,7 +1132,7 @@ export async function updateClubSettings(
   input: unknown,
 ): Promise<ActionResult> {
   return run(async () => {
-    const { supabase, club } = await requireCtx(MANAGERS);
+    const { supabase, club } = await requireCtx('settings.manage');
     const parsed = settingsSchema.safeParse(input);
     if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
     const v = parsed.data;
@@ -1197,7 +1199,7 @@ export async function updateClubSettings(
 
 export async function saveSmtpSettings(input: unknown): Promise<ActionResult> {
   return run(async () => {
-    const { club } = await requireCtx(['president', 'secretary']);
+    const { club } = await requireCtx('communication.manage');
     const parsed = z
       .object({
         host: z.string().trim().min(3).max(120),
@@ -1251,7 +1253,7 @@ export async function selectEmailProvider(
   provider: 'platform' | 'gmail' | 'smtp',
 ): Promise<ActionResult> {
   return run(async () => {
-    const { club } = await requireCtx(['president', 'secretary']);
+    const { club } = await requireCtx('communication.manage');
     const p = z.enum(['platform', 'gmail', 'smtp']).parse(provider);
     const admin = createAdminClient();
     if (p !== 'platform') {
@@ -1275,7 +1277,7 @@ export async function disconnectEmailAccount(
   kind: 'gmail' | 'smtp',
 ): Promise<ActionResult> {
   return run(async () => {
-    const { club } = await requireCtx(['president', 'secretary']);
+    const { club } = await requireCtx('communication.manage');
     const admin = createAdminClient();
     await admin
       .from('club_mail_credentials')
@@ -1300,7 +1302,7 @@ export async function disconnectEmailAccount(
 
 export async function sendTestEmail(): Promise<ActionResult> {
   return run(async () => {
-    const { club, auth } = await requireCtx(MANAGERS);
+    const { club, auth } = await requireCtx('communication.manage');
     const labels = {
       platform: 'serveur Licyo',
       gmail: 'Gmail',
@@ -1333,7 +1335,7 @@ export async function startStripeConnect(): Promise<
   ActionResult<{ url: string }>
 > {
   return run(async () => {
-    const { club } = await requireCtx(['president', 'treasurer']);
+    const { club } = await requireCtx('finance.write');
     if (club.subscription_plan !== 'integral')
       return {
         ok: false,
@@ -1372,7 +1374,7 @@ export async function startStripeConnect(): Promise<
 /** Relit l'état du compte Connect au retour de Stripe. */
 export async function refreshStripeConnectStatus(): Promise<ActionResult> {
   return run(async () => {
-    const { club } = await requireCtx(MANAGERS);
+    const { club } = await requireCtx('finance.read');
     if (!club.stripe_connect_account_id)
       return { ok: false, error: 'Aucun compte Stripe.' };
     const account = await getStripe().accounts.retrieve(
@@ -1404,7 +1406,7 @@ export async function openBillingPortal(): Promise<
   ActionResult<{ url: string }>
 > {
   return run(async () => {
-    const { club } = await requireCtx(['president', 'treasurer']);
+    const { club } = await requireCtx('finance.write');
     if (!club.stripe_customer_id)
       return { ok: false, error: 'Aucun abonnement en cours.' };
     const portal = await getStripe().billingPortal.sessions.create({
@@ -1422,7 +1424,7 @@ export async function openBillingPortal(): Promise<
  */
 export async function setCustomDomain(domain: string): Promise<ActionResult> {
   return run(async () => {
-    const { club } = await requireCtx(['president']);
+    const { club } = await requireCtx('club.admin');
     const value = domain
       .trim()
       .toLowerCase()
@@ -1475,42 +1477,126 @@ export async function setCustomDomain(domain: string): Promise<ActionResult> {
 // Équipe du club
 // ---------------------------------------------------------------------------
 
+const staffAccessSchema = z.object({
+  role: z.enum(CLUB_ROLES),
+  /** Droits cochés par l'administrateur ; le rôle ne fait que les pré-cocher. */
+  permissions: z.array(z.string()).max(30),
+  categoryIds: z.array(z.string().uuid()).max(100).default([]),
+});
+
+/**
+ * Contrôle commun à l'invitation et à la modification : catégories du club uniquement, et au moins une personne
+ * garde le droit d'administrer les accès (sinon plus personne ne pourrait gérer le club).
+ */
+async function checkStaffAccess(
+  clubId: string,
+  change: { staffId?: string; grants: Grant[]; categoryIds: string[] },
+): Promise<string | null> {
+  const admin = createAdminClient();
+  if (change.categoryIds.length) {
+    const { data: cats } = await admin.from('categories').select('id').eq('club_id', clubId).in('id', change.categoryIds);
+    if ((cats ?? []).length !== new Set(change.categoryIds).size) return 'Catégorie inconnue pour ce club.';
+  }
+  const { data: staff } = await admin.from('staff_members').select('id, role, permissions').eq('club_id', clubId);
+  const admins = (staff ?? []).filter((m) =>
+    m.id === change.staffId ? change.grants.includes('club.admin') : effectiveGrants(m.role, m.permissions).includes('club.admin'),
+  );
+  if (change.staffId === undefined && change.grants.includes('club.admin')) return null;
+  if (admins.length === 0) return 'Au moins une personne doit garder le droit « Administrer les accès ».';
+  return null;
+}
+
+async function logStaffChange(clubId: string, actorId: string, action: string, objectId: string) {
+  // Journal des changements de droits (RGPD : savoir qui a donné accès aux données des adhérents, et quand).
+  await createAdminClient().from('audit_events').insert({ club_id: clubId, actor_id: actorId, action, object_id: objectId });
+}
+
 export async function inviteStaff(input: unknown): Promise<ActionResult> {
   return run(async () => {
-    const { club } = await requireCtx(['president']);
-    const parsed = z
-      .object({
+    const { club, auth } = await requireCtx('club.admin');
+    const parsed = staffAccessSchema
+      .extend({
         email: z.string().trim().toLowerCase().email(),
         fullName: z.string().trim().min(2).max(80),
-        role: z.enum(['president', 'secretary', 'treasurer', 'coach']),
-        categoryIds: z.array(z.string().uuid()).default([]),
       })
       .safeParse(input);
     if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
     const v = parsed.data;
+    const grants = normalizeGrants(v.permissions);
+    if (grants.length === 0) return { ok: false, error: 'Cochez au moins un droit.' };
+    const problem = await checkStaffAccess(club.id, { grants, categoryIds: v.categoryIds });
+    if (problem) return { ok: false, error: problem };
     const admin = createAdminClient();
     const userId = (await ensureUser(v.email)).id;
-    const { error } = await admin.from('staff_members').upsert(
-      {
-        user_id: userId,
-        club_id: club.id,
-        full_name: v.fullName,
-        email: v.email,
-        role: v.role,
-        assigned_category_ids: v.categoryIds,
-      },
-      { onConflict: 'user_id,club_id' },
-    );
-    if (error) return { ok: false, error: 'Ajout impossible.' };
+    // Jamais d'écrasement silencieux : une personne déjà présente se modifie depuis la liste (garde-fous inclus).
+    const { data: existing } = await admin
+      .from('staff_members')
+      .select('id')
+      .eq('club_id', club.id)
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (existing) return { ok: false, error: 'Cette personne a déjà un accès : modifiez ses droits dans la liste.' };
+    const { data: row, error } = await admin
+      .from('staff_members')
+      .upsert(
+        {
+          user_id: userId,
+          club_id: club.id,
+          full_name: v.fullName,
+          email: v.email,
+          role: v.role,
+          permissions: grants,
+          assigned_category_ids: v.categoryIds,
+        },
+        { onConflict: 'user_id,club_id' },
+      )
+      .select('id')
+      .maybeSingle();
+    if (error || !row) return { ok: false, error: 'Ajout impossible.' };
+    await logStaffChange(club.id, auth.userId, 'staff.invited', row.id);
     await sendLoginLink(v.email, '/club-admin', false, `${club.name} vous invite sur Licyo. Pour accepter`);
     revalidatePath('/club-admin/parametres');
     return { ok: true, message: `Invitation envoyée à ${v.email}.` };
   });
 }
 
+/** Modifie le rôle, les droits et les catégories d'une personne déjà invitée. */
+export async function updateStaffAccess(staffId: string, input: unknown): Promise<ActionResult> {
+  return run(async () => {
+    const { club, auth } = await requireCtx('club.admin');
+    const parsed = staffAccessSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
+    const v = parsed.data;
+    const admin = createAdminClient();
+    const { data: target } = await admin
+      .from('staff_members')
+      .select('id, user_id')
+      .eq('id', uuid.parse(staffId))
+      .eq('club_id', club.id)
+      .maybeSingle();
+    if (!target) return { ok: false, error: 'Membre introuvable.' };
+    const grants = normalizeGrants(v.permissions);
+    if (grants.length === 0) return { ok: false, error: 'Cochez au moins un droit, ou retirez l’accès de cette personne.' };
+    if (target.user_id === auth.userId && !grants.includes('club.admin')) {
+      return { ok: false, error: 'Vous ne pouvez pas retirer vous-même votre droit d’administrer les accès.' };
+    }
+    const problem = await checkStaffAccess(club.id, { staffId: target.id, grants, categoryIds: v.categoryIds });
+    if (problem) return { ok: false, error: problem };
+    const { error } = await admin
+      .from('staff_members')
+      .update({ role: v.role, permissions: grants, assigned_category_ids: v.categoryIds })
+      .eq('id', target.id)
+      .eq('club_id', club.id);
+    if (error) return { ok: false, error: 'Enregistrement impossible.' };
+    await logStaffChange(club.id, auth.userId, 'staff.permissions.updated', target.id);
+    revalidatePath('/club-admin/parametres');
+    return { ok: true, message: 'Droits enregistrés.' };
+  });
+}
+
 export async function removeStaff(staffId: string): Promise<ActionResult> {
   return run(async () => {
-    const { club, auth, supabase } = await requireCtx(['president']);
+    const { club, auth, supabase } = await requireCtx('club.admin');
     const { data: target } = await supabase
       .from('staff_members')
       .select('*')
@@ -1524,6 +1610,7 @@ export async function removeStaff(staffId: string): Promise<ActionResult> {
         error: 'Vous ne pouvez pas retirer votre propre accès.',
       };
     await supabase.from('staff_members').delete().eq('id', target.id);
+    await logStaffChange(club.id, auth.userId, 'staff.removed', target.id);
     revalidatePath('/club-admin/parametres');
     return { ok: true };
   });
@@ -1541,7 +1628,7 @@ export async function purgeOldSeasons(
   confirmation: string,
 ): Promise<ActionResult<{ deleted: number }>> {
   return run(async () => {
-    const { club, supabase } = await requireCtx(['president']);
+    const { club, supabase } = await requireCtx('club.admin');
     if (confirmation !== 'SUPPRIMER')
       return { ok: false, error: 'Tapez SUPPRIMER pour confirmer.' };
     const keepFrom = previousSeason(club.current_season);
@@ -1584,7 +1671,7 @@ export async function sendRenewalInvitations(): Promise<
   ActionResult<{ sent: number }>
 > {
   return run(async () => {
-    const { club, supabase } = await requireCtx(MANAGERS);
+    const { club, supabase } = await requireCtx('members.write');
     const from = previousSeason(club.current_season);
     const { data: members } = await supabase
       .from('members')
@@ -1672,5 +1759,36 @@ export async function signOut(): Promise<void> {
 
 export async function canManage(): Promise<boolean> {
   const ctx = await getClubContext();
-  return Boolean(ctx && isManager(ctx.role));
+  return Boolean(ctx && isOffice(ctx));
+}
+
+// ---------------------------------------------------------------------------
+// Formulaire d'inscription modulable (src/config/registration-fields.ts)
+// ---------------------------------------------------------------------------
+
+/**
+ * Enregistre les champs activés et les questions du club. Les réglages sont relus par parseFormConfig : tout ce qui
+ * n'est pas reconnu (champ inconnu, question incomplète, liste sans options) est écarté et signalé.
+ */
+export async function saveRegistrationForm(input: unknown): Promise<ActionResult> {
+  return run(async () => {
+    const { supabase, club } = await requireCtx('settings.manage');
+    const raw = input && typeof input === 'object' ? (input as { fields?: unknown; custom?: unknown }) : {};
+    const config = parseFormConfig(raw);
+    const sentCustom = Array.isArray(raw.custom) ? raw.custom.length : 0;
+    if (sentCustom !== config.custom.length) {
+      return {
+        ok: false,
+        error: 'Une question du club est incomplète : intitulé obligatoire, et au moins deux choix pour une liste.',
+      };
+    }
+    const { error } = await supabase
+      .from('clubs')
+      .update({ registration_form: config })
+      .eq('id', club.id);
+    if (error) return { ok: false, error: 'Enregistrement impossible.' };
+    refreshPublic(club.slug);
+    revalidatePath('/club-admin/formulaire');
+    return { ok: true, message: 'Formulaire d’inscription enregistré.' };
+  });
 }

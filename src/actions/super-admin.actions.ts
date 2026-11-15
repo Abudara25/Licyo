@@ -6,6 +6,7 @@ import { revalidatePath, revalidateTag } from 'next/cache';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
+import { CLUB_ROLES } from '@/lib/permissions';
 import { createAdminClient } from '@/lib/db/admin';
 import { getAuthContext } from '@/lib/db/server';
 import {
@@ -345,7 +346,7 @@ export async function inviteClubOwner(
         email: z.string().trim().toLowerCase().email(),
         fullName: z.string().trim().min(2).max(80),
         role: z
-          .enum(['president', 'secretary', 'treasurer', 'coach'])
+          .enum(CLUB_ROLES)
           .default('president'),
       })
       .safeParse(input);

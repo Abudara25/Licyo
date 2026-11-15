@@ -129,7 +129,7 @@ export function defaultModules(
         m.id,
         !["private_lessons", "gallery"].includes(m.id) ||
           (m.id === "private_lessons" &&
-            /muay|box|judo|karate|tennis/.test(sport)),
+            /muay|box|judo|karate|taekwondo/.test(sport)),
       ]),
     ),
   } as import("../types/database").EnabledModules;

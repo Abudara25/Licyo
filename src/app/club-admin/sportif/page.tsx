@@ -2,14 +2,15 @@ import { moduleEnabled } from '@/lib/platform';
 import {
   requireClubContext,
   createClient,
-  isManager,
+  can,
 } from '@/lib/db/server';
 import { getSportPreset } from '@/config/sports-presets';
 import { PageHeader } from '@/components/club-admin/AdminShell';
 import { SportifManager } from '@/components/club-admin/SportifManager';
 
 export default async function SportifPage() {
-  const { club, role } = await requireClubContext();
+  const ctx = await requireClubContext();
+  const { club } = ctx;
   const supabase = await createClient();
   const [
     { data: categories },
@@ -61,7 +62,7 @@ export default async function SportifPage() {
         description={`${vocab.groups.charAt(0).toUpperCase() + vocab.groups.slice(1)}, créneaux, calendrier et convocations`}
       />
       <SportifManager
-        canManage={isManager(role)}
+        canManage={can(ctx, 'organization.manage')}
         eventsEnabled={moduleEnabled(club.enabled_modules, 'events')}
         vocab={vocab}
         categories={categories ?? []}

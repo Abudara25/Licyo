@@ -30,6 +30,8 @@ import {
   type ActionResult,
 } from '@/lib/validation';
 import { moduleEnabled } from '@/lib/platform';
+import { getSportPreset } from '@/config/sports-presets';
+import { parseFormConfig, resolveForm, validateExtraAnswers, type ExtraAnswers } from '@/config/registration-fields';
 import type { Club } from '@/types/database';
 
 const PAYMENT_LABELS = {
@@ -129,6 +131,14 @@ export async function submitRegistration(
       return { ok: false, error: 'Lien de réinscription invalide.' };
   }
 
+  // Champs du formulaire activés par le club (relus côté serveur, jamais fournis par le navigateur).
+  const formFields = resolveForm(
+    parseFormConfig(club.registration_form),
+    club.sport_type,
+    getSportPreset(club.sport_type).family,
+  );
+  const extraByMember: ExtraAnswers[] = [];
+
   // Contrôles métier par personne.
   const cartMembers = [];
   for (const [i, m] of input.members.entries()) {
@@ -148,6 +158,9 @@ export async function submitRegistration(
         ok: false,
         error: `Date de naissance de ${m.firstName} invalide.`,
       };
+    const extra = validateExtraAnswers(formFields, m.extra, age < 18, m.firstName);
+    if (!extra.ok) return { ok: false, error: extra.error };
+    extraByMember[i] = extra.value;
     if (
       category.medical_requirement !== 'health_questionnaire' &&
       !fileFrom(formData, `medical_${i}`)
@@ -332,6 +345,7 @@ export async function submitRegistration(
     consent_autonomous_exit:
       ageOn(m.birthDate) >= 18 ? true : m.consentAutonomousExit,
     signature_data_url: m.signatureDataUrl,
+    extra_fields: extraByMember[i] ?? {},
     registration_type: input.renewalToken
       ? ('renewal' as const)
       : ('full' as const),

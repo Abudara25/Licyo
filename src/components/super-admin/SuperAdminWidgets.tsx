@@ -19,6 +19,7 @@ import {
   upsertProspect,
 } from '@/actions/super-admin.actions';
 import { SPORTS_PRESETS } from '@/config/sports-presets';
+import { CLUB_ROLES, ROLE_LABELS } from '@/lib/permissions';
 import { Button } from '@/components/ui/button';
 import {
   Badge,
@@ -413,10 +414,11 @@ export function ClubsTable({ clubs }: { clubs: ClubRow[] }) {
               value={owner.role}
               onChange={(e) => setOwner({ ...owner, role: e.target.value })}
             >
-              <option value="president">Président(e)</option>
-              <option value="secretary">Secrétaire</option>
-              <option value="treasurer">Trésorier(e)</option>
-              <option value="coach">Éducateur</option>
+              {CLUB_ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_LABELS[r]}
+                </option>
+              ))}
             </Select>
           </Field>
           <Button type="submit" size="lg" disabled={pending}>

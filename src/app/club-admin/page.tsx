@@ -1,7 +1,7 @@
 import {
   requireClubContext,
   createClient,
-  isManager,
+  can,
 } from '@/lib/db/server';
 import { PageHeader } from '@/components/club-admin/AdminShell';
 import { ManagementDashboard } from '@/components/platform/ManagementDashboard';
@@ -10,7 +10,8 @@ export default async function ClubDashboard({
 }: {
   searchParams: Promise<{ erreur?: string }>;
 }) {
-  const { club, role } = await requireClubContext();
+  const ctx = await requireClubContext();
+  const { club } = ctx;
   const db = await createClient();
   const { erreur } = await searchParams;
   const [
@@ -33,7 +34,7 @@ export default async function ClubDashboard({
       .eq('club_id', club.id)
       .eq('season', club.current_season)
       .in('dossier_status', ['pending_review', 'needs_correction']),
-    isManager(role)
+    can(ctx, 'finance.read')
       ? db
           .from('family_registrations')
           .select('final_total_amount,amount_paid')

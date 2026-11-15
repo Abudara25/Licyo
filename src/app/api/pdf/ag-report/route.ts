@@ -1,6 +1,7 @@
 import { createElement } from 'react';
 import { renderToBuffer } from '@react-pdf/renderer';
-import { createClient, getClubContext, isManager } from '@/lib/db/server';
+import { createClient, getClubContext } from '@/lib/db/server';
+import { grantsCanAny } from '@/lib/permissions';
 import { AgMunicipalityReportPdf } from '@/lib/pdf/ag-municipality-report-pdf';
 import { buildAgReport } from '@/lib/reports';
 
@@ -8,7 +9,7 @@ export const runtime = 'nodejs';
 
 export async function GET(req: Request) {
   const ctx = await getClubContext();
-  if (!ctx || !isManager(ctx.role)) return new Response('Accès refusé', { status: 403 });
+  if (!ctx || !grantsCanAny(ctx.grants, ['members.read', 'finance.read'])) return new Response('Accès refusé', { status: 403 });
   const season = new URL(req.url).searchParams.get('saison') ?? ctx.club.current_season;
   if (!/^\d{4}-\d{4}$/.test(season)) return new Response('Saison invalide', { status: 400 });
   const data = await buildAgReport(await createClient(), ctx.club, season);

@@ -3,6 +3,7 @@ import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import type { Club, StaffMember, StaffRole } from '@/types/database';
+import { ALL_GRANTS, effectiveGrants, grantsCan, grantsCanAny, isScopedOnly, type Grant, type Permission } from '@/lib/permissions';
 import { IMPERSONATION_COOKIE, verifyImpersonation } from '@/lib/utils/impersonation';
 import { endSession, getSessionUser, type AuthUser } from '@/lib/auth/session';
 import { makeClient, type DbClient } from './client.ts';
@@ -59,11 +60,14 @@ export type ClubContext = {
   auth: AuthContext;
   club: Club;
   role: StaffRole;
+  /** Droits effectifs de la personne dans ce club (personnalisés par l'administrateur, sinon ceux du rôle). */
+  grants: Grant[];
+  /** Catégories rattachées (droits « de ses catégories »). */
+  categoryIds: string[];
   /** Vrai si un super_admin consulte le back-office d'un club en Mode Miroir. */
   impersonating: boolean;
 };
 
-export const MANAGER_ROLES: StaffRole[] = ['president', 'secretary', 'treasurer', 'super_admin'];
 
 /**
  * Club courant du back-office.
@@ -80,7 +84,7 @@ export const getClubContext = cache(async (): Promise<ClubContext | null> => {
     const clubId = await verifyImpersonation(cookieStore.get(IMPERSONATION_COOKIE)?.value, auth.userId);
     if (clubId) {
       const { data: club } = await db.from('clubs').select('*').eq('id', clubId).maybeSingle();
-      if (club) return { auth, club, role: 'super_admin', impersonating: true };
+      if (club) return { auth, club, role: 'super_admin', grants: [...ALL_GRANTS], categoryIds: [], impersonating: true };
     }
   }
 
@@ -90,17 +94,27 @@ export const getClubContext = cache(async (): Promise<ClubContext | null> => {
   const membership = clubMemberships.find((m) => m.club_id === preferred) ?? clubMemberships[0];
   const { data: club } = await db.from('clubs').select('*').eq('id', membership.club_id!).maybeSingle();
   if (!club) return null;
-  return { auth, club, role: membership.role, impersonating: false };
+  return {
+    auth,
+    club,
+    role: membership.role,
+    grants: effectiveGrants(membership.role, membership.permissions),
+    categoryIds: membership.assigned_category_ids ?? [],
+    impersonating: false,
+  };
 });
 
-/** Exige un club courant (et éventuellement un rôle), sinon redirige. */
-export async function requireClubContext(allowedRoles?: StaffRole[]): Promise<ClubContext> {
+/**
+ * Exige un club courant et, si demandé, AU MOINS UNE des permissions (src/lib/permissions.ts), sinon redirige.
+ * Les règles d'accès SQL (policies.ts) appliquent les mêmes permissions à chaque lecture et écriture.
+ */
+export async function requireClubContext(anyOf?: Permission | readonly Permission[]): Promise<ClubContext> {
   const ctx = await getClubContext();
   if (!ctx) {
     const auth = await getAuthContext();
     redirect(auth?.isSuperAdmin ? '/super-admin/clubs' : '/login?next=/club-admin');
   }
-  if (allowedRoles && !allowedRoles.includes(ctx.role)) redirect('/club-admin?erreur=droits');
+  if (anyOf && !grantsCanAny(ctx.grants, typeof anyOf === 'string' ? [anyOf] : anyOf)) redirect('/club-admin?erreur=droits');
   return ctx;
 }
 
@@ -111,6 +125,12 @@ export async function requireSuperAdmin(): Promise<AuthContext> {
   return auth;
 }
 
-export function isManager(role: StaffRole): boolean {
-  return MANAGER_ROLES.includes(role);
+/** Vrai si la personne a la permission sur tout le club (super_admin compris). */
+export function can(ctx: Pick<ClubContext, 'grants'>, permission: Permission): boolean {
+  return grantsCan(ctx.grants, permission);
+}
+
+/** Personne « bureau » : au moins un droit sur tout le club, pas seulement sur ses catégories. */
+export function isOffice(ctx: Pick<ClubContext, 'grants'>): boolean {
+  return !isScopedOnly(ctx.grants);
 }

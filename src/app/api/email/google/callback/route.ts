@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getAuthContext } from '@/lib/db/server';
+import { effectiveGrants, grantsCan } from '@/lib/permissions';
 import { createAdminClient } from '@/lib/db/admin';
 import { verifyValue } from '@/lib/utils/impersonation';
 import { encryptSecret } from '@/lib/utils/crypto';
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
 
   const auth = await getAuthContext();
   if (!auth || auth.userId !== userId) return back('erreur');
-  const allowed = auth.isSuperAdmin || auth.memberships.some((m) => m.club_id === clubId && ['president', 'secretary'].includes(m.role));
+  const allowed = auth.isSuperAdmin || auth.memberships.some((m) => m.club_id === clubId && grantsCan(effectiveGrants(m.role, m.permissions), 'communication.manage'));
   if (!allowed) return back('refuse');
 
   try {

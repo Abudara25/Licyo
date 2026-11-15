@@ -115,7 +115,7 @@ must(await db.from('staff_members').insert([
   { user_id: accounts.coachHb, club_id: hb.id, full_name: 'Karim B.', email: 'coach@hbc.test', role: 'coach', assigned_category_ids: [hb.cat(1)] },
   { user_id: accounts.presJudo, club_id: judo.id, full_name: 'Paul Leroy', email: 'president@judo.test', role: 'president' },
 ]));
-await db.from('saas_prospects').insert({ club_name: 'Tennis Club fictif', sport_type: 'tennis', city: 'Mantes', contact_name: 'Contact fictif', stage: 'contacted' });
+await db.from('saas_prospects').insert({ club_name: 'Rugby Club fictif', sport_type: 'rugby', city: 'Mantes', contact_name: 'Contact fictif', stage: 'contacted' });
 
 // Export : une instruction INSERT par ligne, dans l'ordre des dépendances.
 const ORDER = [

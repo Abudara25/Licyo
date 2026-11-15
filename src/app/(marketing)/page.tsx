@@ -94,7 +94,7 @@ export default function Home() {
         <div className="page-container">
           <span>UNE MÊME PASSION, MILLE FAÇONS DE LA VIVRE</span>
           <p>
-            Football <i /> Muay thaï <i /> Tennis <i /> Danse <i /> Natation{' '}
+            Football <i /> Handball <i /> Muay thaï <i /> Judo <i /> Karaté{' '}
             <i /> Et votre sport.
           </p>
         </div>

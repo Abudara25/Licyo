@@ -47,7 +47,7 @@ function writeStorage(key: string, value: unknown) {
 }
 
 /**
- * Feuille d'appel mobile, utilisable sans réseau (gymnases, piscines).
+ * Feuille d'appel mobile, utilisable sans réseau (gymnases, salles, dojos).
  * La liste est copiée dans le téléphone à chaque ouverture en ligne ; les appels
  * faits hors ligne sont mis en file et renvoyés dès que la connexion revient.
  */

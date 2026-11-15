@@ -2,7 +2,6 @@ import { requireModule } from '@/lib/module-access';
 import {
   requireClubContext,
   createClient,
-  MANAGER_ROLES,
 } from '@/lib/db/server';
 import { PageHeader } from '@/components/club-admin/AdminShell';
 import {
@@ -10,10 +9,11 @@ import {
   type ReviewItem,
 } from '@/components/club-admin/SplitScreenValidator';
 import { RenewalButton } from '@/components/club-admin/RenewalButton';
+import { describeAnswers, parseFormConfig } from '@/config/registration-fields';
 
 export default async function InscriptionsPage() {
   await requireModule('inscriptions');
-  const { club } = await requireClubContext(MANAGER_ROLES);
+  const { club } = await requireClubContext('members.read');
   const supabase = await createClient();
   const [{ data: members }, { data: categories }, { data: families }] =
     await Promise.all([
@@ -38,6 +38,7 @@ export default async function InscriptionsPage() {
         .eq('club_id', club.id)
         .eq('season', club.current_season),
     ]);
+  const formConfig = parseFormConfig(club.registration_form);
   const catById = new Map((categories ?? []).map((c) => [c.id, c]));
   const famById = new Map((families ?? []).map((f) => [f.id, f]));
 
@@ -59,6 +60,7 @@ export default async function InscriptionsPage() {
       consentImage: m.consent_image_rights,
       consentExit: m.consent_autonomous_exit,
       rejectionReason: m.rejection_reason,
+      extra: describeAnswers(formConfig, m.extra_fields),
       docs: {
         photo: Boolean(m.photo_storage_path),
         medical: Boolean(m.medical_doc_storage_path),

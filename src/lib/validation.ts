@@ -35,6 +35,8 @@ export const memberInputSchema = z.object({
     .array(z.object({ productId: z.string().uuid(), size: z.string().trim().min(1).max(20) }))
     .max(10)
     .default([]),
+  /** Champs activés par le club : validés côté serveur selon ses réglages (registration-fields.ts). */
+  extra: z.record(z.union([z.string().max(1000), z.number(), z.boolean()])).default({}),
 });
 
 export const registrationSchema = z.object({

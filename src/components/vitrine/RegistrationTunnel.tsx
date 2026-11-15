@@ -10,7 +10,9 @@ import { compressImage } from '@/lib/utils/image-compression';
 import { Field, Input, Select, Checkbox } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { TactileSignaturePad } from './TactileSignaturePad';
-import type { SportVocabulary } from '@/config/sports-presets';
+import { getSportPreset, type SportVocabulary } from '@/config/sports-presets';
+import { parseFormConfig, resolveForm } from '@/config/registration-fields';
+import { ClubExtraFields, extraPayload, missingRequiredExtra, type ExtraDraft } from './ClubExtraFields';
 import type { Category, Club, ClubProduct } from '@/types/database';
 
 type DocKind = 'photo' | 'medical' | 'id';
@@ -28,6 +30,7 @@ type MemberDraft = {
   consentAutonomousExit: boolean;
   products: { productId: string; size: string }[];
   files: Partial<Record<DocKind, File>>;
+  extra: ExtraDraft;
 };
 
 export type TunnelClub = Pick<
@@ -42,6 +45,8 @@ export type TunnelClub = Pick<
   | 'pass_stripe_fees_to_parents'
   | 'enabled_modules'
   | 'stripe_connect_onboarded'
+  | 'sport_type'
+  | 'registration_form'
 >;
 
 export type TunnelPrefill = {
@@ -67,6 +72,7 @@ const newMember = (seed: Partial<MemberDraft> = {}): MemberDraft => ({
   consentAutonomousExit: false,
   products: [],
   files: {},
+  extra: {},
   ...seed,
 });
 
@@ -96,6 +102,12 @@ export function RegistrationTunnel({
   const [signature, setSignature] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+
+  // Champs activés par le club (mêmes règles que le serveur, qui fait foi).
+  const formFields = useMemo(
+    () => resolveForm(parseFormConfig(club.registration_form), club.sport_type, getSportPreset(club.sport_type).family),
+    [club.registration_form, club.sport_type],
+  );
 
   const ages = members.map((m) => (m.birthDate ? ageOn(m.birthDate) : NaN));
   const isAdultSelf = members.length === 1 && ages[0] >= 18;
@@ -149,6 +161,8 @@ export function RegistrationTunnel({
         if (cat && cat.medical_requirement === 'health_questionnaire' && !m.healthQuestionnairePassed && !m.files.medical) {
           return `Si une réponse au questionnaire de santé est « oui », joignez un certificat médical pour ${who}.`;
         }
+        const missing = missingRequiredExtra(formFields, m.extra, ages[i] < 18);
+        if (missing) return `${who} : « ${missing.label} » est obligatoire.`;
       }
     }
     if (n === 2) {
@@ -196,6 +210,7 @@ export function RegistrationTunnel({
         consentAutonomousExit: m.consentAutonomousExit,
         signatureDataUrl: signature,
         products: m.products.filter((p) => p.productId && p.size),
+        extra: extraPayload(formFields, m.extra, ageOn(m.birthDate) < 18),
       })),
       paymentMethod,
       installmentsCount,
@@ -302,6 +317,16 @@ export function RegistrationTunnel({
                       <Checkbox id={`${p}-exit`} checked={m.consentAutonomousExit} onChange={(v) => update(m.key, { consentAutonomousExit: v })} label="Mon enfant peut repartir seul après l'activité." />
                     ) : null}
                   </div>
+
+                  {m.birthDate && !Number.isNaN(age) ? (
+                    <ClubExtraFields
+                      idPrefix={p}
+                      fields={formFields}
+                      values={m.extra}
+                      isMinor={!adult}
+                      onChange={(key, value) => update(m.key, { extra: { ...m.extra, [key]: value } })}
+                    />
+                  ) : null}
 
                   <div className="mt-4 grid gap-3 border-t pt-4 sm:grid-cols-3">
                     {(['photo', 'medical', 'id'] as DocKind[]).map((kind) => {

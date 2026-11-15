@@ -2,7 +2,6 @@ import { requireModule } from '@/lib/module-access';
 import {
   requireClubContext,
   createClient,
-  MANAGER_ROLES,
 } from '@/lib/db/server';
 import { PageHeader } from '@/components/club-admin/AdminShell';
 import {
@@ -18,7 +17,7 @@ import { todayIso } from '@/lib/season';
 
 export default async function TreasuryPage() {
   await requireModule('payments');
-  const { club } = await requireClubContext(MANAGER_ROLES);
+  const { club } = await requireClubContext('finance.read');
   const supabase = await createClient();
   const [
     { data: families },

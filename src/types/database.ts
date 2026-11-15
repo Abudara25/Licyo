@@ -4,8 +4,8 @@
 export type ClubStatus = "demo" | "active" | "suspended" | "archived";
 export type SubscriptionPlan = "vitrine" | "integral";
 export type EmailProvider = "platform" | "gmail" | "smtp";
-export type StaffRole =
-  "super_admin" | "president" | "secretary" | "treasurer" | "coach";
+/** Rôles et permissions : src/lib/permissions.ts (source unique). */
+export type StaffRole = import("../lib/permissions").AnyStaffRole;
 export type MedicalRequirement =
   "health_questionnaire" | "medical_cert_standard" | "medical_cert_competition";
 export type PaymentStatus = "unpaid" | "partial" | "paid" | "refunded";
@@ -89,6 +89,8 @@ export type Club = {
   accepts_installments: boolean;
   pass_stripe_fees_to_parents: boolean;
   enabled_modules: EnabledModules;
+  /** Réglages du formulaire d'inscription (src/config/registration-fields.ts, lus avec parseFormConfig). */
+  registration_form: Record<string, unknown>;
   email_provider: EmailProvider;
   email_sender_address: string | null;
   status: ClubStatus;
@@ -118,6 +120,8 @@ export type StaffMember = {
   email: string;
   role: StaffRole;
   assigned_category_ids: string[];
+  /** Droits accordés (src/lib/permissions.ts) ; null = droits par défaut du rôle. */
+  permissions: string[] | null;
   created_at: string;
 };
 
@@ -232,6 +236,8 @@ export type Member = {
   dossier_status: DossierStatus;
   rejection_reason: string | null;
   magic_action_token: string;
+  /** Réponses aux champs activés par le club (validées par validateExtraAnswers). */
+  extra_fields: Record<string, string | number | boolean>;
   created_at: string;
 };
 

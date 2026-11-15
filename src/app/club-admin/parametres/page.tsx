@@ -3,25 +3,25 @@ import { MembershipPanel } from '@/components/platform/MembershipPanel';
 import {
   requireClubContext,
   createClient,
-  MANAGER_ROLES,
+  can,
 } from '@/lib/db/server';
 import { createAdminClient } from '@/lib/db/admin';
 import { clubSiteUrl } from '@/lib/env';
 import { previousSeason } from '@/lib/season';
+import { StaffAccessPanel } from '@/components/club-admin/StaffAccessPanel';
 import { PageHeader } from '@/components/club-admin/AdminShell';
 import { ClubSettingsForm } from '@/components/club-admin/ClubSettingsForm';
 import { EmailIntegrationSettings } from '@/components/club-admin/EmailIntegrationSettings';
 import {
   BillingPanel,
   RgpdPanel,
-  StaffPanel,
 } from '@/components/club-admin/AccountPanels';
 
 type Props = { searchParams: Promise<{ gmail?: string; stripe?: string }> };
 
 export default async function SettingsPage({ searchParams }: Props) {
   const { gmail, stripe } = await searchParams;
-  const ctx = await requireClubContext(MANAGER_ROLES);
+  const ctx = await requireClubContext(['settings.manage', 'communication.manage', 'finance.write', 'club.admin']);
   const { club } = ctx;
   const supabase = await createClient();
   const [{ data: staff }, { data: categories }, { data: creds }] =
@@ -50,7 +50,8 @@ export default async function SettingsPage({ searchParams }: Props) {
     .eq('club_id', club.id)
     .eq('season', club.current_season)
     .not('dossier_status', 'in', '(rejected,trial_requested,trial_done)');
-  const isPresident = ctx.role === 'president' || ctx.role === 'super_admin';
+  // Accès des membres du bureau, purge des saisons : permission club.admin (président).
+  const isPresident = can(ctx, 'club.admin');
 
   return (
     <>
@@ -86,7 +87,7 @@ export default async function SettingsPage({ searchParams }: Props) {
           customDomain={club.custom_domain}
           stripeReturn={stripe}
         />
-        <StaffPanel
+        <StaffAccessPanel
           staff={staff ?? []}
           currentUserId={ctx.auth.userId}
           canManage={isPresident}

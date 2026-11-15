@@ -8,6 +8,7 @@ import {
   getAuthContext,
   getClubContext,
 } from "@/lib/db/server";
+import { grantsCan } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/db/admin";
 import {
   MODULES,
@@ -65,7 +66,7 @@ export async function saveClubModules(
   template: string,
 ): Promise<ActionResult> {
   const ctx = await getClubContext();
-  if (!ctx || !["president", "secretary", "super_admin"].includes(ctx.role))
+  if (!ctx || !grantsCan(ctx.grants, "settings.manage"))
     return { ok: false, error: "Accès réservé à la direction du club." };
   if (!SITE_TEMPLATES.some((t) => t.id === template))
     return { ok: false, error: "Modèle inconnu." };
@@ -178,7 +179,7 @@ export async function startMembershipCheckout(): Promise<
   ActionResult<{ url: string }>
 > {
   const ctx = await getClubContext();
-  if (!ctx || !["president", "treasurer", "super_admin"].includes(ctx.role))
+  if (!ctx || !grantsCan(ctx.grants, "finance.write"))
     return {
       ok: false,
       error: "Accès réservé à la direction et à la trésorerie.",
@@ -266,7 +267,7 @@ export async function updateDeclaredCount(
   value: number,
 ): Promise<ActionResult> {
   const ctx = await getClubContext();
-  if (!ctx || !["president", "treasurer", "super_admin"].includes(ctx.role))
+  if (!ctx || !grantsCan(ctx.grants, "finance.write"))
     return {
       ok: false,
       error: "Accès réservé à la direction et à la trésorerie.",
@@ -310,7 +311,7 @@ export async function saveSiteComposition(
   input: unknown,
 ): Promise<ActionResult> {
   const ctx = await getClubContext();
-  if (!ctx || !["president", "secretary", "super_admin"].includes(ctx.role))
+  if (!ctx || !grantsCan(ctx.grants, "content.write"))
     return { ok: false, error: "Accès réservé à la direction du club." };
   if (!validSections(input))
     return {

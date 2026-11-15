@@ -1,6 +1,7 @@
 import { createElement } from 'react';
 import { renderToBuffer } from '@react-pdf/renderer';
-import { createClient, getClubContext, isManager } from '@/lib/db/server';
+import { createClient, getClubContext } from '@/lib/db/server';
+import { grantsCan } from '@/lib/permissions';
 import { CeAttestationPdf } from '@/lib/pdf/ce-attestation-pdf';
 
 export const runtime = 'nodejs';
@@ -8,7 +9,7 @@ export const runtime = 'nodejs';
 /** Attestation CE d'un dossier : réservée au bureau du club (RLS + rôle). */
 export async function GET(_req: Request, { params }: { params: Promise<{ familyId: string }> }) {
   const ctx = await getClubContext();
-  if (!ctx || !isManager(ctx.role)) return new Response('Accès refusé', { status: 403 });
+  if (!ctx || !grantsCan(ctx.grants, 'finance.read')) return new Response('Accès refusé', { status: 403 });
   const { familyId } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(familyId)) return new Response('Introuvable', { status: 404 });
   const supabase = await createClient();

@@ -376,17 +376,16 @@ export class QueryBuilder<Row, Result = Row[]> implements PromiseLike<DbResult<R
       const columns = Object.keys(row);
       if (columns.length === 0) throw new DbQueryError('Insertion vide', '22023');
       const params = columns.map((c) => toSql(this.meta, c, row[c]));
-      let sql = `INSERT INTO ${ident(this.table)} (${columns.map(ident).join(', ')}) SELECT ${columns.map(() => '?').join(', ')}`;
+      // La ligne proposée est exposée sous l'alias new_row : une règle peut citer plusieurs fois la même colonne
+      // (ex. club_id dans canInCategory) sans décaler les paramètres liés.
+      let sql = `INSERT INTO ${ident(this.table)} (${columns.map(ident).join(', ')}) SELECT ${columns
+        .map((c) => `new_row.${ident(c)}`)
+        .join(', ')} FROM (SELECT ${columns.map((c) => `? AS ${ident(c)}`).join(', ')}) AS new_row`;
 
       if (insertPolicy.check) {
-        // Chaque référence de colonne devient la valeur proposée.
-        const checkParams: unknown[] = [];
-        const check = insertPolicy.check((c) => {
-          checkParams.push(c in row ? toSql(this.meta, c, row[c]) : null);
-          return '?';
-        });
+        // Chaque référence de colonne devient la valeur proposée (NULL si la colonne n'est pas fournie).
+        const check = insertPolicy.check((c) => (c in row ? `new_row.${ident(c)}` : 'NULL'));
         sql += ` WHERE ${enforce(check)}`;
-        params.push(...checkParams);
       } else {
         sql += ' WHERE 1';
       }

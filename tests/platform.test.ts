@@ -49,7 +49,7 @@ test('Muay thaï : vocabulaire de combat et sections sans héritage football', a
   assert.equal(p.vocabulary.groups, 'sections');
   assert.equal(p.vocabulary.hasScores, false);
   assert.equal(p.demo.categories[0].name, 'Enfants');
-  const other = getSportPreset('Escalade');
-  assert.equal(other.label, 'Escalade');
+  const other = getSportPreset('Hockey');
+  assert.equal(other.label, 'Hockey');
   assert.equal(other.vocabulary.groups, 'groupes');
 });

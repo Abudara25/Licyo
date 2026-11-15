@@ -10,6 +10,7 @@
 // Sans politique applicable, l'accès est refusé (refus par défaut).
 
 import type { TableName } from './schema';
+import { CLUB_ROLES, rolesWith, scopedRolesWith, type Permission, type ScopedPermission } from '../permissions.ts';
 
 export type SecurityContext =
   | { role: 'service' }
@@ -26,10 +27,12 @@ export type Helpers = {
   isSuperAdmin: string;
   hasClubRole: (club: string, roles: readonly string[]) => string;
   isClubStaff: (club: string) => string;
-  isClubManager: (club: string) => string;
+  /** Permission sur tout le club (src/lib/permissions.ts). */
+  can: (club: string, permission: Permission) => string;
   isPublicClub: (club: string) => string;
   hasFamilyAccess: (family: string) => string;
-  canCoachCategory: (club: string, category: string) => string;
+  /** Permission sportive : sur tout le club (sport.manage) ou sur une catégorie rattachée (encadrement). */
+  canInCategory: (club: string, category: string, permission: ScopedPermission) => string;
 };
 
 type Expr = (col: ColumnRef, h: Helpers) => string;
@@ -43,9 +46,6 @@ type Policy = {
 };
 
 const NOW = "strftime('%Y-%m-%dT%H:%M:%fZ','now')";
-const STAFF = ['president', 'secretary', 'treasurer', 'coach'] as const;
-const MANAGERS = ['president', 'secretary', 'treasurer'] as const;
-const EDITORS = ['president', 'secretary'] as const;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 function list(values: readonly string[]): string {
@@ -66,20 +66,26 @@ export function buildHelpers(ctx: SecurityContext): Helpers {
     signedIn
       ? `(${isSuperAdmin} OR EXISTS (SELECT 1 FROM staff_members sr WHERE sr.user_id = ${uid} AND sr.club_id = ${club} AND sr.role IN (${list(roles)})))`
       : '0';
-  const isClubManager = (club: string) => hasClubRole(club, MANAGERS);
+  // Droit d'une ligne staff_members : sa liste personnalisée, ou à défaut (NULL) les droits par défaut de son rôle.
+  const holds = (alias: string, grant: Permission | ScopedPermission, defaultRoles: readonly string[]) =>
+    `((${alias}.permissions IS NULL AND ${alias}.role IN (${list(defaultRoles)})) OR EXISTS (SELECT 1 FROM json_each(${alias}.permissions) jp WHERE jp.value = ${list([grant])}))`;
+  const can = (club: string, permission: Permission) =>
+    signedIn
+      ? `(${isSuperAdmin} OR EXISTS (SELECT 1 FROM staff_members sp WHERE sp.user_id = ${uid} AND sp.club_id = ${club} AND ${holds('sp', permission, rolesWith(permission))}))`
+      : '0';
   return {
     uid,
     isSuperAdmin,
     hasClubRole,
-    isClubStaff: (club) => hasClubRole(club, STAFF),
-    isClubManager,
+    isClubStaff: (club) => hasClubRole(club, CLUB_ROLES),
+    can,
     isPublicClub: (club) =>
       `EXISTS (SELECT 1 FROM clubs pc WHERE pc.id = ${club} AND (pc.status = 'active' OR (pc.status = 'demo' AND (pc.demo_expires_at IS NULL OR pc.demo_expires_at > ${NOW}))))`,
     hasFamilyAccess: (family) =>
       signedIn ? `EXISTS (SELECT 1 FROM family_access fa WHERE fa.family_id = ${family} AND fa.user_id = ${uid})` : '0',
-    canCoachCategory: (club, category) =>
+    canInCategory: (club, category, permission) =>
       signedIn
-        ? `(${isClubManager(club)} OR EXISTS (SELECT 1 FROM staff_members sc, json_each(sc.assigned_category_ids) jc WHERE sc.user_id = ${uid} AND sc.club_id = ${club} AND sc.role = 'coach' AND jc.value = ${category}))`
+        ? `(${can(club, 'sport.manage')} OR EXISTS (SELECT 1 FROM staff_members sc, json_each(sc.assigned_category_ids) jc WHERE sc.user_id = ${uid} AND sc.club_id = ${club} AND jc.value = ${category} AND ${holds('sc', permission, scopedRolesWith(permission))}))`
         : '0',
   };
 }
@@ -87,14 +93,21 @@ export function buildHelpers(ctx: SecurityContext): Helpers {
 // --- Politiques par table (équivalent des CREATE POLICY) ----------------------------
 
 const superAdminAll: Policy = { cmd: 'all', to: 'authenticated', using: (_c, h) => h.isSuperAdmin };
-const managerAll: Policy = { cmd: 'all', to: 'authenticated', using: (c, h) => h.isClubManager(c('club_id')) };
+/** Lecture et écriture réservées aux rôles qui ont la permission. */
+const permAll = (permission: Permission): Policy => ({ cmd: 'all', to: 'authenticated', using: (c, h) => h.can(c('club_id'), permission) });
+/** Lecture réservée aux rôles qui ont au moins une des permissions. */
+const permRead = (...permissions: Permission[]): Policy => ({
+  cmd: 'select',
+  to: 'authenticated',
+  using: (c, h) => `(${permissions.map((p) => h.can(c('club_id'), p)).join(' OR ')})`,
+});
 const publicOrStaffRead: Policy = {
   cmd: 'select',
   to: 'public',
   using: (c, h) => `(${h.isPublicClub(c('club_id'))} OR ${h.isClubStaff(c('club_id'))})`,
 };
-/** Contenus de vitrine : lecture publique, écriture par le bureau, tout pour le super_admin. */
-const vitrineContent: Policy[] = [publicOrStaffRead, managerAll, superAdminAll];
+/** Organisation publique du club (lieux, catégories, créneaux, produits) : lecture publique, écriture organization.manage. */
+const organizationContent: Policy[] = [publicOrStaffRead, permAll('organization.manage'), superAdminAll];
 
 const POLICIES: Partial<Record<TableName, Policy[]>> = {
   // Comptes, sessions, limites : service uniquement (aucune politique).
@@ -104,7 +117,11 @@ const POLICIES: Partial<Record<TableName, Policy[]>> = {
   ],
   clubs: [
     { cmd: 'select', to: 'authenticated', using: (c, h) => h.isClubStaff(c('id')) },
-    { cmd: 'update', to: 'authenticated', using: (c, h) => h.isClubManager(c('id')) },
+    {
+      cmd: 'update',
+      to: 'authenticated',
+      using: (c, h) => `(${h.can(c('id'), 'settings.manage')} OR ${h.can(c('id'), 'content.write')} OR ${h.can(c('id'), 'finance.write')})`,
+    },
     superAdminAll,
   ],
   public_clubs: [{ cmd: 'select', to: 'public', using: () => '1' }],
@@ -114,17 +131,17 @@ const POLICIES: Partial<Record<TableName, Policy[]>> = {
     {
       cmd: 'all',
       to: 'authenticated',
-      using: (c, h) => `(${c('club_id')} IS NOT NULL AND ${h.hasClubRole(c('club_id'), ['president'])})`,
+      using: (c, h) => `(${c('club_id')} IS NOT NULL AND ${h.can(c('club_id'), 'club.admin')})`,
       check: (c, h) =>
-        `(${c('club_id')} IS NOT NULL AND ${c('role')} <> 'super_admin' AND ${h.hasClubRole(c('club_id'), ['president'])})`,
+        `(${c('club_id')} IS NOT NULL AND ${c('role')} <> 'super_admin' AND ${h.can(c('club_id'), 'club.admin')})`,
     },
     superAdminAll,
   ],
-  facilities: vitrineContent,
-  categories: vitrineContent,
-  schedules: vitrineContent,
-  club_products: vitrineContent,
-  sponsors: vitrineContent,
+  facilities: organizationContent,
+  categories: organizationContent,
+  schedules: organizationContent,
+  club_products: organizationContent,
+  sponsors: [publicOrStaffRead, permAll('partners.manage'), superAdminAll],
   posts: [
     {
       cmd: 'select',
@@ -132,48 +149,58 @@ const POLICIES: Partial<Record<TableName, Policy[]>> = {
       using: (c, h) =>
         `((${c('is_published')} = 1 AND ${c('published_at')} <= ${NOW} AND ${h.isPublicClub(c('club_id'))}) OR ${h.isClubStaff(c('club_id'))})`,
     },
-    managerAll,
+    permAll('content.write'),
     superAdminAll,
   ],
   events: [
     publicOrStaffRead,
-    { cmd: 'all', to: 'authenticated', using: (c, h) => h.canCoachCategory(c('club_id'), c('category_id')) },
+    { cmd: 'all', to: 'authenticated', using: (c, h) => h.canInCategory(c('club_id'), c('category_id'), 'events.manage') },
     superAdminAll,
   ],
   members: [
-    { cmd: 'select', to: 'authenticated', using: (c, h) => h.isClubManager(c('club_id')) },
+    permRead('members.read'),
     { cmd: 'select', to: 'authenticated', using: (c, h) => h.hasFamilyAccess(c('family_id')) },
-    managerAll,
+    permAll('members.write'),
     superAdminAll,
   ],
-  coach_roster: [{ cmd: 'select', to: 'authenticated', using: (c, h) => h.canCoachCategory(c('club_id'), c('category_id')) }],
+  coach_roster: [
+    {
+      cmd: 'select',
+      to: 'authenticated',
+      using: (c, h) =>
+        `(${h.canInCategory(c('club_id'), c('category_id'), 'attendance.take')} OR ${h.canInCategory(c('club_id'), c('category_id'), 'events.manage')})`,
+    },
+  ],
   coach_contacts: [
     {
       cmd: 'select',
       to: 'authenticated',
       using: (c, h) =>
-        `(${h.isClubManager(c('club_id'))} OR EXISTS (SELECT 1 FROM members mr WHERE mr.family_id = ${c('id')} AND ${h.canCoachCategory('mr.club_id', 'mr.category_id')}))`,
+        `(${h.can(c('club_id'), 'members.read')} OR EXISTS (SELECT 1 FROM members mr WHERE mr.family_id = ${c('id')} AND (${h.canInCategory('mr.club_id', 'mr.category_id', 'attendance.take')} OR ${h.canInCategory('mr.club_id', 'mr.category_id', 'events.manage')})))`,
     },
   ],
   family_registrations: [
-    managerAll,
+    permRead('members.read', 'finance.read'),
+    permAll('members.write'),
+    permAll('finance.write'),
     { cmd: 'select', to: 'authenticated', using: (c, h) => h.hasFamilyAccess(c('id')) },
     superAdminAll,
   ],
   payment_installments: [
-    managerAll,
+    permRead('finance.read'),
+    permAll('finance.write'),
     { cmd: 'select', to: 'authenticated', using: (c, h) => h.hasFamilyAccess(c('family_id')) },
     superAdminAll,
   ],
-  member_product_orders: [managerAll, superAdminAll],
+  member_product_orders: [permRead('finance.read'), permAll('finance.write'), superAdminAll],
   attendances: [
     {
       cmd: 'all',
       to: 'authenticated',
       using: (c, h) =>
-        `EXISTS (SELECT 1 FROM schedules sa2 WHERE sa2.id = ${c('schedule_id')} AND sa2.club_id = ${c('club_id')} AND ${h.canCoachCategory('sa2.club_id', 'sa2.category_id')})`,
+        `EXISTS (SELECT 1 FROM schedules sa2 WHERE sa2.id = ${c('schedule_id')} AND sa2.club_id = ${c('club_id')} AND ${h.canInCategory('sa2.club_id', 'sa2.category_id', 'attendance.take')})`,
       check: (c, h) =>
-        `EXISTS (SELECT 1 FROM schedules sa3 JOIN members ma3 ON ma3.category_id = sa3.category_id AND ma3.club_id = sa3.club_id WHERE sa3.id = ${c('schedule_id')} AND ma3.id = ${c('member_id')} AND sa3.club_id = ${c('club_id')} AND ${h.canCoachCategory('sa3.club_id', 'sa3.category_id')})`,
+        `EXISTS (SELECT 1 FROM schedules sa3 JOIN members ma3 ON ma3.category_id = sa3.category_id AND ma3.club_id = sa3.club_id WHERE sa3.id = ${c('schedule_id')} AND ma3.id = ${c('member_id')} AND sa3.club_id = ${c('club_id')} AND ${h.canInCategory('sa3.club_id', 'sa3.category_id', 'attendance.take')})`,
     },
     superAdminAll,
   ],
@@ -187,34 +214,34 @@ const POLICIES: Partial<Record<TableName, Policy[]>> = {
       cmd: 'all',
       to: 'authenticated',
       using: (c, h) =>
-        `EXISTS (SELECT 1 FROM events ec WHERE ec.id = ${c('event_id')} AND ${h.canCoachCategory('ec.club_id', 'ec.category_id')})`,
+        `EXISTS (SELECT 1 FROM events ec WHERE ec.id = ${c('event_id')} AND ${h.canInCategory('ec.club_id', 'ec.category_id', 'events.manage')})`,
       check: (c, h) =>
-        `EXISTS (SELECT 1 FROM events ek JOIN members mk ON mk.club_id = ek.club_id WHERE ek.id = ${c('event_id')} AND mk.id = ${c('member_id')} AND ek.club_id = ${c('club_id')} AND (ek.category_id IS NULL OR mk.category_id = ek.category_id) AND ${h.canCoachCategory('ek.club_id', 'ek.category_id')})`,
+        `EXISTS (SELECT 1 FROM events ek JOIN members mk ON mk.club_id = ek.club_id WHERE ek.id = ${c('event_id')} AND mk.id = ${c('member_id')} AND ek.club_id = ${c('club_id')} AND (ek.category_id IS NULL OR mk.category_id = ek.category_id) AND ${h.canInCategory('ek.club_id', 'ek.category_id', 'events.manage')})`,
     },
     superAdminAll,
   ],
-  sponsor_leads: [managerAll, superAdminAll],
+  sponsor_leads: [permAll('partners.manage'), superAdminAll],
   anonymous_page_views: [
-    { cmd: 'select', to: 'authenticated', using: (c, h) => h.isClubStaff(c('club_id')) },
+    permRead('stats.read'),
     superAdminAll,
   ],
-  club_requests: [managerAll],
+  club_requests: [permRead('members.read'), permAll('members.write')],
   club_gallery: [
     { cmd: 'select', to: 'public', using: (c, h) => h.isPublicClub(c('club_id')) },
-    managerAll,
+    permAll('content.write'),
   ],
   club_site_settings: [
     { cmd: 'select', to: 'public', using: (c, h) => h.isPublicClub(c('club_id')) },
-    { cmd: 'select', to: 'authenticated', using: (c, h) => h.isClubManager(c('club_id')) },
+    { cmd: 'select', to: 'authenticated', using: (c, h) => h.isClubStaff(c('club_id')) },
     {
       cmd: 'insert',
       to: 'authenticated',
-      check: (c, h) => `(${h.hasClubRole(c('club_id'), EDITORS)} OR ${h.isSuperAdmin})`,
+      check: (c, h) => `(${h.can(c('club_id'), 'content.write')} OR ${h.isSuperAdmin})`,
     },
     {
       cmd: 'update',
       to: 'authenticated',
-      using: (c, h) => `(${h.hasClubRole(c('club_id'), EDITORS)} OR ${h.isSuperAdmin})`,
+      using: (c, h) => `(${h.can(c('club_id'), 'content.write')} OR ${h.isSuperAdmin})`,
     },
   ],
   club_site_media: [
@@ -222,7 +249,7 @@ const POLICIES: Partial<Record<TableName, Policy[]>> = {
     {
       cmd: 'all',
       to: 'authenticated',
-      using: (c, h) => `(${h.hasClubRole(c('club_id'), EDITORS)} OR ${h.isSuperAdmin})`,
+      using: (c, h) => `(${h.can(c('club_id'), 'content.write')} OR ${h.isSuperAdmin})`,
     },
   ],
   family_access: [
@@ -243,7 +270,7 @@ export const CLUB_USER_UPDATABLE = new Set([
   'siret_number', 'federation_name', 'affiliation_number', 'city', 'postal_code', 'nearby_cities',
   'contact_email', 'contact_phone', 'social_links', 'sibling_discount_rules', 'accepts_pass_sport',
   'pass_sport_amount', 'accepts_caf_aids', 'accepts_installments', 'pass_stripe_fees_to_parents',
-  'enabled_modules', 'current_season',
+  'enabled_modules', 'current_season', 'registration_form',
 ]);
 
 export type PolicySql = {

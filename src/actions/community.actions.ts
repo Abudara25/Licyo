@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { z } from 'zod';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { createClient, getClubContext } from '@/lib/db/server';
+import { grantsCan } from '@/lib/permissions';
 import { createAdminClient } from '@/lib/db/admin';
 import { moduleEnabled } from '@/lib/platform';
 import { clubTag } from '@/lib/tenant';
@@ -68,7 +69,7 @@ export async function updateClubRequest(
   status: string,
 ): Promise<ActionResult> {
   const ctx = await getClubContext();
-  if (!ctx || !['president', 'secretary', 'super_admin'].includes(ctx.role))
+  if (!ctx || !grantsCan(ctx.grants, 'members.write'))
     return { ok: false, error: 'Accès refusé.' };
   if (
     !z.string().uuid().safeParse(id).success ||
@@ -89,7 +90,7 @@ export async function addGalleryPhoto(form: FormData): Promise<ActionResult> {
   const ctx = await getClubContext();
   if (
     !ctx ||
-    !['president', 'secretary', 'super_admin'].includes(ctx.role) ||
+    !grantsCan(ctx.grants, 'content.write') ||
     !moduleEnabled(ctx.club.enabled_modules, 'gallery')
   )
     return { ok: false, error: 'Accès refusé.' };
@@ -128,7 +129,7 @@ export async function removeGalleryPhoto(id: string): Promise<ActionResult> {
   const ctx = await getClubContext();
   if (
     !ctx ||
-    !['president', 'secretary', 'super_admin'].includes(ctx.role) ||
+    !grantsCan(ctx.grants, 'content.write') ||
     !z.string().uuid().safeParse(id).success
   )
     return { ok: false, error: 'Accès refusé.' };

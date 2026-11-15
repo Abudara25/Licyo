@@ -12,17 +12,20 @@ import {
   Trophy,
   Wallet,
   SlidersHorizontal,
+  ListChecks,
   MessageSquare,
   Image,
 } from 'lucide-react';
 import { AdminShell, type ShellLink } from './AdminShell';
 import { moduleEnabled } from '@/lib/platform';
 import type { StaffRole } from '@/types/database';
+import { grantsCan, grantsCanAny, type Grant } from '@/lib/permissions';
 
 export function ClubAdminNav({
   clubName,
   subtitle,
   role,
+  grants,
   siteUrl,
   attendanceEnabled,
   modules,
@@ -33,6 +36,8 @@ export function ClubAdminNav({
   clubName: string;
   subtitle: string;
   role: StaffRole;
+  /** Droits effectifs de la personne connectée. */
+  grants: Grant[];
   siteUrl: string;
   attendanceEnabled: boolean;
   modules: Record<string, boolean>;
@@ -40,10 +45,10 @@ export function ClubAdminNav({
   signOutAction: () => Promise<void>;
   children: ReactNode;
 }) {
-  const manager = role !== 'coach';
+  const may = (p: Parameters<typeof grantsCan>[1]) => grantsCan(grants, p);
   const links: ShellLink[] = [
     { href: '/club-admin', label: 'Tableau de bord', icon: Home },
-    ...(manager && moduleEnabled(modules, 'inscriptions')
+    ...(may('members.read') && moduleEnabled(modules, 'inscriptions')
       ? [
           {
             href: '/club-admin/inscriptions',
@@ -52,7 +57,7 @@ export function ClubAdminNav({
           },
         ]
       : []),
-    ...(manager && moduleEnabled(modules, 'payments')
+    ...(may('finance.read') && moduleEnabled(modules, 'payments')
       ? [{ href: '/club-admin/tresorerie', label: 'Trésorerie', icon: Wallet }]
       : []),
     ...(attendanceEnabled
@@ -65,7 +70,7 @@ export function ClubAdminNav({
         ]
       : []),
     { href: '/club-admin/sportif', label: 'Sportif', icon: Trophy },
-    ...(manager
+    ...(may('content.write')
       ? [
           {
             href: '/club-admin/contenus',
@@ -74,7 +79,7 @@ export function ClubAdminNav({
           },
         ]
       : []),
-    ...(manager && moduleEnabled(modules, 'private_lessons')
+    ...(may('members.read') && moduleEnabled(modules, 'private_lessons')
       ? [
           {
             href: '/club-admin/demandes',
@@ -83,10 +88,13 @@ export function ClubAdminNav({
           },
         ]
       : []),
-    ...(manager && moduleEnabled(modules, 'gallery')
+    ...(may('content.write') && moduleEnabled(modules, 'gallery')
       ? [{ href: '/club-admin/galerie', label: 'Galerie', icon: Image }]
       : []),
-    ...(['president', 'secretary', 'super_admin'].includes(role)
+    ...(may('settings.manage') && moduleEnabled(modules, 'inscriptions')
+      ? [{ href: '/club-admin/formulaire', label: 'Formulaire d’inscription', icon: ListChecks }]
+      : []),
+    ...(may('settings.manage')
       ? [
           {
             href: '/club-admin/modules',
@@ -95,7 +103,7 @@ export function ClubAdminNav({
           },
         ]
       : []),
-    ...(manager
+    ...(grantsCanAny(grants, ['settings.manage', 'communication.manage', 'finance.write', 'club.admin'])
       ? [
           {
             href: '/club-admin/parametres',

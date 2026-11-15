@@ -7,11 +7,7 @@ import { requireClubContext } from "@/lib/db/server";
 import { PageHeader } from "@/components/club-admin/AdminShell";
 import { ModulesEditor } from "@/components/platform/ModulesEditor";
 export default async function ModulesPage() {
-  const { club } = await requireClubContext([
-    "president",
-    "secretary",
-    "super_admin",
-  ]);
+  const { club } = await requireClubContext("settings.manage");
   const db = await createClient();
   const [composition, photos, media] = await Promise.all([
     db

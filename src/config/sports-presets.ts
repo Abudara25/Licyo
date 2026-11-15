@@ -9,10 +9,10 @@ export type SportVocabulary = {
   /** Rencontre officielle : « match », « compétition », « combat »… */
   competition: string;
   competitions: string;
-  /** Pratiquant : « joueur », « nageur », « judoka »… */
+  /** Pratiquant : « joueur », « boxeur », « judoka »… */
   athlete: string;
   athletes: string;
-  /** Lieu de pratique : « stade », « gymnase », « piscine », « dojo »… */
+  /** Lieu de pratique : « stade », « gymnase », « salle », « dojo »… */
   venue: string;
   venues: string;
   training: string;
@@ -51,9 +51,18 @@ export type DemoEvent = {
 };
 export type DemoPost = { title: string; content: string };
 
+/** Licyo cible les sports collectifs et les sports de combat / arts martiaux (pas les sports individuels). */
+export type SportFamily = 'collectif' | 'combat';
+
+export const SPORT_FAMILY_LABELS: Record<SportFamily, string> = {
+  collectif: 'Sports collectifs',
+  combat: 'Sports de combat et arts martiaux',
+};
+
 export type SportPreset = {
   id: string;
   label: string;
+  family: SportFamily;
   emoji: string;
   defaultPrimary: string;
   defaultSecondary: string;
@@ -115,7 +124,7 @@ function teamVocabulary(
   };
 }
 
-function individualVocabulary(
+function combatVocabulary(
   sportName: string,
   competition: string,
   competitions: string,
@@ -184,6 +193,7 @@ export const SPORTS_PRESETS: Record<string, SportPreset> = {
   football: {
     id: 'football',
     label: 'Football',
+    family: 'collectif',
     emoji: '⚽',
     defaultPrimary: '#1E40AF',
     defaultSecondary: '#FBBF24',
@@ -261,6 +271,7 @@ export const SPORTS_PRESETS: Record<string, SportPreset> = {
   basketball: {
     id: 'basketball',
     label: 'Basket-ball',
+    family: 'collectif',
     emoji: '🏀',
     defaultPrimary: '#C2410C',
     defaultSecondary: '#111827',
@@ -335,6 +346,7 @@ export const SPORTS_PRESETS: Record<string, SportPreset> = {
   handball: {
     id: 'handball',
     label: 'Handball',
+    family: 'collectif',
     emoji: '🤾',
     defaultPrimary: '#0F766E',
     defaultSecondary: '#F59E0B',
@@ -409,6 +421,7 @@ export const SPORTS_PRESETS: Record<string, SportPreset> = {
   volleyball: {
     id: 'volleyball',
     label: 'Volley-ball',
+    family: 'collectif',
     emoji: '🏐',
     defaultPrimary: '#1D4ED8',
     defaultSecondary: '#FACC15',
@@ -483,6 +496,7 @@ export const SPORTS_PRESETS: Record<string, SportPreset> = {
   rugby: {
     id: 'rugby',
     label: 'Rugby',
+    family: 'collectif',
     emoji: '🏉',
     defaultPrimary: '#14532D',
     defaultSecondary: '#FDE047',
@@ -554,92 +568,16 @@ export const SPORTS_PRESETS: Record<string, SportPreset> = {
       products: [{ name: 'Maillot du club', price: 30, sizes: YOUTH_SIZES }],
     },
   },
-  tennis: {
-    id: 'tennis',
-    label: 'Tennis',
-    emoji: '🎾',
-    defaultPrimary: '#15803D',
-    defaultSecondary: '#EA580C',
-    themePreset: 'court',
-    federation: 'Fédération Française de Tennis',
-    vocabulary: individualVocabulary(
-      'tennis',
-      'rencontre',
-      'rencontres',
-      'joueur',
-      'joueurs',
-      'court',
-      'courts',
-      'groupe',
-      'groupes',
-      "École de tennis et jeu libre toute l'année.",
-    ),
-    demo: {
-      facilityName: 'Courts municipaux',
-      categories: [
-        {
-          name: 'Mini-tennis',
-          minAge: 4,
-          maxAge: 6,
-          price: 150,
-          medical: 'health_questionnaire',
-          description: 'Balles adaptées et terrain réduit.',
-        },
-        {
-          name: 'École de tennis',
-          minAge: 7,
-          maxAge: 12,
-          price: 230,
-          medical: 'health_questionnaire',
-          description: 'Cours collectifs hebdomadaires.',
-        },
-        {
-          name: 'Ados',
-          minAge: 13,
-          maxAge: 17,
-          price: 250,
-          medical: 'health_questionnaire',
-          description: 'Perfectionnement et compétition.',
-        },
-        {
-          name: 'Adultes',
-          minAge: 18,
-          maxAge: 80,
-          price: 280,
-          medical: 'health_questionnaire',
-          description: 'Cours collectifs et accès aux courts.',
-        },
-      ],
-      schedules: SIX_SLOTS,
-      events: [
-        {
-          type: 'tournament',
-          title: 'Tournoi interne',
-          daysFromNow: 10,
-          isHome: true,
-          location: 'Courts municipaux',
-        },
-        {
-          type: 'competition',
-          title: 'Rencontre par équipes',
-          daysFromNow: 17,
-          isHome: false,
-          location: 'Club voisin',
-        },
-      ],
-      posts: genericPosts('tennis', 'club', 'groupes'),
-      products: [{ name: 'Polo du club', price: 28, sizes: YOUTH_SIZES }],
-    },
-  },
   judo: {
     id: 'judo',
     label: 'Judo',
+    family: 'combat',
     emoji: '🥋',
     defaultPrimary: '#1E3A8A',
     defaultSecondary: '#DC2626',
     themePreset: 'dojo',
     federation: 'Fédération Française de Judo',
-    vocabulary: individualVocabulary(
+    vocabulary: combatVocabulary(
       'judo',
       'compétition',
       'compétitions',
@@ -714,485 +652,126 @@ export const SPORTS_PRESETS: Record<string, SportPreset> = {
       ],
     },
   },
-  natation: {
-    id: 'natation',
-    label: 'Natation',
-    emoji: '🏊',
-    defaultPrimary: '#0369A1',
-    defaultSecondary: '#22D3EE',
-    themePreset: 'pool',
-    federation: 'Fédération Française de Natation',
-    vocabulary: individualVocabulary(
-      'natation',
-      'compétition',
-      'compétitions',
-      'nageur',
-      'nageurs',
-      'piscine',
-      'piscines',
-      'groupe',
-      'groupes',
-      "De l'aisance aquatique à la compétition.",
-    ),
+  'boxe': {
+    id: 'boxe',
+    label: 'Boxe anglaise',
+    family: 'combat',
+    emoji: '🥊',
+    defaultPrimary: '#991B1B',
+    defaultSecondary: '#F59E0B',
+    themePreset: 'dojo',
+    federation: 'Fédération Française de Boxe',
+    vocabulary: combatVocabulary('boxe', 'combat', 'combats', 'boxeur', 'boxeurs', 'salle', 'salles', 'section', 'sections', 'Technique, respect et dépassement de soi.'),
     demo: {
-      facilityName: 'Piscine municipale',
+      facilityName: 'Salle de boxe municipale',
       categories: [
-        {
-          name: 'École de natation',
-          minAge: 6,
-          maxAge: 9,
-          price: 190,
-          medical: 'health_questionnaire',
-          description: 'Aisance aquatique et premières nages.',
-        },
-        {
-          name: 'Avenirs - Jeunes',
-          minAge: 10,
-          maxAge: 13,
-          price: 220,
-          medical: 'health_questionnaire',
-          description: 'Apprentissage des quatre nages.',
-        },
-        {
-          name: 'Groupe compétition',
-          minAge: 14,
-          maxAge: 25,
-          price: 260,
-          medical: 'medical_cert_competition',
-          description: 'Entraînements intensifs et meetings.',
-        },
-        {
-          name: 'Adultes - Maîtres',
-          minAge: 18,
-          maxAge: 80,
-          price: 230,
-          medical: 'health_questionnaire',
-          description: 'Forme, technique et compétitions maîtres.',
-        },
+        { name: 'Boxe éducative', minAge: 7, maxAge: 11, price: 160, medical: 'health_questionnaire', description: 'Sans touche appuyée.' },
+        { name: 'Ados', minAge: 12, maxAge: 17, price: 190, medical: 'medical_cert_standard', description: 'Technique, cardio et premiers assauts.' },
+        { name: 'Adultes loisir', minAge: 18, maxAge: 60, price: 230, medical: 'medical_cert_standard', description: 'Boxe loisir sans compétition.' },
+        { name: 'Compétiteurs', minAge: 16, maxAge: 40, price: 260, medical: 'medical_cert_competition', description: 'Préparation aux combats amateurs.' },
       ],
       schedules: SIX_SLOTS,
       events: [
-        {
-          type: 'competition',
-          title: 'Meeting départemental',
-          daysFromNow: 9,
-          isHome: false,
-          location: 'Piscine olympique',
-        },
-        {
-          type: 'club_event',
-          title: 'Journée portes ouvertes',
-          daysFromNow: 25,
-          isHome: true,
-          location: 'Piscine municipale',
-        },
+        { type: 'competition', title: 'Gala régional', daysFromNow: 21, isHome: false, location: 'Salle des sports' },
+        { type: 'club_event', title: 'Interclubs', daysFromNow: 45, isHome: true, location: 'Salle de boxe municipale' },
       ],
-      posts: genericPosts('natation', 'bassin', 'groupes'),
-      products: [{ name: 'Bonnet du club', price: 8, sizes: ['Unique'] }],
-    },
-  },
-  gymnastique: {
-    id: 'gymnastique',
-    label: 'Gymnastique',
-    emoji: '🤸',
-    defaultPrimary: '#7C3AED',
-    defaultSecondary: '#F472B6',
-    themePreset: 'arena',
-    federation: 'Fédération Française de Gymnastique',
-    vocabulary: individualVocabulary(
-      'gymnastique',
-      'compétition',
-      'compétitions',
-      'gymnaste',
-      'gymnastes',
-      'gymnase',
-      'gymnases',
-      'groupe',
-      'groupes',
-      'Souplesse, équilibre et dépassement de soi.',
-    ),
-    demo: {
-      facilityName: 'Salle de gymnastique',
-      categories: [
-        {
-          name: 'Baby gym',
-          minAge: 3,
-          maxAge: 5,
-          price: 150,
-          medical: 'health_questionnaire',
-          description: 'Parcours moteurs ludiques.',
-        },
-        {
-          name: 'Gym loisirs enfants',
-          minAge: 6,
-          maxAge: 11,
-          price: 190,
-          medical: 'health_questionnaire',
-          description: 'Agrès et acrobaties.',
-        },
-        {
-          name: 'Groupe compétition',
-          minAge: 8,
-          maxAge: 18,
-          price: 260,
-          medical: 'medical_cert_competition',
-          description: 'Préparation aux compétitions fédérales.',
-        },
-        {
-          name: 'Gym adultes',
-          minAge: 18,
-          maxAge: 80,
-          price: 170,
-          medical: 'health_questionnaire',
-          description: 'Renforcement et entretien.',
-        },
-      ],
-      schedules: SIX_SLOTS,
-      events: [
-        {
-          type: 'competition',
-          title: 'Compétition départementale',
-          daysFromNow: 14,
-          isHome: false,
-          location: 'Complexe départemental',
-        },
-        {
-          type: 'club_event',
-          title: 'Gala de fin de saison',
-          daysFromNow: 45,
-          isHome: true,
-          location: 'Salle de gymnastique',
-        },
-      ],
-      posts: genericPosts('la gymnastique', 'gymnase', 'groupes'),
+      posts: genericPosts('boxe', 'salle', 'cours'),
       products: [
-        { name: 'Justaucorps du club', price: 40, sizes: YOUTH_SIZES },
+        { name: 'Gants', price: 45, sizes: ['8 oz', '10 oz', '12 oz', '14 oz'] },
+        { name: 'Protège-dents', price: 10, sizes: ['Junior', 'Adulte'] },
       ],
     },
   },
-  athletisme: {
-    id: 'athletisme',
-    label: 'Athlétisme',
-    emoji: '🏃',
+  'muaythai': {
+    id: 'muaythai',
+    label: 'Muay thaï',
+    family: 'combat',
+    emoji: '🥊',
     defaultPrimary: '#B91C1C',
-    defaultSecondary: '#FBBF24',
-    themePreset: 'stadium',
-    federation: "Fédération Française d'Athlétisme",
-    vocabulary: individualVocabulary(
-      'athlétisme',
-      'compétition',
-      'compétitions',
-      'athlète',
-      'athlètes',
-      'stade',
-      'stades',
-      'groupe',
-      'groupes',
-      'Courir, sauter, lancer.',
-    ),
+    defaultSecondary: '#111827',
+    themePreset: 'dojo',
+    federation: 'Fédération Française de Kick Boxing, Muay Thaï et Disciplines Associées',
+    vocabulary: combatVocabulary('muay thaï', 'combat', 'combats', 'pratiquant', 'pratiquants', 'salle', 'salles', 'section', 'sections', 'Discipline, respect et esprit de combat.'),
     demo: {
-      facilityName: "Stade d'athlétisme",
+      facilityName: 'Salle de combat municipale',
       categories: [
-        {
-          name: 'Éveil athlétique',
-          minAge: 6,
-          maxAge: 9,
-          price: 140,
-          medical: 'health_questionnaire',
-          description: "Découverte des familles d'épreuves.",
-        },
-        {
-          name: 'Benjamins - Minimes',
-          minAge: 10,
-          maxAge: 14,
-          price: 170,
-          medical: 'health_questionnaire',
-          description: 'Multi-activités et premiers championnats.',
-        },
-        {
-          name: 'Cadets à Seniors',
-          minAge: 15,
-          maxAge: 35,
-          price: 190,
-          medical: 'medical_cert_competition',
-          description: 'Spécialisation et compétition.',
-        },
-        {
-          name: 'Running loisirs',
-          minAge: 18,
-          maxAge: 80,
-          price: 120,
-          medical: 'health_questionnaire',
-          description: 'Course sur route et santé.',
-        },
+        { name: 'Enfants', minAge: 6, maxAge: 12, price: 250, medical: 'health_questionnaire', description: 'Apprentissage ludique, sans touche appuyée.' },
+        { name: 'Ados', minAge: 13, maxAge: 17, price: 270, medical: 'medical_cert_standard', description: 'Technique, cardio et premiers assauts.' },
+        { name: 'Adultes', minAge: 18, maxAge: 60, price: 290, medical: 'medical_cert_standard', description: 'Muay thaï et K1 loisir, séances mixtes.' },
+        { name: 'Compétiteurs', minAge: 16, maxAge: 40, price: 320, medical: 'medical_cert_competition', description: 'Préparation aux combats amateurs.' },
       ],
       schedules: SIX_SLOTS,
       events: [
-        {
-          type: 'competition',
-          title: 'Cross départemental',
-          daysFromNow: 11,
-          isHome: false,
-          location: 'Parc départemental',
-        },
-        {
-          type: 'club_event',
-          title: 'Course populaire du club',
-          daysFromNow: 35,
-          isHome: true,
-          location: "Stade d'athlétisme",
-        },
+        { type: 'competition', title: 'Championnat régional', daysFromNow: 18, isHome: false, location: 'Palais des sports' },
+        { type: 'club_event', title: 'Passage de grades', daysFromNow: 50, isHome: true, location: 'Salle de combat municipale' },
       ],
-      posts: genericPosts("l'athlétisme", 'stade', 'groupes'),
-      products: [{ name: 'Débardeur du club', price: 25, sizes: YOUTH_SIZES }],
+      posts: genericPosts('muay thaï', 'salle', 'cours'),
+      products: [
+        { name: 'Short de combat', price: 35, sizes: ['XS', 'S', 'M', 'L', 'XL'] },
+        { name: 'Gants', price: 45, sizes: ['8 oz', '10 oz', '12 oz', '14 oz'] },
+      ],
     },
   },
-  badminton: {
-    id: 'badminton',
-    label: 'Badminton',
-    emoji: '🏸',
-    defaultPrimary: '#0E7490',
-    defaultSecondary: '#A3E635',
-    themePreset: 'arena',
-    federation: 'Fédération Française de Badminton',
-    vocabulary: individualVocabulary(
-      'badminton',
-      'rencontre',
-      'rencontres',
-      'joueur',
-      'joueurs',
-      'gymnase',
-      'gymnases',
-      'créneau',
-      'créneaux',
-      'Le sport de raquette le plus rapide du monde.',
-    ),
+  'karate': {
+    id: 'karate',
+    label: 'Karaté',
+    family: 'combat',
+    emoji: '🥋',
+    defaultPrimary: '#1F2937',
+    defaultSecondary: '#DC2626',
+    themePreset: 'dojo',
+    federation: 'Fédération Française de Karaté et Disciplines Associées',
+    vocabulary: combatVocabulary('karaté', 'compétition', 'compétitions', 'karatéka', 'karatékas', 'dojo', 'dojos', 'cours', 'cours', 'Rigueur, maîtrise et confiance en soi.'),
     demo: {
-      facilityName: 'Gymnase municipal',
+      facilityName: 'Dojo municipal',
       categories: [
-        {
-          name: 'Minibad',
-          minAge: 6,
-          maxAge: 8,
-          price: 110,
-          medical: 'health_questionnaire',
-          description: 'Initiation ludique.',
-        },
-        {
-          name: 'Jeunes',
-          minAge: 9,
-          maxAge: 17,
-          price: 130,
-          medical: 'health_questionnaire',
-          description: 'École de badminton labellisée.',
-        },
-        {
-          name: 'Adultes compétition',
-          minAge: 18,
-          maxAge: 60,
-          price: 150,
-          medical: 'medical_cert_competition',
-          description: 'Interclubs et tournois.',
-        },
-        {
-          name: 'Adultes loisirs',
-          minAge: 18,
-          maxAge: 80,
-          price: 120,
-          medical: 'health_questionnaire',
-          description: 'Jeu libre.',
-        },
+        { name: 'Baby karaté', minAge: 4, maxAge: 5, price: 140, medical: 'health_questionnaire', description: 'Motricité et premiers gestes.' },
+        { name: 'Enfants', minAge: 6, maxAge: 11, price: 170, medical: 'health_questionnaire', description: 'Kihon, kata et jeux d\'opposition.' },
+        { name: 'Ados', minAge: 12, maxAge: 17, price: 190, medical: 'health_questionnaire', description: 'Kata, kumite et préparation aux grades.' },
+        { name: 'Adultes', minAge: 18, maxAge: 70, price: 210, medical: 'medical_cert_standard', description: 'Karaté traditionnel et self-défense.' },
       ],
       schedules: SIX_SLOTS,
       events: [
-        {
-          type: 'competition',
-          title: 'Interclubs départementaux',
-          daysFromNow: 8,
-          isHome: true,
-          location: 'Gymnase municipal',
-        },
-        {
-          type: 'tournament',
-          title: 'Tournoi de double',
-          daysFromNow: 28,
-          isHome: true,
-          location: 'Gymnase municipal',
-        },
+        { type: 'competition', title: 'Coupe départementale', daysFromNow: 15, isHome: false, location: 'Gymnase départemental' },
+        { type: 'club_event', title: 'Passage de ceintures', daysFromNow: 60, isHome: true, location: 'Dojo municipal' },
       ],
-      posts: genericPosts('badminton', 'gymnase', 'créneaux'),
-      products: [{ name: 'T-shirt du club', price: 18, sizes: YOUTH_SIZES }],
+      posts: genericPosts('karaté', 'dojo', 'cours'),
+      products: [
+        { name: 'Karatégi', price: 35, sizes: ['110', '120', '130', '140', '150', '160', '170', '180'] },
+      ],
     },
   },
-  danse: {
-    id: 'danse',
-    label: 'Danse',
-    emoji: '💃',
-    defaultPrimary: '#9D174D',
-    defaultSecondary: '#FBCFE8',
-    themePreset: 'studio',
-    federation: 'Fédération Française de Danse',
-    vocabulary: {
-      ...individualVocabulary(
-        'danse',
-        'spectacle',
-        'spectacles',
-        'danseur',
-        'danseurs',
-        'studio',
-        'studios',
-        'cours',
-        'cours',
-        'Exprimez-vous en mouvement.',
-      ),
-      training: 'cours',
-      trainings: 'cours',
-      coach: 'professeur',
-      coaches: 'professeurs',
-      license: 'adhésion',
-    },
+  'taekwondo': {
+    id: 'taekwondo',
+    label: 'Taekwondo',
+    family: 'combat',
+    emoji: '🥋',
+    defaultPrimary: '#1D4ED8',
+    defaultSecondary: '#DC2626',
+    themePreset: 'dojo',
+    federation: 'Fédération Française de Taekwondo et Disciplines Associées',
+    vocabulary: combatVocabulary('taekwondo', 'compétition', 'compétitions', 'pratiquant', 'pratiquants', 'dojang', 'dojangs', 'cours', 'cours', 'Souplesse, précision et respect.'),
     demo: {
-      facilityName: 'Studio de danse',
+      facilityName: 'Dojang municipal',
       categories: [
-        {
-          name: 'Éveil',
-          minAge: 4,
-          maxAge: 6,
-          price: 160,
-          medical: 'health_questionnaire',
-          description: 'Rythme et expression corporelle.',
-        },
-        {
-          name: 'Classique enfants',
-          minAge: 7,
-          maxAge: 12,
-          price: 220,
-          medical: 'health_questionnaire',
-          description: 'Technique classique.',
-        },
-        {
-          name: "Modern'jazz ados",
-          minAge: 12,
-          maxAge: 17,
-          price: 240,
-          medical: 'health_questionnaire',
-          description: 'Chorégraphies et spectacle.',
-        },
-        {
-          name: 'Adultes',
-          minAge: 18,
-          maxAge: 80,
-          price: 250,
-          medical: 'health_questionnaire',
-          description: 'Tous niveaux.',
-        },
+        { name: 'Baby', minAge: 4, maxAge: 6, price: 140, medical: 'health_questionnaire', description: 'Éveil et coordination.' },
+        { name: 'Enfants', minAge: 7, maxAge: 11, price: 170, medical: 'health_questionnaire', description: 'Poomsae et premiers combats.' },
+        { name: 'Ados', minAge: 12, maxAge: 17, price: 190, medical: 'health_questionnaire', description: 'Combat et préparation aux grades.' },
+        { name: 'Adultes', minAge: 18, maxAge: 60, price: 210, medical: 'medical_cert_standard', description: 'Taekwondo loisir et compétition.' },
       ],
       schedules: SIX_SLOTS,
       events: [
-        {
-          type: 'club_event',
-          title: 'Spectacle de Noël',
-          daysFromNow: 45,
-          isHome: true,
-          location: 'Salle des fêtes',
-        },
-        {
-          type: 'competition',
-          title: 'Rencontres chorégraphiques',
-          daysFromNow: 60,
-          isHome: false,
-          location: 'Théâtre départemental',
-        },
+        { type: 'competition', title: 'Open régional', daysFromNow: 20, isHome: false, location: 'Palais des sports' },
+        { type: 'club_event', title: 'Passage de grades', daysFromNow: 55, isHome: true, location: 'Dojang municipal' },
       ],
-      posts: genericPosts('la danse', 'studio', 'cours'),
-      products: [{ name: 'Tenue de spectacle', price: 35, sizes: YOUTH_SIZES }],
+      posts: genericPosts('taekwondo', 'dojang', 'cours'),
+      products: [
+        { name: 'Dobok', price: 35, sizes: ['110', '120', '130', '140', '150', '160', '170', '180'] },
+      ],
     },
   },
 };
 
-for (const [id, label] of [
-  ['muaythai', 'Muay thaï'],
-  ['boxe', 'Boxe'],
-  ['karate', 'Karaté'],
-  ['taekwondo', 'Taekwondo'],
-] as const) {
-  SPORTS_PRESETS[id] = {
-    ...SPORTS_PRESETS.judo,
-    id,
-    label,
-    emoji: '',
-    themePreset: 'arena',
-    federation: '',
-    vocabulary: individualVocabulary(
-      label.toLowerCase(),
-      'combat',
-      'combats',
-      'pratiquant',
-      'pratiquants',
-      'salle',
-      'salles',
-      'section',
-      'sections',
-      'Confiance, respect et dépassement de soi.',
-    ),
-    demo: {
-      facilityName: 'Salle de pratique',
-      categories: [
-        {
-          name: 'Enfants',
-          minAge: 6,
-          maxAge: 11,
-          price: 0,
-          medical: 'health_questionnaire',
-          description: 'Découverte et coordination.',
-        },
-        {
-          name: 'Adolescents',
-          minAge: 12,
-          maxAge: 17,
-          price: 0,
-          medical: 'health_questionnaire',
-          description: 'Technique et progression.',
-        },
-        {
-          name: 'Adultes loisir',
-          minAge: 18,
-          maxAge: 99,
-          price: 0,
-          medical: 'health_questionnaire',
-          description: 'Tous niveaux.',
-        },
-        {
-          name: 'Compétition',
-          minAge: 16,
-          maxAge: 50,
-          price: 0,
-          medical: 'medical_cert_competition',
-          description: 'Un accompagnement adapté à la compétition.',
-        },
-      ],
-      schedules: SIX_SLOTS,
-      events: [
-        {
-          type: 'training_camp',
-          title: 'Stage technique',
-          daysFromNow: 21,
-          isHome: true,
-          location: 'Au club',
-        },
-        {
-          type: 'club_event',
-          title: 'Journée de découverte',
-          daysFromNow: 35,
-          isHome: true,
-          location: 'Au club',
-        },
-      ],
-      posts: genericPosts(label.toLowerCase(), 'salle', 'séances'),
-      products: [],
-    },
-  };
-}
 export const SPORT_IDS = Object.keys(SPORTS_PRESETS);
 
 /** Renvoie le preset du sport, ou un preset générique « multisport » si inconnu. */
@@ -1203,6 +782,7 @@ export function getSportPreset(
   return {
     ...SPORTS_PRESETS.football,
     id: 'multisport',
+    family: 'collectif',
     label:
       sportType && sportType !== 'multisport'
         ? sportType.charAt(0).toUpperCase() + sportType.slice(1)
@@ -1266,7 +846,7 @@ export function getSportPreset(
       posts: genericPosts('la pratique sportive', 'espace', 'séances'),
       products: [],
     },
-    vocabulary: individualVocabulary(
+    vocabulary: combatVocabulary(
       sportType || 'sport',
       'rencontre',
       'rencontres',
