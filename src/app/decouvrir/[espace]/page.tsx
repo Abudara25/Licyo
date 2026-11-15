@@ -128,6 +128,7 @@ export default async function Discover({
       declared_member_count: 0,
       membership_tier_id: null,
       registration_form: {},
+      reminder_policy: {},
     } as PublicClubData["club"];
     const categories = preset.demo.categories.map((c, i) => ({
       id: "cat-" + i,

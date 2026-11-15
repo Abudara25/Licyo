@@ -155,6 +155,33 @@ Reste à faire :
   - relance avant l'expiration du lien ;
   - export de la liste.
 
+## Lot 3 — relances automatiques et file « À traiter » (réalisé le 2026-11-15, non déployé)
+
+- **Politique par club** (`clubs.reminder_policy`, migration `0007`) :
+  - désactivée par défaut ;
+  - jusqu'à 3 relances (3, 7 et 14 jours par défaut) ;
+  - types activables séparément : pièces manquantes, correction demandée, reste à payer.
+  - Réglée sur `/club-admin/a-traiter`, avec le droit `settings.manage`.
+- **Tâche planifiée `relances`** (`src/lib/reminders.ts`) :
+  - détecte les pièces manquantes (photo, certificat quand il est exigé), les corrections non faites et le reste à
+    payer (hors chèques déjà remis) ;
+  - pour une correction, le délai est compté depuis l'e-mail de demande du bureau ;
+  - une même relance n'est jamais envoyée deux fois : elle est réservée dans `reminder_log` avant l'envoi et
+    libérée si l'envoi échoue ;
+  - au plus une relance par adresse et par nuit, 2 jours au moins entre deux relances, 100 au plus par club ;
+  - la dernière relance annonce que le bureau prendra contact.
+- **Lien de complément** : la page `/correction/<jeton>` accepte aussi un dossier en attente tant qu'il lui manque
+  des pièces. Le lien ne sert qu'une fois.
+- **File « À traiter »** : dossiers complets à valider, dossiers incomplets et corrections (avec l'historique des
+  relances), paiements en attente (droit `finance.read`), liste d'attente, et réglages des relances.
+- **Bug corrigé** (présent depuis la bascule sur Cloudflare) : la règle des chemins R2 refusait
+  `members/<saison>`, si bien que **tout dépôt de pièce d'adhérent échouait** (inscription, correction, espace
+  adhérent). Règle déplacée dans `src/lib/storage-path.ts` et testée.
+- **Vérifié** :
+  - 64 tests passent ; `tsc` et `next build` sans erreur ;
+  - en local : activation depuis l'écran, cron (« envoyees=1 »), lien de complément, photo déposée, dossier passé
+    en « à valider », ancien lien invalidé ; écrans regardés à 360 et 768 px.
+
 ## Lots proposés (ordre recommandé)
 
 1. **Socle de fiabilité** : journal des e-mails par club, Turnstile sur les formulaires publics, Cron Trigger du

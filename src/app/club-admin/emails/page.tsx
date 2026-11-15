@@ -12,6 +12,9 @@ const KIND_LABELS: Record<string, string> = {
   paiement_recu: 'Paiement reçu',
   preinscription_recue: 'Pré-inscription reçue',
   preinscription_invitation: 'Invitation à s’inscrire',
+  relance_pieces: 'Relance : pièces manquantes',
+  relance_correction: 'Relance : correction',
+  relance_paiement: 'Relance : paiement',
   test: 'Test d’envoi',
   autre: 'Autre',
 };

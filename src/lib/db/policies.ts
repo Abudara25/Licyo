@@ -265,6 +265,8 @@ const POLICIES: Partial<Record<TableName, Policy[]>> = {
   email_log: [permRead('members.read', 'communication.manage'), superAdminAll],
   // Pré-inscriptions et liste d'attente : comme les dossiers. Le dépôt public passe par le serveur (service).
   preregistrations: [permRead('members.read'), permAll('members.write'), superAdminAll],
+  // Relances envoyées : lues par le bureau qui suit les dossiers ; écrites uniquement par la tâche planifiée.
+  reminder_log: [permRead('members.read'), superAdminAll],
   // scheduled_runs : service et équipe Licyo uniquement.
   scheduled_runs: [{ cmd: 'select', to: 'authenticated', using: (_c, h) => h.isSuperAdmin }],
 };
@@ -276,7 +278,7 @@ export const CLUB_USER_UPDATABLE = new Set([
   'siret_number', 'federation_name', 'affiliation_number', 'city', 'postal_code', 'nearby_cities',
   'contact_email', 'contact_phone', 'social_links', 'sibling_discount_rules', 'accepts_pass_sport',
   'pass_sport_amount', 'accepts_caf_aids', 'accepts_installments', 'pass_stripe_fees_to_parents',
-  'enabled_modules', 'current_season', 'registration_form',
+  'enabled_modules', 'current_season', 'registration_form', 'reminder_policy',
 ]);
 
 export type PolicySql = {

@@ -12,7 +12,7 @@ export type TableMeta = {
   view?: boolean;
 };
 
-const CLUB_JSON = ['nearby_cities', 'social_links', 'sibling_discount_rules', 'enabled_modules', 'registration_form'] as const;
+const CLUB_JSON = ['nearby_cities', 'social_links', 'sibling_discount_rules', 'enabled_modules', 'registration_form', 'reminder_policy'] as const;
 const CLUB_BOOL = [
   'accepts_pass_sport',
   'accepts_caf_aids',
@@ -42,6 +42,7 @@ export const TABLES = {
   facilities: { generated: ['id'] },
   categories: { bool: ['auto_invite'], generated: ['id'] },
   preregistrations: { generated: ['id'] },
+  reminder_log: { generated: ['id'] },
   schedules: { generated: ['id'] },
   club_products: { json: ['available_sizes'], generated: ['id'] },
   family_registrations: { bool: ['is_adult_self_registration'], generated: ['id'] },

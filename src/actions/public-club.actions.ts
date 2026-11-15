@@ -33,6 +33,7 @@ import { clientIp, guardPublicForm, turnstileTokenFrom } from '@/lib/security/pu
 import { rateLimit } from '@/lib/auth/session';
 import { getDatabase } from '@/lib/db/d1';
 import { clubAvailability, completeInvitation, findInvitation } from '@/lib/waitlist';
+import { missingDocuments } from '@/lib/reminders';
 import { getSportPreset } from '@/config/sports-presets';
 import { parseFormConfig, resolveForm, validateExtraAnswers, type ExtraAnswers } from '@/config/registration-fields';
 import type { Club } from '@/types/database';
@@ -595,8 +596,16 @@ export async function submitCorrection(
     .select('*')
     .eq('magic_action_token', token)
     .maybeSingle();
-  if (!member || member.dossier_status !== 'needs_correction')
+  if (!member || !['needs_correction', 'pending_review'].includes(member.dossier_status))
     return { ok: false, error: "Ce lien n'est plus valable." };
+  if (member.dossier_status === 'pending_review') {
+    // Dossier en attente : seulement pour ajouter les pièces encore manquantes (lien des relances automatiques).
+    const { data: category } = member.category_id
+      ? await admin.from('categories').select('medical_requirement').eq('id', member.category_id).maybeSingle()
+      : { data: null };
+    if (missingDocuments({ ...member, medical_requirement: category?.medical_requirement ?? null }).length === 0)
+      return { ok: false, error: "Ce lien n'est plus valable : le dossier est complet." };
+  }
 
   const updates: Record<string, string> = {};
   const replaced: string[] = [];
@@ -637,12 +646,12 @@ export async function submitCorrection(
       magic_action_token: crypto.randomUUID(),
     })
     .eq('id', member.id)
-    .eq('dossier_status', 'needs_correction');
+    .eq('dossier_status', member.dossier_status);
   if (error) return { ok: false, error: 'Enregistrement impossible.' };
   await deletePrivateFiles(replaced);
   return {
     ok: true,
-    message: 'Merci, le dossier est de nouveau en cours de vérification.',
+    message: 'Merci, les documents sont transmis au club pour vérification.',
   };
 }
 

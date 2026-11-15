@@ -155,3 +155,26 @@ export function PreregistrationInvitationEmail({ club, contactName, personName, 
     </Layout>
   );
 }
+
+export function ReminderEmail({ club, firstName, kind, personName, details, link, amountDue, step, totalSteps }: { club: ClubBrand; firstName: string; kind: 'documents' | 'correction' | 'payment'; personName: string; details: string[]; link?: string; amountDue?: string; step: number; totalSteps: number }) {
+  const last = step >= totalSteps;
+  const title =
+    kind === 'documents' ? 'Il manque des pièces au dossier' : kind === 'correction' ? 'Une pièce est toujours à remplacer' : 'Un règlement reste à effectuer';
+  return (
+    <Layout club={club} preview={`${title} - ${personName}`}>
+      <Heading as="h1" style={{ fontSize: 22 }}>{title}</Heading>
+      <Text style={p}>Bonjour {firstName},</Text>
+      {kind === 'documents' ? (
+        <Text style={p}>Le dossier de <strong>{personName}</strong> est presque complet. Il manque encore : <strong>{details.join(', ')}</strong>.</Text>
+      ) : kind === 'correction' ? (
+        <Text style={p}>Le club vous a demandé de remplacer une pièce du dossier de <strong>{personName}</strong>{details[0] ? <> : « {details[0]} »</> : null}.</Text>
+      ) : (
+        <Text style={p}>Pour l’inscription de <strong>{personName}</strong>, il reste <strong>{amountDue}</strong> à régler. Si vous avez déjà payé, ne tenez pas compte de ce message.</Text>
+      )}
+      {link ? <CallToAction club={club} href={link} label={kind === 'payment' ? 'Voir le dossier' : 'Compléter le dossier'} /> : null}
+      <Text style={{ ...p, color: '#71717A', fontSize: 13 }}>
+        {last ? 'C’est notre dernier rappel automatique : sans réponse, le bureau du club vous contactera.' : 'Ce message est un rappel automatique du club.'}
+      </Text>
+    </Layout>
+  );
+}

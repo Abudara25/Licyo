@@ -4,6 +4,8 @@ import { TASKS, daily, runScheduledTasks, sameSecret, type Task } from '@/lib/sc
 import { workerVar } from '@/lib/secrets';
 import { runWaitlistMaintenance } from '@/lib/waitlist';
 import { sendInvitationEmail } from '@/lib/waitlist-mail';
+import { runReminders } from '@/lib/reminders';
+import { sendReminder } from '@/lib/reminders-mail';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,6 +22,13 @@ const waitlistTask: Task = {
     }),
 };
 
+/** Relances des dossiers incomplets, pour les clubs qui les ont activées (src/lib/reminders.ts). */
+const remindersTask: Task = {
+  name: 'relances',
+  slot: daily,
+  run: (db, now) => runReminders(db, now, sendReminder),
+};
+
 /**
  * Point d'entrée des tâches planifiées. Appelé par le Cron Trigger du Worker (worker.ts, `scheduled`) avec
  * « Authorization: Bearer <CRON_SECRET> ». Sans secret configuré, la route est fermée.
@@ -30,7 +39,7 @@ export async function POST(req: Request) {
   const given = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
   if (!expected || !sameSecret(given, expected)) return new Response('Accès refusé', { status: 401 });
 
-  const results = await runScheduledTasks(getDatabase(), new Date(), [...TASKS, waitlistTask]);
+  const results = await runScheduledTasks(getDatabase(), new Date(), [...TASKS, waitlistTask, remindersTask]);
   const failed = results.filter((r) => r.status === 'failed');
   for (const r of results) console.log(`[cron] ${r.task} : ${r.status} - ${r.detail}`);
   return Response.json({ ok: failed.length === 0, results }, { status: failed.length ? 500 : 200, headers: { 'Cache-Control': 'no-store' } });

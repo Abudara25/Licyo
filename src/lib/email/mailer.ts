@@ -78,6 +78,9 @@ export type EmailKind =
   | 'paiement_recu'
   | 'preinscription_recue'
   | 'preinscription_invitation'
+  | 'relance_pieces'
+  | 'relance_correction'
+  | 'relance_paiement'
   | 'test'
   | 'autre';
 

@@ -91,6 +91,8 @@ export type Club = {
   enabled_modules: EnabledModules;
   /** Réglages du formulaire d'inscription (src/config/registration-fields.ts, lus avec parseFormConfig). */
   registration_form: Record<string, unknown>;
+  /** Politique de relance des dossiers incomplets (src/lib/reminders.ts, lue avec parseReminderPolicy). */
+  reminder_policy: Record<string, unknown>;
   email_provider: EmailProvider;
   email_sender_address: string | null;
   status: ClubStatus;
@@ -517,6 +519,19 @@ export type Database = {
       facilities: TableDef<
         Facility,
         "club_id" | "name" | "address" | "city" | "postal_code"
+      >;
+      reminder_log: TableDef<
+        {
+          id: string;
+          club_id: string;
+          target_type: "member" | "family";
+          target_id: string;
+          kind: "documents" | "correction" | "payment";
+          step: number;
+          recipient: string;
+          sent_at: string;
+        },
+        "club_id" | "target_type" | "target_id" | "kind" | "step" | "recipient"
       >;
       preregistrations: TableDef<
         Preregistration,

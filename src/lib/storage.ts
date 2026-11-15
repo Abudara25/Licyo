@@ -9,11 +9,12 @@ import { signValue, verifyValue } from '@/lib/utils/impersonation';
 //     délivré après contrôle d'accès.
 // Chemins : <club_id>/<dossier>/<uuid>.<ext>, jamais dérivés d'un nom fourni.
 
+import { isStoragePath } from './storage-path.ts';
+
 export const PUBLIC_BUCKET = 'club-public-assets';
 export const PRIVATE_BUCKET = 'club-private-docs';
 type Bucket = typeof PUBLIC_BUCKET | typeof PRIVATE_BUCKET;
 const MAX_BYTES = 5 * 1024 * 1024;
-const PATH_RE = /^[0-9a-f-]{36}\/[a-z0-9_-]{1,40}\/[0-9a-f-]{36}\.(jpg|png|webp|pdf)$/;
 
 type Detected = { mime: string; ext: string };
 
@@ -35,9 +36,8 @@ export function mimeForPath(path: string): string {
   return 'application/octet-stream';
 }
 
-export function isStoragePath(path: string): boolean {
-  return PATH_RE.test(path);
-}
+// Règle des chemins (dont members/<saison> pour les pièces des adhérents) : src/lib/storage-path.ts, testée.
+export { isStoragePath };
 
 function bucket(name: Bucket): R2Bucket {
   const env = cloudflareEnv();
