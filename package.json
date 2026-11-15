@@ -15,7 +15,9 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "node --test --experimental-strip-types --no-warnings \"tests/**/*.test.ts\"",
-    "db:seed:remote": "node --experimental-strip-types --no-warnings scripts/seed-d1.ts --remote"
+    "db:seed:remote": "node --experimental-strip-types --no-warnings scripts/seed-d1.ts --remote",
+    "build:gratuit": "node scripts/deploy-gratuit.mjs",
+    "deploy:gratuit": "node scripts/deploy-gratuit.mjs --deploy"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",
