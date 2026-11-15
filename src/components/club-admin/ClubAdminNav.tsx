@@ -17,6 +17,7 @@ import {
   Hourglass,
   Inbox,
   Users,
+  Megaphone,
   MessageSquare,
   Image,
 } from 'lucide-react';
@@ -103,6 +104,9 @@ export function ClubAdminNav({
       : []),
     ...(may('content.write') && moduleEnabled(modules, 'gallery')
       ? [{ href: '/club-admin/galerie', label: 'Galerie', icon: Image }]
+      : []),
+    ...(may('communication.manage')
+      ? [{ href: '/club-admin/newsletter', label: 'Newsletter', icon: Megaphone }]
       : []),
     ...(grantsCanAny(grants, ['members.read', 'communication.manage'])
       ? [{ href: '/club-admin/emails', label: 'Journal des e-mails', icon: Mail }]

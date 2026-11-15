@@ -93,6 +93,8 @@ export type Club = {
   registration_form: Record<string, unknown>;
   /** Politique de relance des dossiers incomplets (src/lib/reminders.ts, lue avec parseReminderPolicy). */
   reminder_policy: Record<string, unknown>;
+  /** Conservation RGPD (src/lib/retention.ts, lue avec parseRetentionPolicy). */
+  retention_policy: Record<string, unknown>;
   email_provider: EmailProvider;
   email_sender_address: string | null;
   status: ClubStatus;
@@ -238,6 +240,7 @@ export type FamilyRegistration = {
   amount_paid: number;
   payment_status: PaymentStatus;
   payment_method: PaymentMethod | null;
+  anonymized_at: string | null;
   stripe_checkout_session_id: string | null;
   invoice_number: string | null;
   created_at: string;
@@ -252,6 +255,8 @@ export type PaymentInstallment = {
   check_number: string | null;
   scheduled_deposit_date: string;
   status: InstallmentStatus;
+  /** Origine (import financier) ; null = saisie manuelle. */
+  source: "helloasso" | "bank" | "sumup" | "stripe" | "other" | null;
   created_at: string;
 };
 
@@ -284,6 +289,10 @@ export type Member = {
   extra_fields: Record<string, string | number | boolean>;
   /** Personne suivie d'une saison à l'autre (people) ; renseignée par la base à l'insertion. */
   person_id: string | null;
+  /** Saison ancienne anonymisée par la conservation RGPD. */
+  anonymized_at: string | null;
+  /** Autorisation parentale signée en ligne (copie figée, src/config/parental-authorization.ts). */
+  parental_authorization: Record<string, unknown> | null;
   created_at: string;
 };
 
@@ -534,6 +543,82 @@ export type Database = {
       facilities: TableDef<
         Facility,
         "club_id" | "name" | "address" | "city" | "postal_code"
+      >;
+      newsletters: TableDef<
+        {
+          id: string;
+          club_id: string;
+          subject: string;
+          body: string;
+          audience: Record<string, unknown>;
+          status: "draft" | "scheduled" | "sending" | "sent" | "cancelled";
+          send_at: string | null;
+          recipient_count: number;
+          sent_count: number;
+          failed_count: number;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        },
+        "club_id" | "subject" | "body"
+      >;
+      newsletter_deliveries: TableDef<
+        {
+          id: string;
+          newsletter_id: string;
+          club_id: string;
+          email: string;
+          first_name: string | null;
+          status: "pending" | "sent" | "failed" | "skipped";
+          unsubscribe_token_hash: string;
+          error: string | null;
+          sent_at: string | null;
+        },
+        "newsletter_id" | "club_id" | "email" | "unsubscribe_token_hash"
+      >;
+      newsletter_unsubscribes: TableDef<{ club_id: string; email: string; created_at: string }, "club_id" | "email">;
+      retention_runs: TableDef<
+        { id: string; club_id: string; trigger: "auto" | "manual"; detail: Record<string, number>; ran_at: string },
+        "club_id" | "trigger" | "detail"
+      >;
+      financial_imports: TableDef<
+        {
+          id: string;
+          club_id: string;
+          source: "helloasso" | "bank" | "sumup" | "stripe" | "other";
+          file_name: string | null;
+          row_count: number;
+          inserted_count: number;
+          duplicate_count: number;
+          imported_by: string | null;
+          created_at: string;
+        },
+        "club_id" | "source"
+      >;
+      financial_transactions: TableDef<
+        {
+          id: string;
+          club_id: string;
+          import_id: string | null;
+          source: "helloasso" | "bank" | "sumup" | "stripe" | "other";
+          dedup_key: string;
+          external_ref: string | null;
+          occurred_on: string;
+          amount_cents: number;
+          payer_name: string | null;
+          payer_email: string | null;
+          label: string | null;
+          payment_type: "card" | "check" | "cash" | "transfer" | "pass_sport" | "caf" | "other_aid";
+          status: "unmatched" | "matched" | "ignored";
+          family_id: string | null;
+          installment_id: string | null;
+          created_at: string;
+        },
+        "club_id" | "source" | "dedup_key" | "occurred_on" | "amount_cents" | "payment_type"
+      >;
+      member_documents: TableDef<
+        { id: string; club_id: string; member_id: string; doc_key: string; storage_path: string; created_at: string },
+        "club_id" | "member_id" | "doc_key" | "storage_path"
       >;
       people: TableDef<Person, "club_id" | "first_name" | "last_name" | "birth_date" | "match_key">;
       reminder_log: TableDef<

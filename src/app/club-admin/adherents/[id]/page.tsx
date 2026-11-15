@@ -5,13 +5,16 @@ import { can, createClient, requireClubContext } from '@/lib/db/server';
 import { getDatabase } from '@/lib/db/d1';
 import { PageHeader } from '@/components/club-admin/AdminShell';
 import { PersonNotes } from '@/components/club-admin/PersonNotes';
+import { PersonalDataPanel } from '@/components/club-admin/PersonalDataPanel';
 import { Badge, Card, CardBody, CardHeader } from '@/components/ui/card';
 import { describeAnswers, parseFormConfig } from '@/config/registration-fields';
 import { ageOn } from '@/lib/age';
 import { DOSSIER_STATUS } from '@/lib/dossier-status';
 import { DUPLICATE_LABELS, possibleDuplicates } from '@/lib/people';
 import { formatEuros } from '@/lib/pricing';
-import { REMINDER_KIND_LABELS } from '@/lib/reminders';
+import { REMINDER_KIND_LABELS, clubDocuments, missingDocuments } from '@/lib/reminders';
+import { documentLabel, parseDocumentsConfig } from '@/config/registration-documents';
+import { SIGNER_QUALITIES, parseSignedAuthorization } from '@/config/parental-authorization';
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -55,6 +58,12 @@ export default async function PersonPage({ params }: Props) {
   const catName = new Map((categories ?? []).map((c) => [c.id, c.name]));
   const famById = new Map((families ?? []).map((f) => [f.id, f]));
   const form = parseFormConfig(club.registration_form);
+  const docsConfig = parseDocumentsConfig(club.registration_form);
+  const documents = clubDocuments(club.registration_form, club.sport_type);
+  const { data: extraDocs } = memberRows.length
+    ? await db.from('member_documents').select('member_id, doc_key').in('member_id', memberRows.map((m) => m.id))
+    : { data: [] as { member_id: string; doc_key: string }[] };
+  const { data: medicalOf } = await db.from('categories').select('id, medical_requirement').eq('club_id', club.id);
   const latestFamily = memberRows.map((m) => (m.family_id ? famById.get(m.family_id) : undefined)).find(Boolean);
   const age = ageOn(person.birth_date);
 
@@ -130,10 +139,39 @@ export default async function PersonPage({ params }: Props) {
                       <Badge tone={DOSSIER_STATUS[m.dossier_status].tone}>{DOSSIER_STATUS[m.dossier_status].label}</Badge>
                       {m.registration_type === 'renewal' ? <Badge tone="neutral">Réinscription</Badge> : null}
                     </div>
-                    <p className="text-muted-foreground">
-                      Pièces : photo {m.photo_storage_path ? '✓' : 'manquante'} - certificat {m.medical_doc_storage_path ? '✓' : m.health_questionnaire_passed ? 'non requis (questionnaire)' : 'manquant'} - droit à l’image{' '}
-                      {m.consent_image_rights ? 'accordé' : 'refusé'}
-                    </p>
+                    {(() => {
+                      const extras = new Set((extraDocs ?? []).filter((d) => d.member_id === m.id).map((d) => d.doc_key));
+                      const requirement = (medicalOf ?? []).find((c) => c.id === m.category_id)?.medical_requirement ?? null;
+                      const missing = missingDocuments({ ...m, medical_requirement: requirement }, documents, extras);
+                      const given = [
+                        m.photo_storage_path ? 'photo' : null,
+                        m.medical_doc_storage_path ? 'certificat' : null,
+                        m.id_doc_storage_path ? 'pièce d’identité' : null,
+                        ...[...extras].map((k) => documentLabel(docsConfig, k).toLowerCase()),
+                      ].filter(Boolean);
+                      return (
+                        <p className="text-muted-foreground">
+                          Pièces fournies : {given.length ? given.join(', ') : 'aucune'}
+                          {m.season === club.current_season && missing.length ? ` - manque : ${missing.join(', ')}` : ''} - droit à l’image{' '}
+                          {m.consent_image_rights ? 'accordé' : 'refusé'}
+                        </p>
+                      );
+                    })()}
+                    {m.is_minor ? (
+                      (() => {
+                        const a = parseSignedAuthorization(m.parental_authorization);
+                        return a ? (
+                          <p className="text-muted-foreground">
+                            Autorisation parentale signée le {day.format(new Date(a.signedAt))} par {a.signerName} ({SIGNER_QUALITIES[a.signerQuality]}) -{' '}
+                            <Link href={`/club-admin/adherents/${id}/autorisation/${m.id}`} className="inline-flex min-h-11 items-center font-medium text-foreground underline">
+                              voir et imprimer
+                            </Link>
+                          </p>
+                        ) : (
+                          <p className="text-muted-foreground">Autorisation parentale : non signée en ligne pour cette saison.</p>
+                        );
+                      })()
+                    ) : null}
                     {canFinance && fam ? (
                       <p className="text-muted-foreground">
                         Règlement famille : {PAYMENT[fam.payment_status] ?? fam.payment_status} - {formatEuros(Number(fam.amount_paid))} sur{' '}
@@ -184,6 +222,7 @@ export default async function PersonPage({ params }: Props) {
         </Card>
 
         <PersonNotes personId={id} initial={person.notes ?? ''} canEdit={can(ctx, 'members.write')} />
+        {can(ctx, 'club.admin') ? <PersonalDataPanel personId={id} name={`${person.first_name} ${person.last_name}`} /> : null}
       </div>
     </>
   );

@@ -13,11 +13,14 @@ import { TurnstileField } from '@/components/ui/turnstile';
 import { TactileSignaturePad } from './TactileSignaturePad';
 import { getSportPreset, type SportVocabulary } from '@/config/sports-presets';
 import { parseFormConfig, resolveForm } from '@/config/registration-fields';
+import { documentApplies, parseDocumentsConfig, resolveDocuments } from '@/config/registration-documents';
+import { SIGNER_QUALITIES, parseParentalAuthorization, renderAuthorization, type SignerQuality } from '@/config/parental-authorization';
 import { PUBLIC_STATE_LABELS, type CategoryAvailability } from '@/lib/waitlist';
 import { ClubExtraFields, extraPayload, missingRequiredExtra, type ExtraDraft } from './ClubExtraFields';
 import type { Category, Club, ClubProduct } from '@/types/database';
 
-type DocKind = 'photo' | 'medical' | 'id';
+/** Champ de fichier : photo, medical, id, ou doc_<clé> pour les autres pièces demandées par le club. */
+type DocKind = string;
 type MemberDraft = {
   key: string;
   firstName: string;
@@ -31,7 +34,7 @@ type MemberDraft = {
   consentEmergencyMedical: boolean;
   consentAutonomousExit: boolean;
   products: { productId: string; size: string }[];
-  files: Partial<Record<DocKind, File>>;
+  files: Record<DocKind, File>;
   extra: ExtraDraft;
 };
 
@@ -80,7 +83,6 @@ const newMember = (seed: Partial<MemberDraft> = {}): MemberDraft => ({
   ...seed,
 });
 
-const DOC_LABELS: Record<DocKind, string> = { photo: 'Photo d\'identité', medical: 'Certificat médical', id: 'Pièce d\'identité' };
 
 export function RegistrationTunnel({
   club,
@@ -112,6 +114,10 @@ export function RegistrationTunnel({
   const [installmentsCount, setInstallmentsCount] = useState(1);
   const [acceptRules, setAcceptRules] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
+  // Autorisation parentale en ligne (réglée par le club) : un responsable signe pour chaque enfant mineur.
+  const authorization = useMemo(() => parseParentalAuthorization(club.registration_form), [club.registration_form]);
+  const [signer, setSigner] = useState<{ name: string; quality: SignerQuality | '' }>({ name: '', quality: '' });
+  const [authorizationAccepted, setAuthorizationAccepted] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState('');
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -121,6 +127,23 @@ export function RegistrationTunnel({
     () => resolveForm(parseFormConfig(club.registration_form), club.sport_type, getSportPreset(club.sport_type).family),
     [club.registration_form, club.sport_type],
   );
+
+  // Pièces demandées par le club (le certificat médical dépend de la catégorie).
+  const clubDocs = useMemo(
+    () => resolveDocuments(parseDocumentsConfig(club.registration_form), getSportPreset(club.sport_type).family),
+    [club.registration_form, club.sport_type],
+  );
+  /** Pièces à afficher pour une personne : certificat si exigé ou utile, puis celles du club qui la concernent. */
+  const docsFor = (m: MemberDraft, isMinor: boolean) => {
+    const cat = categories.find((c) => c.id === m.categoryId);
+    const certRequired = Boolean(cat && (cat.medical_requirement !== 'health_questionnaire' || !m.healthQuestionnairePassed));
+    return [
+      { field: 'medical', label: 'Certificat médical', required: certRequired, photoOnly: false },
+      ...clubDocs
+        .filter((d) => documentApplies(d, isMinor))
+        .map((d) => ({ field: d.storage === 'extra' ? `doc_${d.key}` : d.storage, label: d.label, required: d.mode === 'required', photoOnly: d.storage === 'photo' })),
+    ];
+  };
 
   const ages = members.map((m) => (m.birthDate ? ageOn(m.birthDate) : NaN));
   const isAdultSelf = members.length === 1 && ages[0] >= 18;
@@ -162,6 +185,9 @@ export function RegistrationTunnel({
     setMembers((list) => list.map((m) => (m.key === key ? { ...m, files: { ...m.files, [kind]: prepared } } : m)));
   }
 
+  const minorsForAuthorization = members.filter((m) => m.birthDate && ageOn(m.birthDate) < 18);
+  const needsAuthorization = authorization.enabled && minorsForAuthorization.length > 0;
+
   function validateStep(n: number): string | null {
     if (n === 1) {
       for (const [i, m] of members.entries()) {
@@ -174,6 +200,8 @@ export function RegistrationTunnel({
         if (cat && cat.medical_requirement === 'health_questionnaire' && !m.healthQuestionnairePassed && !m.files.medical) {
           return `Si une réponse au questionnaire de santé est « oui », joignez un certificat médical pour ${who}.`;
         }
+        const missingDoc = docsFor(m, ages[i] < 18).find((d) => d.required && d.field !== 'medical' && !m.files[d.field]);
+        if (missingDoc) return `« ${missingDoc.label} » est demandé pour ${who}.`;
         const missing = missingRequiredExtra(formFields, m.extra, ages[i] < 18);
         if (missing) return `${who} : « ${missing.label} » est obligatoire.`;
       }
@@ -184,6 +212,11 @@ export function RegistrationTunnel({
       if (!emergency.name || !emergency.phone) return 'Indiquez un contact en cas d\'urgence.';
     }
     if (n === 3) {
+      if (needsAuthorization) {
+        if (signer.name.trim().length < 3) return 'Indiquez le nom du responsable légal qui signe l’autorisation parentale.';
+        if (!signer.quality) return 'Indiquez votre qualité (mère, père ou tuteur).';
+        if (!authorizationAccepted) return 'Vous devez accepter l’autorisation parentale.';
+      }
       if (!acceptRules) return 'Vous devez accepter le règlement intérieur.';
       if (!signature) return 'La signature est obligatoire.';
     }
@@ -229,11 +262,15 @@ export function RegistrationTunnel({
       paymentMethod,
       installmentsCount,
       acceptRules,
+      parentalAuthorization: needsAuthorization && signer.quality ? { signerName: signer.name.trim(), signerQuality: signer.quality, accepted: authorizationAccepted } : undefined,
     };
     const fd = new FormData();
     fd.set('payload', JSON.stringify(payload));
     fd.set('turnstileToken', turnstileToken);
-    members.forEach((m, i) => (Object.entries(m.files) as [DocKind, File][]).forEach(([kind, file]) => fd.set(`${kind}_${i}`, file)));
+    members.forEach((m, i) => {
+      const allowed = new Set(docsFor(m, ageOn(m.birthDate) < 18).map((d) => d.field));
+      (Object.entries(m.files) as [DocKind, File][]).forEach(([kind, file]) => allowed.has(kind) && fd.set(`${kind}_${i}`, file));
+    });
     startTransition(async () => {
       const res = await submitRegistration(fd);
       if (!res.ok) {
@@ -353,17 +390,14 @@ export function RegistrationTunnel({
                   ) : null}
 
                   <div className="mt-4 grid gap-3 border-t pt-4 sm:grid-cols-3">
-                    {(['photo', 'medical', 'id'] as DocKind[]).map((kind) => {
-                      const required = kind === 'medical' && cat && (cat.medical_requirement !== 'health_questionnaire' || !m.healthQuestionnairePassed);
-                      return (
-                        <label key={kind} htmlFor={`${p}-${kind}`} className="flex min-h-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed p-3 text-center text-sm hover:bg-muted">
-                          <Upload className="size-5" aria-hidden />
-                          <span className="font-medium">{DOC_LABELS[kind]}{required ? ' *' : ''}</span>
-                          <span className="text-xs text-muted-foreground">{m.files[kind] ? `${m.files[kind]!.name.slice(0, 24)} (${Math.round(m.files[kind]!.size / 1024)} Ko)` : kind === 'photo' ? 'Appareil photo ou galerie' : 'Photo ou PDF'}</span>
-                          <input id={`${p}-${kind}`} type="file" className="sr-only" accept={kind === 'photo' ? 'image/*' : 'image/*,application/pdf'} capture={kind === 'photo' ? 'user' : undefined} onChange={(e) => attachFile(m.key, kind, e.target.files?.[0])} />
-                        </label>
-                      );
-                    })}
+                    {docsFor(m, !adult).map(({ field: kind, label, required, photoOnly }) => (
+                      <label key={kind} htmlFor={`${p}-${kind}`} className="flex min-h-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed p-3 text-center text-sm hover:bg-muted">
+                        <Upload className="size-5" aria-hidden />
+                        <span className="font-medium">{label}{required ? ' *' : ''}</span>
+                        <span className="text-xs text-muted-foreground">{m.files[kind] ? `${m.files[kind]!.name.slice(0, 24)} (${Math.round(m.files[kind]!.size / 1024)} Ko)` : photoOnly ? 'Appareil photo ou galerie' : 'Photo ou PDF'}</span>
+                        <input id={`${p}-${kind}`} type="file" className="sr-only" accept={photoOnly ? 'image/*' : 'image/*,application/pdf'} capture={photoOnly ? 'user' : undefined} onChange={(e) => attachFile(m.key, kind, e.target.files?.[0])} />
+                      </label>
+                    ))}
                   </div>
 
                   {club.enabled_modules.boutique && products.length > 0 ? (
@@ -452,6 +486,50 @@ export function RegistrationTunnel({
                 </Field>
               ) : null}
             </fieldset>
+            {needsAuthorization ? (
+              <fieldset className="rounded-2xl border bg-white p-4 md:p-6">
+                <legend className="px-1 text-lg font-bold">Autorisation parentale</legend>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field id="pa-name" label="Nom et prénom du responsable légal">
+                    <Input id="pa-name" autoComplete="name" value={signer.name} onChange={(e) => setSigner({ ...signer, name: e.target.value })} />
+                  </Field>
+                  <Field id="pa-quality" label="Vous êtes">
+                    <Select id="pa-quality" value={signer.quality} onChange={(e) => setSigner({ ...signer, quality: e.target.value as SignerQuality | '' })}>
+                      <option value="">Choisir…</option>
+                      {(Object.keys(SIGNER_QUALITIES) as SignerQuality[]).map((q) => (
+                        <option key={q} value={q}>
+                          {SIGNER_QUALITIES[q].charAt(0).toUpperCase() + SIGNER_QUALITIES[q].slice(1)}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                </div>
+                {minorsForAuthorization.map((m) => (
+                  <div key={m.key} className="mt-4">
+                    <p className="font-semibold">Pour {m.firstName || 'l’enfant'}</p>
+                    <div className="mt-1 max-h-72 overflow-y-auto whitespace-pre-line rounded-lg border bg-muted/30 p-3 text-sm leading-6" tabIndex={0} aria-label={`Autorisation parentale pour ${m.firstName}`}>
+                      {renderAuthorization(authorization.text, {
+                        signerName: signer.name,
+                        signerQuality: signer.quality || 'tuteur',
+                        childName: `${m.firstName} ${m.lastName.toUpperCase()}`,
+                        birthDate: m.birthDate,
+                        clubName: club.name,
+                        sport: getSportPreset(club.sport_type).label,
+                        season: club.current_season,
+                      })}
+                    </div>
+                  </div>
+                ))}
+                <div className="mt-4">
+                  <Checkbox
+                    id="pa-accept"
+                    checked={authorizationAccepted}
+                    onChange={setAuthorizationAccepted}
+                    label={minorsForAuthorization.length > 1 ? 'J’ai lu et j’accepte ces autorisations parentales.' : 'J’ai lu et j’accepte cette autorisation parentale.'}
+                  />
+                </div>
+              </fieldset>
+            ) : null}
             <fieldset className="rounded-2xl border bg-white p-4 md:p-6">
               <legend className="px-1 text-lg font-bold">Signature</legend>
               <Checkbox id="rules" checked={acceptRules} onChange={setAcceptRules} label="J'accepte le règlement intérieur du club et certifie l'exactitude des informations." />

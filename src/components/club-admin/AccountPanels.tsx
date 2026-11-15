@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import {
   openBillingPortal,
-  purgeOldSeasons,
   refreshStripeConnectStatus,
   setCustomDomain,
   startStripeConnect,
@@ -13,7 +12,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge, Card, CardBody, CardHeader } from '@/components/ui/card';
 import { Field, Input, Select } from '@/components/ui/form';
-import { Dialog } from '@/components/ui/dialog';
 import { startMembershipCheckout } from '@/actions/platform.actions';
 import { useAction } from './useAction';
 
@@ -169,76 +167,5 @@ export function BillingPanel({
         </CardBody>
       </Card>
     </div>
-  );
-}
-
-export function RgpdPanel({
-  canManage,
-  keepFrom,
-}: {
-  canManage: boolean;
-  keepFrom: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const [confirmation, setConfirmation] = useState('');
-  const { pending, run } = useAction();
-  return (
-    <Card className="border-red-200">
-      <CardHeader
-        title="Données personnelles (RGPD)"
-        description={`Supprime les dossiers, adhérents et pièces des saisons antérieures à ${keepFrom}.`}
-      />
-      <CardBody>
-        <Button
-          variant="destructive"
-          disabled={!canManage}
-          onClick={() => setOpen(true)}
-        >
-          Purger les anciennes saisons
-        </Button>
-        {!canManage ? (
-          <p className="mt-2 text-xs text-muted-foreground">
-            Réservé au président.
-          </p>
-        ) : null}
-      </CardBody>
-      <Dialog
-        open={open}
-        onOpenChange={setOpen}
-        title="Purger les anciennes saisons"
-        description="Suppression définitive : fiches, dossiers, règlements et pièces justificatives."
-      >
-        <form
-          className="grid gap-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            run(
-              () => purgeOldSeasons(confirmation),
-              () => {
-                setOpen(false);
-                setConfirmation('');
-              },
-            );
-          }}
-        >
-          <Field id="rg" label="Tapez SUPPRIMER pour confirmer">
-            <Input
-              id="rg"
-              value={confirmation}
-              onChange={(e) => setConfirmation(e.target.value)}
-              autoComplete="off"
-            />
-          </Field>
-          <Button
-            type="submit"
-            variant="destructive"
-            size="lg"
-            disabled={pending || confirmation !== 'SUPPRIMER'}
-          >
-            Supprimer définitivement
-          </Button>
-        </form>
-      </Dialog>
-    </Card>
   );
 }

@@ -28,7 +28,8 @@ export type ReviewItem = {
   rejectionReason: string | null;
   /** Réponses aux champs du formulaire choisis par le club. */
   extra: { label: string; value: string }[];
-  docs: { photo: boolean; medical: boolean; id: boolean };
+  /** Pièces du dossier : historiques (photo, medical, id) et pièces demandées par le club. */
+  docs: { key: string; label: string; present: boolean }[];
   payer: { name: string; email: string; phone: string; city: string } | null;
   paymentStatus: string | null;
   createdAt: string;
@@ -42,14 +43,13 @@ const STATUS: Record<DossierStatus, { label: string; tone: 'info' | 'warning' | 
   trial_requested: { label: 'Essai demandé', tone: 'info' },
   trial_done: { label: 'Essai fait', tone: 'neutral' },
 };
-const DOCS = { photo: 'Photo', medical: 'Certificat', id: 'Identité' } as const;
 
 /** Validation rapide : liste à gauche, pièce justificative à droite. */
 export function SplitScreenValidator({ items }: { items: ReviewItem[] }) {
   const [filter, setFilter] = useState<'todo' | 'trials' | 'all'>('todo');
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [doc, setDoc] = useState<'photo' | 'medical' | 'id'>('medical');
+  const [doc, setDoc] = useState<string>('medical');
   const [preview, setPreview] = useState<{ url: string; isPdf: boolean } | null>(null);
   const [loadingDoc, setLoadingDoc] = useState(false);
   const [dialog, setDialog] = useState<'correction' | 'reject' | null>(null);
@@ -68,13 +68,13 @@ export function SplitScreenValidator({ items }: { items: ReviewItem[] }) {
 
   useEffect(() => {
     if (!selected) return;
-    const first = (['medical', 'photo', 'id'] as const).find((k) => selected.docs[k]) ?? 'medical';
+    const first = selected.docs.find((d) => d.present)?.key ?? 'medical';
     setDoc(first);
   }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setPreview(null);
-    if (!selected || !selected.docs[doc]) return;
+    if (!selected || !selected.docs.some((d) => d.key === doc && d.present)) return;
     let cancelled = false;
     setLoadingDoc(true);
     getMemberDocumentUrl(selected.id, doc).then((res) => {
@@ -158,22 +158,22 @@ export function SplitScreenValidator({ items }: { items: ReviewItem[] }) {
           <div className="grid gap-4 p-4 xl:grid-cols-[1fr_240px]">
             <div className="min-w-0">
               <div className="mb-2 flex flex-wrap gap-2" role="tablist" aria-label="Pièces">
-                {(Object.keys(DOCS) as (keyof typeof DOCS)[]).map((k) => (
-                  <Button key={k} role="tab" aria-selected={doc === k} size="sm" variant={doc === k ? 'default' : 'outline'} onClick={() => setDoc(k)}>
-                    {DOCS[k]} {selected.docs[k] ? '' : '(absent)'}
+                {selected.docs.map((d) => (
+                  <Button key={d.key} role="tab" aria-selected={doc === d.key} size="sm" variant={doc === d.key ? 'default' : 'outline'} onClick={() => setDoc(d.key)}>
+                    {d.label} {d.present ? '' : '(absent)'}
                   </Button>
                 ))}
               </div>
               <div className="flex min-h-[320px] items-center justify-center overflow-hidden rounded-lg border bg-zinc-100 md:min-h-[460px]">
-                {!selected.docs[doc] ? (
+                {!selected.docs.some((d) => d.key === doc && d.present) ? (
                   <p className="p-6 text-center text-sm text-muted-foreground">Pièce non fournie.</p>
                 ) : loadingDoc || !preview ? (
                   <p className="text-sm text-muted-foreground">Chargement…</p>
                 ) : preview.isPdf ? (
-                  <iframe src={preview.url} title={`${DOCS[doc]} de ${selected.firstName}`} className="h-[460px] w-full md:h-[560px]" />
+                  <iframe src={preview.url} title={`${selected.docs.find((d) => d.key === doc)?.label ?? 'Pièce'} de ${selected.firstName}`} className="h-[460px] w-full md:h-[560px]" />
                 ) : (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={preview.url} alt={`${DOCS[doc]} de ${selected.firstName}`} className="max-h-[560px] w-auto object-contain" />
+                  <img src={preview.url} alt={`${selected.docs.find((d) => d.key === doc)?.label ?? 'Pièce'} de ${selected.firstName}`} className="max-h-[560px] w-auto object-contain" />
                 )}
               </div>
             </div>

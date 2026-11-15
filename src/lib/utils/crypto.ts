@@ -1,11 +1,12 @@
 import 'server-only';
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
+import { workerVar } from '@/lib/secrets';
 
 // Chiffrement AES-256-GCM des identifiants d'e-mail des clubs (refresh token
 // Gmail, mot de passe SMTP). Format : iv.tag.données, en base64url.
 
 function key(): Buffer {
-  const raw = process.env.EMAIL_CREDENTIALS_ENCRYPTION_KEY;
+  const raw = workerVar('EMAIL_CREDENTIALS_ENCRYPTION_KEY');
   const k = raw ? Buffer.from(raw, 'base64') : Buffer.alloc(0);
   if (k.length !== 32) throw new Error('EMAIL_CREDENTIALS_ENCRYPTION_KEY doit faire 32 octets encodés en base64.');
   return k;

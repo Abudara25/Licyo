@@ -31,6 +31,8 @@ export function buildMime(msg: {
   html: string;
   text: string;
   replyTo?: string;
+  /** En-têtes supplémentaires (ex. List-Unsubscribe) : noms contrôlés, valeurs sans retour à la ligne. */
+  headers?: Record<string, string>;
 }): string {
   const boundary = `licyo-${crypto.randomUUID()}`;
   const headers = [
@@ -38,6 +40,9 @@ export function buildMime(msg: {
     `To: ${formatAddress({ address: msg.to })}`,
     msg.replyTo ? `Reply-To: ${formatAddress({ address: msg.replyTo })}` : null,
     `Subject: ${encodeHeader(msg.subject)}`,
+    ...Object.entries(msg.headers ?? {})
+      .filter(([name]) => /^[A-Za-z][A-Za-z0-9-]{0,40}$/.test(name))
+      .map(([name, value]) => `${name}: ${value.replace(/[\r\n]/g, ' ')}`),
     'MIME-Version: 1.0',
     `Content-Type: multipart/alternative; boundary="${boundary}"`,
   ].filter(Boolean);

@@ -10,6 +10,8 @@ import {
 } from '@/components/club-admin/SplitScreenValidator';
 import { RenewalButton } from '@/components/club-admin/RenewalButton';
 import { describeAnswers, parseFormConfig } from '@/config/registration-fields';
+import { documentApplies, documentLabel, parseDocumentsConfig } from '@/config/registration-documents';
+import { clubDocuments } from '@/lib/reminders';
 
 export default async function InscriptionsPage() {
   await requireModule('inscriptions');
@@ -39,6 +41,10 @@ export default async function InscriptionsPage() {
         .eq('season', club.current_season),
     ]);
   const formConfig = parseFormConfig(club.registration_form);
+  const docsConfig = parseDocumentsConfig(club.registration_form);
+  const clubDocs = clubDocuments(club.registration_form, club.sport_type).filter((d) => d.storage === 'extra');
+  const { data: extraDocs } = await supabase.from('member_documents').select('member_id, doc_key').eq('club_id', club.id);
+  const extrasOf = (memberId: string) => new Set((extraDocs ?? []).filter((d) => d.member_id === memberId).map((d) => d.doc_key));
   const catById = new Map((categories ?? []).map((c) => [c.id, c]));
   const famById = new Map((families ?? []).map((f) => [f.id, f]));
 
@@ -61,11 +67,17 @@ export default async function InscriptionsPage() {
       consentExit: m.consent_autonomous_exit,
       rejectionReason: m.rejection_reason,
       extra: describeAnswers(formConfig, m.extra_fields),
-      docs: {
-        photo: Boolean(m.photo_storage_path),
-        medical: Boolean(m.medical_doc_storage_path),
-        id: Boolean(m.id_doc_storage_path),
-      },
+      docs: (() => {
+        const present = extrasOf(m.id);
+        // Pièces demandées aujourd'hui à cette personne + celles déposées avant un changement de réglage.
+        const keys = [...new Set([...clubDocs.filter((d) => documentApplies(d, m.is_minor)).map((d) => d.key), ...present])];
+        return [
+          { key: 'medical', label: 'Certificat', present: Boolean(m.medical_doc_storage_path) },
+          { key: 'photo', label: 'Photo', present: Boolean(m.photo_storage_path) },
+          { key: 'id', label: 'Identité', present: Boolean(m.id_doc_storage_path) },
+          ...keys.map((k) => ({ key: k, label: documentLabel(docsConfig, k), present: present.has(k) })),
+        ];
+      })(),
       payer: f
         ? {
             name: `${f.payer_first_name} ${f.payer_last_name}`,

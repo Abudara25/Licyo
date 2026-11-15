@@ -267,8 +267,19 @@ const POLICIES: Partial<Record<TableName, Policy[]>> = {
   preregistrations: [permRead('members.read'), permAll('members.write'), superAdminAll],
   // Relances envoyées : lues par le bureau qui suit les dossiers ; écrites uniquement par la tâche planifiée.
   reminder_log: [permRead('members.read'), superAdminAll],
+  // Newsletter : rédigée et envoyée par qui gère la communication ; envois et désinscriptions écrits par le serveur.
+  newsletters: [permAll('communication.manage'), superAdminAll],
+  newsletter_deliveries: [permRead('communication.manage'), superAdminAll],
+  newsletter_unsubscribes: [permRead('communication.manage'), superAdminAll],
+  // Import financier : lu par qui voit les finances, géré par qui gère les paiements.
+  financial_imports: [permRead('finance.read'), permAll('finance.write'), superAdminAll],
+  financial_transactions: [permRead('finance.read'), permAll('finance.write'), superAdminAll],
+  // Pièces configurables : comme les dossiers ; dépôt public par le serveur (service) après contrôle.
+  member_documents: [permRead('members.read'), permAll('members.write'), superAdminAll],
   // Fiches adhérents permanentes : comme les dossiers.
   people: [permRead('members.read'), permAll('members.write'), superAdminAll],
+  // Journal de conservation RGPD : écrit par le serveur, lu par la présidence.
+  retention_runs: [permRead('club.admin'), superAdminAll],
   // scheduled_runs : service et équipe Licyo uniquement.
   scheduled_runs: [{ cmd: 'select', to: 'authenticated', using: (_c, h) => h.isSuperAdmin }],
 };

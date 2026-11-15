@@ -111,13 +111,18 @@ export default async function TreasuryPage() {
         title="Trésorerie"
         description={`Règlements des cotisations - saison ${club.current_season}`}
         actions={
-          <a
-            href="/api/pdf/ag-report"
-            target="_blank"
-            className={buttonVariants({ variant: 'outline' })}
-          >
-            Bilan AG et mairie (PDF)
-          </a>
+          <div className="flex flex-wrap gap-2">
+            <a href="/club-admin/tresorerie/import" className={buttonVariants({ variant: 'outline' })}>
+              Importer des paiements
+            </a>
+            <a
+              href="/api/pdf/ag-report"
+              target="_blank"
+              className={buttonVariants({ variant: 'outline' })}
+            >
+              Bilan AG et mairie (PDF)
+            </a>
+          </div>
         }
       />
       <div className="mb-6 grid gap-3 sm:grid-cols-3">

@@ -12,10 +12,10 @@ import { StaffAccessPanel } from '@/components/club-admin/StaffAccessPanel';
 import { PageHeader } from '@/components/club-admin/AdminShell';
 import { ClubSettingsForm } from '@/components/club-admin/ClubSettingsForm';
 import { EmailIntegrationSettings } from '@/components/club-admin/EmailIntegrationSettings';
-import {
-  BillingPanel,
-  RgpdPanel,
-} from '@/components/club-admin/AccountPanels';
+import { BillingPanel } from '@/components/club-admin/AccountPanels';
+import { RetentionPanel } from '@/components/club-admin/RetentionPanel';
+import { getDatabase } from '@/lib/db/d1';
+import { parseRetentionPolicy, previewRetention } from '@/lib/retention';
 
 type Props = { searchParams: Promise<{ gmail?: string; stripe?: string }> };
 
@@ -50,8 +50,15 @@ export default async function SettingsPage({ searchParams }: Props) {
     .eq('club_id', club.id)
     .eq('season', club.current_season)
     .not('dossier_status', 'in', '(rejected,trial_requested,trial_done)');
-  // Accès des membres du bureau, purge des saisons : permission club.admin (président).
+  // Accès des membres du bureau, conservation des données : permission club.admin (président).
   const isPresident = can(ctx, 'club.admin');
+  const retention = parseRetentionPolicy(club.retention_policy);
+  const [retentionPreview, { data: retentionRuns }] = isPresident
+    ? await Promise.all([
+        previewRetention(getDatabase(), club.id, retention, new Date()),
+        supabase.from('retention_runs').select('*').eq('club_id', club.id).order('ran_at', { ascending: false }).limit(5),
+      ])
+    : [null, { data: null }];
 
   return (
     <>
@@ -93,10 +100,14 @@ export default async function SettingsPage({ searchParams }: Props) {
           canManage={isPresident}
           categories={categories ?? []}
         />
-        <RgpdPanel
-          canManage={isPresident}
-          keepFrom={previousSeason(club.current_season)}
-        />
+        {isPresident && retentionPreview ? (
+          <RetentionPanel
+            initial={retention}
+            preview={retentionPreview}
+            lastEndedSeason={previousSeason(club.current_season)}
+            runs={(retentionRuns ?? []).map((r) => ({ id: r.id, ranAt: r.ran_at, trigger: r.trigger, detail: r.detail }))}
+          />
+        ) : null}
       </div>
     </>
   );

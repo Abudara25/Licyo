@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/club-admin/AdminShell';
 import { ReminderPolicyEditor } from '@/components/club-admin/ReminderPolicyEditor';
 import { Badge, Card, CardBody, CardHeader } from '@/components/ui/card';
 import { formatEuros } from '@/lib/pricing';
-import { missingDocuments, parseReminderPolicy } from '@/lib/reminders';
+import { clubDocuments, missingDocuments, parseReminderPolicy } from '@/lib/reminders';
 
 const day = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeZone: 'Europe/Paris' });
 
@@ -58,7 +58,7 @@ export default async function ToDoPage() {
   const [{ data: members }, { data: categories }, { data: families }, { data: installments }, { data: logs }, { data: requests }] = await Promise.all([
     db
       .from('members')
-      .select('id, first_name, last_name, dossier_status, photo_storage_path, medical_doc_storage_path, health_questionnaire_passed, category_id, rejection_reason, created_at')
+      .select('id, first_name, last_name, dossier_status, photo_storage_path, medical_doc_storage_path, id_doc_storage_path, health_questionnaire_passed, is_minor, category_id, rejection_reason, created_at')
       .eq('club_id', club.id)
       .eq('season', club.current_season)
       .in('dossier_status', ['pending_review', 'needs_correction'])
@@ -75,6 +75,9 @@ export default async function ToDoPage() {
     db.from('preregistrations').select('id, status').eq('club_id', club.id).eq('season', club.current_season).in('status', ['waiting', 'expired']),
   ]);
   const cat = new Map((categories ?? []).map((c) => [c.id, c]));
+  const documents = clubDocuments(club.registration_form, club.sport_type);
+  const { data: extraDocs } = await db.from('member_documents').select('member_id, doc_key').eq('club_id', club.id);
+  const extrasOf = (id: string) => new Set((extraDocs ?? []).filter((d) => d.member_id === id).map((d) => d.doc_key));
   const remindersOf = (id: string) => {
     const list = (logs ?? []).filter((l) => l.target_id === id);
     return list.length ? `${list.length} relance${list.length > 1 ? 's' : ''} envoyée${list.length > 1 ? 's' : ''}, la dernière le ${day.format(new Date(list[0].sent_at))}` : undefined;
@@ -90,7 +93,7 @@ export default async function ToDoPage() {
       corrections.push({ id: m.id, title: name, detail: m.rejection_reason ?? 'Pièce à remplacer', reminders: remindersOf(m.id) });
       continue;
     }
-    const missing = missingDocuments({ ...m, medical_requirement: category?.medical_requirement ?? null });
+    const missing = missingDocuments({ ...m, medical_requirement: category?.medical_requirement ?? null }, documents, extrasOf(m.id));
     if (missing.length) {
       incomplete.push({ id: m.id, title: name, detail: `${category?.name ?? 'Sans catégorie'} - manque : ${missing.join(', ')}`, reminders: remindersOf(m.id) });
     } else {

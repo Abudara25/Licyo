@@ -49,6 +49,7 @@ export async function sendPlatformEmail(msg: {
   text: string;
   fromName?: string;
   replyTo?: string;
+  headers?: Record<string, string>;
 }): Promise<SendResult> {
   const from = process.env.EMAIL_FROM_ADDRESS;
   const binding = cloudflareEnv().EMAIL;
@@ -63,6 +64,7 @@ export async function sendPlatformEmail(msg: {
     html: msg.html,
     text: msg.text,
     ...(msg.replyTo ? { replyTo: msg.replyTo } : {}),
+    ...(msg.headers ? { headers: msg.headers } : {}),
   })) as { messageId?: string } | undefined;
   return { provider: 'platform', messageId: res?.messageId };
 }
@@ -81,6 +83,7 @@ export type EmailKind =
   | 'relance_pieces'
   | 'relance_correction'
   | 'relance_paiement'
+  | 'newsletter'
   | 'test'
   | 'autre';
 
@@ -135,6 +138,8 @@ export async function sendClubEmail(args: {
   replyTo?: string;
   /** Type d'e-mail pour le journal du club. */
   kind?: EmailKind;
+  /** En-têtes supplémentaires (désinscription en un clic des newsletters). */
+  headers?: Record<string, string>;
 }): Promise<SendResult> {
   const kind = args.kind ?? 'autre';
   try {
@@ -160,12 +165,14 @@ async function deliverClubEmail({
   subject,
   reactComponent,
   replyTo,
+  headers,
 }: {
   club: MailClub;
   to: string;
   subject: string;
   reactComponent: ReactElement;
   replyTo?: string;
+  headers?: Record<string, string>;
 }): Promise<SendResult> {
   const html = await render(reactComponent);
   const text = await render(reactComponent, { plainText: true });
@@ -178,7 +185,7 @@ async function deliverClubEmail({
       if (creds?.google_refresh_token_enc) {
         const accessToken = await accessTokenFromRefresh(decryptSecret(creds.google_refresh_token_enc));
         const from = creds.google_account_email ?? club.email_sender_address ?? club.contact_email;
-        const raw = buildMime({ from: { name, address: from }, to, subject, html, text, replyTo: reply });
+        const raw = buildMime({ from: { name, address: from }, to, subject, html, text, replyTo: reply, headers });
         return { provider: 'gmail', messageId: await gmailSendRaw(accessToken, toBase64Url(raw)) };
       }
     } catch (error) {
@@ -186,7 +193,7 @@ async function deliverClubEmail({
     }
   }
 
-  return sendPlatformEmail({ to, subject, html, text, fromName: name, replyTo: reply });
+  return sendPlatformEmail({ to, subject, html, text, fromName: name, replyTo: reply, headers });
 }
 
 /** Envoi sans bloquer l'action en cours : l'échec est journalisé, pas propagé. */

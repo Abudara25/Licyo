@@ -12,6 +12,8 @@
 // Module sans dépendance à Next.js : testé sur SQLite (tests/reminders.test.ts).
 
 import type { SqlDatabase } from './db/query.ts';
+import { DEFAULT_DOCUMENTS, documentApplies, parseDocumentsConfig, resolveDocuments, type ResolvedDocument } from '../config/registration-documents.ts';
+import { getSportPreset } from '../config/sports-presets.ts';
 
 export type ReminderKind = 'documents' | 'correction' | 'payment';
 
@@ -61,6 +63,8 @@ export type MemberRow = {
   dossier_status: string;
   photo_storage_path: string | null;
   medical_doc_storage_path: string | null;
+  id_doc_storage_path: string | null;
+  is_minor: number | boolean;
   health_questionnaire_passed: number | boolean;
   rejection_reason: string | null;
   magic_action_token: string;
@@ -70,10 +74,35 @@ export type MemberRow = {
   payer_first_name: string | null;
 };
 
-/** Pièces encore attendues pour un dossier en cours de vérification. */
-export function missingDocuments(m: Pick<MemberRow, 'photo_storage_path' | 'medical_doc_storage_path' | 'health_questionnaire_passed' | 'medical_requirement'>): string[] {
+export type DocumentState = Pick<MemberRow, 'photo_storage_path' | 'medical_doc_storage_path' | 'health_questionnaire_passed' | 'medical_requirement'> & {
+  id_doc_storage_path?: string | null;
+  /** Mineur : sert aux pièces réservées aux mineurs ou aux majeurs (vrai par défaut, comme l'ancienne règle). */
+  is_minor?: number | boolean | null;
+};
+
+/** Pièces demandées par un club (réglages du formulaire), ou celles par défaut. */
+export function clubDocuments(registrationForm: unknown, sportType: string | null | undefined): ResolvedDocument[] {
+  if (registrationForm === undefined) return [...DEFAULT_DOCUMENTS];
+  const raw = typeof registrationForm === 'string' ? JSON.parse(registrationForm) : registrationForm;
+  return resolveDocuments(parseDocumentsConfig(raw), getSportPreset(sportType ?? undefined).family);
+}
+
+/**
+ * Pièces OBLIGATOIRES encore manquantes (libellés en minuscules pour les phrases) : certificat médical selon la
+ * catégorie, puis les pièces obligatoires du club qui concernent cette personne (mineur ou majeur).
+ */
+export function missingDocuments(
+  m: DocumentState,
+  documents: readonly ResolvedDocument[] = DEFAULT_DOCUMENTS,
+  extraKeys: ReadonlySet<string> = new Set(),
+): string[] {
   const out: string[] = [];
-  if (!m.photo_storage_path) out.push('photo d’identité');
+  const isMinor = m.is_minor === undefined || m.is_minor === null ? true : Boolean(m.is_minor);
+  for (const d of documents) {
+    if (d.mode !== 'required' || !documentApplies(d, isMinor)) continue;
+    const present = d.storage === 'photo' ? Boolean(m.photo_storage_path) : d.storage === 'id' ? Boolean(m.id_doc_storage_path) : extraKeys.has(d.key);
+    if (!present) out.push(d.label.charAt(0).toLowerCase() + d.label.slice(1));
+  }
   const certificateRequired = (m.medical_requirement ?? 'health_questionnaire') !== 'health_questionnaire' || !m.health_questionnaire_passed;
   if (certificateRequired && !m.medical_doc_storage_path) out.push('certificat médical');
   return out;
@@ -109,7 +138,11 @@ export function dueStep(opts: { now: Date; base: string; delaysDays: number[]; s
 }
 
 /** Relances dues pour un club (aucun envoi : planification seulement). */
-export async function planClubReminders(db: SqlDatabase, club: { id: string; current_season: string; reminder_policy: unknown }, now: Date): Promise<PlannedReminder[]> {
+export async function planClubReminders(
+  db: SqlDatabase,
+  club: { id: string; current_season: string; reminder_policy: unknown; registration_form?: unknown; sport_type?: string | null },
+  now: Date,
+): Promise<PlannedReminder[]> {
   const policy = parseReminderPolicy(typeof club.reminder_policy === 'string' ? JSON.parse(club.reminder_policy) : club.reminder_policy);
   if (!policy.enabled) return [];
   const logs = await all<{ target_id: string; kind: ReminderKind; n: number; last: string }>(
@@ -129,18 +162,25 @@ export async function planClubReminders(db: SqlDatabase, club: { id: string; cur
     const members = await all<MemberRow>(
       db,
       `SELECT m.id, m.club_id, m.family_id, m.first_name, m.dossier_status, m.photo_storage_path, m.medical_doc_storage_path,
-              m.health_questionnaire_passed, m.rejection_reason, m.magic_action_token, m.created_at,
+              m.health_questionnaire_passed, m.rejection_reason, m.magic_action_token, m.created_at, m.id_doc_storage_path, m.is_minor,
               c.medical_requirement, f.payer_email, f.payer_first_name
        FROM members m LEFT JOIN categories c ON c.id = m.category_id LEFT JOIN family_registrations f ON f.id = m.family_id
        WHERE m.club_id = ? AND m.season = ? AND m.dossier_status IN ('pending_review','needs_correction')`,
       club.id,
       club.current_season,
     );
+    const documents = clubDocuments(club.registration_form, club.sport_type);
+    const extras = await all<{ member_id: string; doc_key: string }>(
+      db,
+      'SELECT member_id, doc_key FROM member_documents WHERE club_id = ?',
+      club.id,
+    );
+    const extraKeysOf = (memberId: string) => new Set(extras.filter((e) => e.member_id === memberId).map((e) => e.doc_key));
     for (const m of members) {
       if (!m.payer_email) continue;
       const common = { clubId: club.id, targetType: 'member' as const, targetId: m.id, recipient: m.payer_email, firstName: m.payer_first_name ?? '', subject: m.first_name, token: m.magic_action_token };
       if (m.dossier_status === 'pending_review' && policy.kinds.documents) {
-        const missing = missingDocuments(m);
+        const missing = missingDocuments(m, documents, extraKeysOf(m.id));
         if (missing.length) consider({ ...common, kind: 'documents', details: missing }, m.created_at);
       }
       if (m.dossier_status === 'needs_correction' && policy.kinds.correction) {
@@ -195,9 +235,9 @@ export type ReminderSender = (reminder: PlannedReminder) => Promise<void>;
 
 /** Tâche planifiée : planifie et envoie les relances de tous les clubs qui les ont activées. */
 export async function runReminders(db: SqlDatabase, now: Date, send: ReminderSender): Promise<string> {
-  const clubs = await all<{ id: string; current_season: string; reminder_policy: string }>(
+  const clubs = await all<{ id: string; current_season: string; reminder_policy: string; registration_form: string; sport_type: string }>(
     db,
-    "SELECT id, current_season, reminder_policy FROM clubs WHERE status IN ('active','demo') AND json_extract(reminder_policy, '$.enabled') = 1",
+    "SELECT id, current_season, reminder_policy, registration_form, sport_type FROM clubs WHERE status IN ('active','demo') AND json_extract(reminder_policy, '$.enabled') = 1",
   );
   let sentCount = 0;
   let failures = 0;

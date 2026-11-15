@@ -7,6 +7,7 @@ import { ALL_GRANTS, effectiveGrants, grantsCan, grantsCanAny, isScopedOnly, typ
 import { IMPERSONATION_COOKIE, verifyImpersonation } from '@/lib/utils/impersonation';
 import { endSession, getSessionUser, type AuthUser } from '@/lib/auth/session';
 import { makeClient, type DbClient } from './client.ts';
+import { hydrateProcessEnv } from '@/lib/secrets';
 import { getDatabase } from './d1.ts';
 
 export type ServerDbClient = DbClient & {
@@ -18,6 +19,7 @@ export type ServerDbClient = DbClient & {
 
 /** Client lié à l'utilisateur de la session (cookie), soumis aux règles d'accès. */
 export async function createClient(): Promise<ServerDbClient> {
+  hydrateProcessEnv();
   const user = await getSessionUser();
   const client = makeClient(getDatabase(), user ? { role: 'authenticated', userId: user.id } : { role: 'anon' });
   return {

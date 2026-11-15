@@ -15,9 +15,11 @@ import {
 } from '@/lib/db/server';
 import { CLUB_ROLES, ROLE_LABELS, effectiveGrants, grantsCan, normalizeGrants, type Grant, type Permission } from '@/lib/permissions';
 import { parseFormConfig } from '@/config/registration-fields';
+import { syncFamilyPaid } from '@/lib/finance-sync';
+import { isDocumentKey, parseDocumentsConfig } from '@/config/registration-documents';
+import { AUTHORIZATION_TEXT_MAX, parseParentalAuthorization } from '@/config/parental-authorization';
 import { createAdminClient } from '@/lib/db/admin';
 import {
-  deletePrivateFiles,
   PUBLIC_BUCKET,
   publicAssetUrl,
   signedPrivateUrl,
@@ -101,7 +103,7 @@ const uuid = z.string().uuid();
 
 export async function getMemberDocumentUrl(
   memberId: string,
-  kind: 'photo' | 'medical' | 'id',
+  kind: string,
 ): Promise<ActionResult<{ url: string; isPdf: boolean }>> {
   return run(async () => {
     const { supabase } = await requireCtx('members.read', 'inscriptions');
@@ -113,13 +115,20 @@ export async function getMemberDocumentUrl(
       )
       .eq('id', uuid.parse(memberId))
       .maybeSingle();
-    const path =
-      member &&
-      {
-        photo: member.photo_storage_path,
-        medical: member.medical_doc_storage_path,
-        id: member.id_doc_storage_path,
-      }[kind];
+    let path: string | null | undefined =
+      member && (kind === 'photo' || kind === 'medical' || kind === 'id')
+        ? { photo: member.photo_storage_path, medical: member.medical_doc_storage_path, id: member.id_doc_storage_path }[kind]
+        : null;
+    // Pièce demandée par le club : clé contrôlée, lecture soumise aux règles d'accès (membre du même club).
+    if (member && !path && isDocumentKey(kind)) {
+      const { data: extra } = await supabase
+        .from('member_documents')
+        .select('storage_path')
+        .eq('member_id', uuid.parse(memberId))
+        .eq('doc_key', kind)
+        .maybeSingle();
+      path = extra?.storage_path;
+    }
     if (!path) return { ok: false, error: 'Aucune pièce de ce type.' };
     const url = await signedPrivateUrl(path, 300);
     if (!url) return { ok: false, error: 'Pièce introuvable.' };
@@ -294,48 +303,6 @@ const installmentSchema = z.object({
     .enum(['pending', 'deposited', 'cashed', 'rejected'])
     .default('pending'),
 });
-
-/** Recalcule le montant encaissé d'un dossier à partir de son échéancier. */
-async function syncFamilyPaid(supabase: Ctx['supabase'], familyId: string) {
-  const [{ data: family }, { data: rows }] = await Promise.all([
-    supabase
-      .from('family_registrations')
-      .select('final_total_amount, stripe_checkout_session_id')
-      .eq('id', familyId)
-      .single(),
-    supabase
-      .from('payment_installments')
-      .select('amount, status, payment_type')
-      .eq('family_id', familyId),
-  ]);
-  if (!family) return;
-  const paid = (rows ?? [])
-    .filter((r) => r.status === 'deposited' || r.status === 'cashed')
-    .reduce((s, r) => s + Number(r.amount), 0);
-  const amount = Math.round(paid * 100) / 100;
-  const total = Number(family.final_total_amount);
-  const types = new Set(
-    (rows ?? [])
-      .filter((r) => r.status !== 'rejected')
-      .map((r) => r.payment_type),
-  );
-  await supabase
-    .from('family_registrations')
-    .update({
-      amount_paid: amount,
-      payment_status:
-        amount >= total ? 'paid' : amount > 0 ? 'partial' : 'unpaid',
-      payment_method:
-        types.size > 1
-          ? 'mixed'
-          : types.size === 1
-            ? [...types][0] === 'caf' || [...types][0] === 'other_aid'
-              ? 'mixed'
-              : ([...types][0] as 'check')
-            : undefined,
-    })
-    .eq('id', familyId);
-}
 
 export async function addInstallment(input: unknown): Promise<ActionResult> {
   return run(async () => {
@@ -1624,52 +1591,6 @@ export async function removeStaff(staffId: string): Promise<ActionResult> {
 // RGPD, réinscriptions, navigation
 // ---------------------------------------------------------------------------
 
-/**
- * Purge des saisons anciennes : supprime adhérents, dossiers et pièces des
- * saisons antérieures à la saison précédente. Confirmation explicite exigée.
- */
-export async function purgeOldSeasons(
-  confirmation: string,
-): Promise<ActionResult<{ deleted: number }>> {
-  return run(async () => {
-    const { club, supabase } = await requireCtx('club.admin');
-    if (confirmation !== 'SUPPRIMER')
-      return { ok: false, error: 'Tapez SUPPRIMER pour confirmer.' };
-    const keepFrom = previousSeason(club.current_season);
-    const { data: oldMembers } = await supabase
-      .from('members')
-      .select(
-        'id, photo_storage_path, medical_doc_storage_path, id_doc_storage_path',
-      )
-      .eq('club_id', club.id)
-      .lt('season', keepFrom);
-    const files = (oldMembers ?? [])
-      .flatMap((m) => [
-        m.photo_storage_path,
-        m.medical_doc_storage_path,
-        m.id_doc_storage_path,
-      ])
-      .filter((p): p is string => Boolean(p));
-    await deletePrivateFiles(files);
-    await supabase
-      .from('family_registrations')
-      .delete()
-      .eq('club_id', club.id)
-      .lt('season', keepFrom);
-    await supabase
-      .from('members')
-      .delete()
-      .eq('club_id', club.id)
-      .lt('season', keepFrom);
-    revalidatePath('/club-admin', 'layout');
-    return {
-      ok: true,
-      data: { deleted: oldMembers?.length ?? 0 },
-      message: `${oldMembers?.length ?? 0} fiche(s) et ${files.length} pièce(s) supprimées.`,
-    };
-  });
-}
-
 /** Invite les adhérents validés de la saison précédente à se réinscrire. */
 export async function sendRenewalInvitations(): Promise<
   ActionResult<{ sent: number }>
@@ -1778,8 +1699,13 @@ export async function canManage(): Promise<boolean> {
 export async function saveRegistrationForm(input: unknown): Promise<ActionResult> {
   return run(async () => {
     const { supabase, club } = await requireCtx('settings.manage');
-    const raw = input && typeof input === 'object' ? (input as { fields?: unknown; custom?: unknown }) : {};
+    const raw = input && typeof input === 'object' ? (input as { fields?: unknown; custom?: unknown; documents?: unknown; customDocuments?: unknown; parentalAuthorization?: { enabled?: unknown; text?: unknown } }) : {};
+    const sentText = typeof raw.parentalAuthorization?.text === 'string' ? raw.parentalAuthorization.text.trim() : '';
+    if (sentText.length > AUTHORIZATION_TEXT_MAX) return { ok: false, error: `Autorisation parentale : ${AUTHORIZATION_TEXT_MAX} caractères au plus.` };
+    if (sentText && sentText.length < 40) return { ok: false, error: 'Autorisation parentale : texte trop court (40 caractères au moins).' };
+    const parentalAuthorization = parseParentalAuthorization(raw);
     const config = parseFormConfig(raw);
+    const docs = parseDocumentsConfig(raw);
     const sentCustom = Array.isArray(raw.custom) ? raw.custom.length : 0;
     if (sentCustom !== config.custom.length) {
       return {
@@ -1787,9 +1713,12 @@ export async function saveRegistrationForm(input: unknown): Promise<ActionResult
         error: 'Une question du club est incomplète : intitulé obligatoire, et au moins deux choix pour une liste.',
       };
     }
+    const sentDocs = Array.isArray(raw.customDocuments) ? raw.customDocuments.length : 0;
+    if (sentDocs !== docs.customDocuments.length) return { ok: false, error: 'Une pièce du club n’a pas d’intitulé.' };
+    // Champs et pièces dans le même réglage : rien n'est perdu d'une partie à l'autre.
     const { error } = await supabase
       .from('clubs')
-      .update({ registration_form: config })
+      .update({ registration_form: { ...config, ...docs, parentalAuthorization } })
       .eq('id', club.id);
     if (error) return { ok: false, error: 'Enregistrement impossible.' };
     refreshPublic(club.slug);

@@ -119,14 +119,21 @@ export function SponsorLeadForm({ clubSlug }: { clubSlug: string }) {
   );
 }
 
-export function CorrectionForm({ token, reason }: { token: string; reason: string }) {
-  const [files, setFiles] = useState<Partial<Record<'photo' | 'medical' | 'id', File>>>({});
+type CorrectionSlot = { field: string; label: string; photoOnly: boolean };
+const DEFAULT_SLOTS: CorrectionSlot[] = [
+  { field: 'photo', label: 'Photo d\'identité', photoOnly: true },
+  { field: 'medical', label: 'Certificat médical', photoOnly: false },
+  { field: 'id', label: 'Pièce d\'identité', photoOnly: false },
+];
+
+export function CorrectionForm({ token, reason, slots = DEFAULT_SLOTS }: { token: string; reason: string; slots?: CorrectionSlot[] }) {
+  const [files, setFiles] = useState<Record<string, File>>({});
   const [pending, start] = useTransition();
   const [done, setDone] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   if (done) return <Success message={done} />;
 
-  async function attach(kind: 'photo' | 'medical' | 'id', file?: File) {
+  async function attach(kind: string, file?: File) {
     if (!file) return;
     const prepared = file.type.startsWith('image/') ? await compressImage(file) : file;
     if (prepared.size > 5 * 1024 * 1024) return toast.error('Fichier trop lourd (5 Mo maximum).');
@@ -150,12 +157,12 @@ export function CorrectionForm({ token, reason }: { token: string; reason: strin
     >
       <p className="rounded-lg bg-amber-50 p-3 text-amber-900"><strong>Demande du club :</strong> {reason}</p>
       <div className="grid gap-3 sm:grid-cols-3">
-        {([['photo', 'Photo d\'identité'], ['medical', 'Certificat médical'], ['id', 'Pièce d\'identité']] as const).map(([kind, label]) => (
+        {slots.map(({ field: kind, label, photoOnly }) => (
           <label key={kind} htmlFor={`c-${kind}`} className="flex min-h-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed p-3 text-center text-sm hover:bg-muted">
             <Upload className="size-5" aria-hidden />
             <span className="font-medium">{label}</span>
-            <span className="text-xs text-muted-foreground">{files[kind] ? files[kind]!.name.slice(0, 24) : 'Remplacer'}</span>
-            <input id={`c-${kind}`} type="file" className="sr-only" accept={kind === 'photo' ? 'image/*' : 'image/*,application/pdf'} onChange={(e) => attach(kind, e.target.files?.[0])} />
+            <span className="text-xs text-muted-foreground">{files[kind] ? files[kind]!.name.slice(0, 24) : 'Ajouter ou remplacer'}</span>
+            <input id={`c-${kind}`} type="file" className="sr-only" accept={photoOnly ? 'image/*' : 'image/*,application/pdf'} onChange={(e) => attach(kind, e.target.files?.[0])} />
           </label>
         ))}
       </div>

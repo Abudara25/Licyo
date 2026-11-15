@@ -12,7 +12,7 @@ export type TableMeta = {
   view?: boolean;
 };
 
-const CLUB_JSON = ['nearby_cities', 'social_links', 'sibling_discount_rules', 'enabled_modules', 'registration_form', 'reminder_policy'] as const;
+const CLUB_JSON = ['nearby_cities', 'social_links', 'sibling_discount_rules', 'enabled_modules', 'registration_form', 'reminder_policy', 'retention_policy'] as const;
 const CLUB_BOOL = [
   'accepts_pass_sport',
   'accepts_caf_aids',
@@ -44,11 +44,18 @@ export const TABLES = {
   preregistrations: { generated: ['id'] },
   reminder_log: { generated: ['id'] },
   people: { generated: ['id'] },
+  member_documents: { generated: ['id'] },
+  financial_imports: { generated: ['id'] },
+  newsletters: { json: ['audience'], generated: ['id'] },
+  newsletter_deliveries: { generated: ['id'] },
+  newsletter_unsubscribes: {},
+  retention_runs: { json: ['detail'], generated: ['id'] },
+  financial_transactions: { generated: ['id'] },
   schedules: { generated: ['id'] },
   club_products: { json: ['available_sizes'], generated: ['id'] },
   family_registrations: { bool: ['is_adult_self_registration'], generated: ['id'] },
   payment_installments: { generated: ['id'] },
-  members: { json: ['extra_fields'], bool: MEMBER_BOOL, generated: ['id', 'magic_action_token'] },
+  members: { json: ['extra_fields', 'parental_authorization'], bool: MEMBER_BOOL, generated: ['id', 'magic_action_token'] },
   coach_roster: { bool: ['is_minor', 'consent_autonomous_exit'], view: true },
   coach_contacts: { view: true },
   member_product_orders: { generated: ['id'] },

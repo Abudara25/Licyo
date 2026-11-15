@@ -178,3 +178,62 @@ export function ReminderEmail({ club, firstName, kind, personName, details, link
     </Layout>
   );
 }
+
+type NlInline = { text: string; bold?: boolean; href?: string };
+type NlBlock = { type: 'p'; content: NlInline[] } | { type: 'h'; content: NlInline[] } | { type: 'ul'; items: NlInline[][] };
+
+function NlText({ parts }: { parts: NlInline[] }) {
+  return (
+    <>
+      {parts.map((i, k) =>
+        i.href ? (
+          <a key={k} href={i.href} style={{ color: '#1D4ED8' }}>
+            {i.text}
+          </a>
+        ) : i.bold ? (
+          <strong key={k}>{i.text}</strong>
+        ) : (
+          <span key={k} style={{ whiteSpace: 'pre-line' }}>
+            {i.text}
+          </span>
+        ),
+      )}
+    </>
+  );
+}
+
+/** Newsletter du club : blocs structurés (jamais de HTML libre) et lien de désinscription en pied de message. */
+export function NewsletterEmail({ club, firstName, subject, blocks, unsubscribeLink }: { club: ClubBrand; firstName: string | null; subject: string; blocks: NlBlock[]; unsubscribeLink: string }) {
+  return (
+    <Layout club={club} preview={subject}>
+      <Heading as="h1" style={{ fontSize: 22 }}>{subject}</Heading>
+      {firstName ? <Text style={p}>Bonjour {firstName},</Text> : null}
+      {blocks.map((b, i) =>
+        b.type === 'h' ? (
+          <Heading key={i} as="h2" style={{ fontSize: 18, marginTop: 20 }}>
+            <NlText parts={b.content} />
+          </Heading>
+        ) : b.type === 'ul' ? (
+          <ul key={i} style={{ ...p, paddingLeft: 20 }}>
+            {b.items.map((it, j) => (
+              <li key={j}>
+                <NlText parts={it} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <Text key={i} style={p}>
+            <NlText parts={b.content} />
+          </Text>
+        ),
+      )}
+      <Text style={{ color: '#71717A', fontSize: 12, marginTop: 24 }}>
+        Vous recevez ce message car vous êtes adhérent ou responsable d’un adhérent du club.{' '}
+        <a href={unsubscribeLink} style={{ color: '#71717A' }}>
+          Ne plus recevoir la newsletter
+        </a>
+        .
+      </Text>
+    </Layout>
+  );
+}

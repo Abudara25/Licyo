@@ -122,6 +122,30 @@ export async function deletePrivateFiles(paths: string[]): Promise<void> {
   if (valid.length) await bucket(PRIVATE_BUCKET).delete(valid);
 }
 
+/**
+ * Supprime des pièces privées puis vérifie leur absence une à une : renvoie les chemins dont la suppression est
+ * confirmée (un chemin invalide n'a jamais pu être déposé : il compte comme absent). Utilisé par la conservation RGPD.
+ */
+export async function deletePrivateFilesVerified(paths: string[]): Promise<Set<string>> {
+  const gone = new Set(paths.filter((p) => !isStoragePath(p)));
+  const valid = [...new Set(paths.filter(isStoragePath))];
+  const b = bucket(PRIVATE_BUCKET);
+  for (let i = 0; i < valid.length; i += 500) {
+    const chunk = valid.slice(i, i + 500);
+    try {
+      await b.delete(chunk);
+    } catch (error) {
+      console.error('[stockage] suppression groupée échouée', error instanceof Error ? error.message : error);
+    }
+    for (let j = 0; j < chunk.length; j += 25) {
+      const part = chunk.slice(j, j + 25);
+      const heads = await Promise.all(part.map((p) => b.head(p).then((o) => o === null, () => false)));
+      part.forEach((p, k) => heads[k] && gone.add(p));
+    }
+  }
+  return gone;
+}
+
 export async function deletePublicFiles(paths: string[]): Promise<void> {
   const valid = paths.filter(isStoragePath);
   if (valid.length) await bucket(PUBLIC_BUCKET).delete(valid);

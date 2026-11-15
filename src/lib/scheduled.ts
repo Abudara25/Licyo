@@ -26,6 +26,9 @@ export const daily = (now: Date) => now.toISOString().slice(0, 10);
 /** Durées de conservation appliquées par la purge. */
 export const RETENTION = {
   emailLogDays: 396, // 13 mois : répondre à « je n'ai rien reçu » sur une saison complète
+  reminderLogDays: 396,
+  newsletterDeliveriesDays: 396, // après la fin de l'envoi ; les désinscriptions, elles, sont gardées (opposition)
+  retentionRunsDays: 1096, // journal de conservation du club : 3 ans
   scheduledRunsDays: 90,
   rateLimitsDays: 2,
   loginTokensDays: 1, // après expiration
@@ -45,6 +48,13 @@ export const TASKS: readonly Task[] = [
       const t = now.getTime();
       const counts = {
         emails: await deleteOlderThan(db, 'DELETE FROM email_log WHERE created_at < ?', new Date(t - RETENTION.emailLogDays * DAY)),
+        relances: await deleteOlderThan(db, 'DELETE FROM reminder_log WHERE sent_at < ?', new Date(t - RETENTION.reminderLogDays * DAY)),
+        newsletter: await deleteOlderThan(
+          db,
+          "DELETE FROM newsletter_deliveries WHERE newsletter_id IN (SELECT id FROM newsletters WHERE status IN ('sent','cancelled') AND updated_at < ?)",
+          new Date(t - RETENTION.newsletterDeliveriesDays * DAY),
+        ),
+        conservation: await deleteOlderThan(db, 'DELETE FROM retention_runs WHERE ran_at < ?', new Date(t - RETENTION.retentionRunsDays * DAY)),
         executions: await deleteOlderThan(db, "DELETE FROM scheduled_runs WHERE started_at < ? AND status <> 'running'", new Date(t - RETENTION.scheduledRunsDays * DAY)),
         limites: await deleteOlderThan(db, 'DELETE FROM rate_limits WHERE window_start < ?', new Date(t - RETENTION.rateLimitsDays * DAY)),
         liens: await deleteOlderThan(db, 'DELETE FROM auth_login_tokens WHERE expires_at < ?', new Date(t - RETENTION.loginTokensDays * DAY)),

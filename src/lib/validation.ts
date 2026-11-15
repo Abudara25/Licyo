@@ -59,6 +59,14 @@ export const registrationSchema = z.object({
   paymentMethod: z.enum(['card', 'check', 'cash', 'transfer']),
   installmentsCount: z.number().int().min(1).max(3).default(1),
   acceptRules: z.literal(true, { errorMap: () => ({ message: 'Vous devez accepter le règlement intérieur.' }) }),
+  /** Autorisation parentale en ligne : exigée par le serveur s'il y a un mineur et que le club l'a activée. */
+  parentalAuthorization: z
+    .object({
+      signerName: z.string().trim().min(3, 'Nom du responsable légal obligatoire.').max(120),
+      signerQuality: z.enum(['mere', 'pere', 'tuteur']),
+      accepted: z.literal(true, { errorMap: () => ({ message: 'L’autorisation parentale doit être acceptée.' }) }),
+    })
+    .optional(),
 });
 export type RegistrationInput = z.infer<typeof registrationSchema>;
 

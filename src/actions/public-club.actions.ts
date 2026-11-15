@@ -33,8 +33,11 @@ import { clientIp, guardPublicForm, turnstileTokenFrom } from '@/lib/security/pu
 import { rateLimit } from '@/lib/auth/session';
 import { getDatabase } from '@/lib/db/d1';
 import { clubAvailability, completeInvitation, findInvitation } from '@/lib/waitlist';
-import { missingDocuments } from '@/lib/reminders';
+import { clubDocuments } from '@/lib/reminders';
+import { memberDocumentState } from '@/lib/member-documents';
+import { documentApplies } from '@/config/registration-documents';
 import { getSportPreset } from '@/config/sports-presets';
+import { parseParentalAuthorization, renderAuthorization, templateHash, type SignedAuthorization } from '@/config/parental-authorization';
 import { parseFormConfig, resolveForm, validateExtraAnswers, type ExtraAnswers } from '@/config/registration-fields';
 import type { Club } from '@/types/database';
 
@@ -134,6 +137,9 @@ export async function submitRegistration(
     getSportPreset(club.sport_type).family,
   );
   const extraByMember: ExtraAnswers[] = [];
+  // Pièces demandées par le club (hors certificat médical, piloté par la catégorie).
+  const documents = clubDocuments(club.registration_form, club.sport_type);
+  const docField = (key: string, storage: string, i: number) => (storage === 'extra' ? `doc_${key}_${i}` : `${storage}_${i}`);
 
   // Contrôles métier par personne.
   const cartMembers = [];
@@ -175,6 +181,11 @@ export async function submitRegistration(
         ok: false,
         error: `Questionnaire de santé : si une réponse est « oui », joignez un certificat médical pour ${m.firstName}.`,
       };
+    }
+    for (const d of documents) {
+      if (d.mode === 'required' && documentApplies(d, age < 18) && !fileFrom(formData, docField(d.key, d.storage, i))) {
+        return { ok: false, error: `« ${d.label} » est demandé pour ${m.firstName}.` };
+      }
     }
     const memberProducts = [];
     if (m.products.length && !moduleEnabled(club.enabled_modules, 'boutique'))
@@ -253,6 +264,36 @@ export async function submitRegistration(
     payByCard,
   );
 
+  // Autorisation parentale : texte rendu ici à partir des réglages du club (jamais celui du navigateur), figé.
+  const authorizationConfig = parseParentalAuthorization(club.registration_form);
+  const hasMinor = input.members.some((m) => ageOn(m.birthDate) < 18);
+  let authorizationFor: (m: (typeof input.members)[number]) => SignedAuthorization | null = () => null;
+  if (authorizationConfig.enabled && hasMinor) {
+    const pa = input.parentalAuthorization;
+    if (!pa) return { ok: false, error: 'L’autorisation parentale doit être remplie et acceptée.' };
+    const hash = await templateHash(authorizationConfig.text);
+    const signedAt = new Date().toISOString();
+    const sport = getSportPreset(club.sport_type).label;
+    authorizationFor = (m) =>
+      ageOn(m.birthDate) < 18
+        ? {
+            text: renderAuthorization(authorizationConfig.text, {
+              signerName: pa.signerName,
+              signerQuality: pa.signerQuality,
+              childName: `${m.firstName} ${m.lastName.toUpperCase()}`,
+              birthDate: m.birthDate,
+              clubName: club.name,
+              sport,
+              season,
+            }),
+            signerName: pa.signerName,
+            signerQuality: pa.signerQuality,
+            signedAt,
+            templateHash: hash,
+          }
+        : null;
+  }
+
   // Pièces jointes : déposées avant l'écriture en base, supprimées si l'écriture échoue.
   const uploaded: string[] = [];
   const docPaths: {
@@ -260,6 +301,7 @@ export async function submitRegistration(
     medical: string | null;
     id: string | null;
   }[] = [];
+  const extraDocs: { key: string; path: string }[][] = [];
   try {
     for (let i = 0; i < input.members.length; i++) {
       const paths = {
@@ -281,6 +323,18 @@ export async function submitRegistration(
         }
       }
       docPaths.push(paths);
+      // Autres pièces : seulement celles que le club demande à cette personne (clé jamais choisie par le navigateur).
+      const extras: { key: string; path: string }[] = [];
+      const isMinor = ageOn(input.members[i].birthDate) < 18;
+      for (const d of documents) {
+        if (d.storage !== 'extra' || !documentApplies(d, isMinor)) continue;
+        const file = fileFrom(formData, docField(d.key, d.storage, i));
+        if (!file) continue;
+        const path = await uploadClubFile(PRIVATE_BUCKET, club.id, `members/${season}`, file, true);
+        uploaded.push(path);
+        extras.push({ key: d.key, path });
+      }
+      extraDocs.push(extras);
     }
   } catch (error) {
     await deletePrivateFiles(uploaded);
@@ -350,6 +404,7 @@ export async function submitRegistration(
     consent_autonomous_exit:
       ageOn(m.birthDate) >= 18 ? true : m.consentAutonomousExit,
     signature_data_url: m.signatureDataUrl,
+    parental_authorization: authorizationFor(m),
     extra_fields: extraByMember[i] ?? {},
     // Réinscription : même personne que la saison précédente ; sinon la base rattache (prénom, nom, naissance).
     person_id: i === renewedIndex ? (renewal?.person_id ?? null) : null,
@@ -381,6 +436,14 @@ export async function submitRegistration(
     })),
   );
   if (orders.length) await admin.from('member_product_orders').insert(orders);
+
+  const documentRows = extraDocs.flatMap((list, i) =>
+    list.map((d) => ({ club_id: club.id, member_id: members[i].id, doc_key: d.key, storage_path: d.path })),
+  );
+  if (documentRows.length) {
+    const { error: docsError } = await admin.from('member_documents').insert(documentRows);
+    if (docsError) console.error('[inscription] pièces complémentaires', docsError.message);
+  }
 
   // Invitation utilisée : la demande est close et rattachée à l'adhérent de la catégorie réservée.
   if (invitation) {
@@ -609,18 +672,20 @@ export async function submitCorrection(
     .maybeSingle();
   if (!member || !['needs_correction', 'pending_review'].includes(member.dossier_status))
     return { ok: false, error: "Ce lien n'est plus valable." };
-  if (member.dossier_status === 'pending_review') {
-    // Dossier en attente : seulement pour ajouter les pièces encore manquantes (lien des relances automatiques).
-    const { data: category } = member.category_id
-      ? await admin.from('categories').select('medical_requirement').eq('id', member.category_id).maybeSingle()
-      : { data: null };
-    if (missingDocuments({ ...member, medical_requirement: category?.medical_requirement ?? null }).length === 0)
-      return { ok: false, error: "Ce lien n'est plus valable : le dossier est complet." };
-  }
+  // Pièces déposables selon les réglages actuels du club (même calcul que la page de complément).
+  const docState = await memberDocumentState(member);
+  if (member.dossier_status === 'pending_review' && docState.missing.length === 0)
+    return { ok: false, error: "Ce lien n'est plus valable : le dossier est complet." };
 
   const updates: Record<string, string> = {};
   const replaced: string[] = [];
+  const extraUploads: { key: string; path: string }[] = [];
   try {
+    for (const slot of docState.slots.filter((s) => s.storage === 'extra')) {
+      const file = fileFrom(formData, slot.field);
+      if (!file) continue;
+      extraUploads.push({ key: slot.key, path: await uploadClubFile(PRIVATE_BUCKET, member.club_id, `members/${member.season}`, file, true) });
+    }
     for (const [kind, column] of [
       ['photo', 'photo_storage_path'],
       ['medical', 'medical_doc_storage_path'],
@@ -644,8 +709,19 @@ export async function submitCorrection(
       error: error instanceof UploadError ? error.message : 'Envoi impossible.',
     };
   }
-  if (Object.keys(updates).length === 0)
+  if (Object.keys(updates).length === 0 && extraUploads.length === 0)
     return { ok: false, error: 'Ajoutez au moins un document.' };
+  for (const e of extraUploads) {
+    const previous = docState.extras.find((x) => x.doc_key === e.key);
+    const { error: docError } = await admin
+      .from('member_documents')
+      .upsert({ club_id: member.club_id, member_id: member.id, doc_key: e.key, storage_path: e.path }, { onConflict: 'member_id,doc_key' });
+    if (docError) {
+      await deletePrivateFiles([e.path, ...Object.values(updates)]);
+      return { ok: false, error: 'Enregistrement impossible.' };
+    }
+    if (previous) replaced.push(previous.storage_path);
+  }
 
   // Le jeton est renouvelé : le lien reçu par e-mail ne sert qu'une fois.
   const { error } = await admin
