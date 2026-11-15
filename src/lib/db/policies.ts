@@ -263,6 +263,8 @@ const POLICIES: Partial<Record<TableName, Policy[]>> = {
   audit_events: [{ cmd: 'select', to: 'authenticated', using: (_c, h) => h.isSuperAdmin }],
   // Journal des e-mails : lu par ceux qui suivent les familles ; écrit uniquement par le serveur (service).
   email_log: [permRead('members.read', 'communication.manage'), superAdminAll],
+  // Pré-inscriptions et liste d'attente : comme les dossiers. Le dépôt public passe par le serveur (service).
+  preregistrations: [permRead('members.read'), permAll('members.write'), superAdminAll],
   // scheduled_runs : service et équipe Licyo uniquement.
   scheduled_runs: [{ cmd: 'select', to: 'authenticated', using: (_c, h) => h.isSuperAdmin }],
 };

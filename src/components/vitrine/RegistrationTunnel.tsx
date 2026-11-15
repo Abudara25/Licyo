@@ -13,6 +13,7 @@ import { TurnstileField } from '@/components/ui/turnstile';
 import { TactileSignaturePad } from './TactileSignaturePad';
 import { getSportPreset, type SportVocabulary } from '@/config/sports-presets';
 import { parseFormConfig, resolveForm } from '@/config/registration-fields';
+import { PUBLIC_STATE_LABELS, type CategoryAvailability } from '@/lib/waitlist';
 import { ClubExtraFields, extraPayload, missingRequiredExtra, type ExtraDraft } from './ClubExtraFields';
 import type { Category, Club, ClubProduct } from '@/types/database';
 
@@ -52,6 +53,8 @@ export type TunnelClub = Pick<
 
 export type TunnelPrefill = {
   renewalToken?: string;
+  /** Lien personnel de la liste d'attente : ouvre la place réservée dans cette catégorie. */
+  invitation?: { token: string; categoryId: string };
   members?: Partial<MemberDraft>[];
   payer?: Partial<Payer>;
   emergency?: { name: string; phone: string };
@@ -85,13 +88,21 @@ export function RegistrationTunnel({
   products,
   vocab,
   prefill,
+  availability = {},
+  preregistrationHref,
 }: {
   club: TunnelClub;
   categories: Category[];
   products: ClubProduct[];
   vocab: SportVocabulary;
   prefill?: TunnelPrefill;
+  /** État public de chaque catégorie (places, liste d'attente, pré-inscription, fermé). Absent = ouvert. */
+  availability?: Record<string, CategoryAvailability['publicState']>;
+  /** Page de pré-inscription / liste d'attente du club. */
+  preregistrationHref?: string;
 }) {
+  const invitedCategory = prefill?.invitation?.categoryId;
+  const canChoose = (categoryId: string) => (availability[categoryId] ?? 'open') === 'open' || categoryId === invitedCategory;
   const [step, setStep] = useState(1);
   const [members, setMembers] = useState<MemberDraft[]>(() => (prefill?.members?.length ? prefill.members.map(newMember) : [newMember()]));
   const [payer, setPayer] = useState<Payer>({ firstName: '', lastName: '', email: '', phone: '', address: '', postalCode: '', city: '', ...prefill?.payer });
@@ -196,6 +207,7 @@ export function RegistrationTunnel({
     const payload = {
       clubSlug: club.slug,
       renewalToken: prefill?.renewalToken,
+      invitationToken: prefill?.invitation?.token,
       payer: finalPayer,
       emergency,
       isAdultSelfRegistration: isAdultSelf,
@@ -293,10 +305,19 @@ export function RegistrationTunnel({
                       <Select id={`${p}-cat`} value={m.categoryId} onChange={(e) => update(m.key, { categoryId: e.target.value })} disabled={!m.birthDate}>
                         <option value="">{m.birthDate ? 'Choisir…' : 'Renseignez d\'abord la date de naissance'}</option>
                         {eligible.map((c) => (
-                          <option key={c.id} value={c.id}>{c.name} - {formatEuros(Number(c.annual_price))}</option>
+                          <option key={c.id} value={c.id} disabled={!canChoose(c.id)}>
+                            {c.name} - {formatEuros(Number(c.annual_price))}
+                            {canChoose(c.id) ? (c.id === invitedCategory ? ' (place réservée)' : '') : ` (${PUBLIC_STATE_LABELS[availability[c.id] ?? 'closed']})`}
+                          </option>
                         ))}
                       </Select>
                     </Field>
+                    {m.birthDate && preregistrationHref && eligible.some((c) => !canChoose(c.id) && availability[c.id] !== 'closed') ? (
+                      <p className="text-sm sm:col-span-2">
+                        Un groupe est complet ou en pré-inscription ?{' '}
+                        <a className="font-semibold underline" href={preregistrationHref}>Rejoindre la liste d’attente</a>
+                      </p>
+                    ) : null}
                   </div>
 
                   <div className="mt-4 grid gap-1 border-t pt-4">

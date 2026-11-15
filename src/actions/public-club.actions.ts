@@ -31,6 +31,8 @@ import {
 import { moduleEnabled } from '@/lib/platform';
 import { clientIp, guardPublicForm, turnstileTokenFrom } from '@/lib/security/public-guard';
 import { rateLimit } from '@/lib/auth/session';
+import { getDatabase } from '@/lib/db/d1';
+import { clubAvailability, completeInvitation, findInvitation } from '@/lib/waitlist';
 import { getSportPreset } from '@/config/sports-presets';
 import { parseFormConfig, resolveForm, validateExtraAnswers, type ExtraAnswers } from '@/config/registration-fields';
 import type { Club } from '@/types/database';
@@ -97,6 +99,16 @@ export async function submitRegistration(
   ]);
   const categoryById = new Map((categories ?? []).map((c) => [c.id, c]));
   const productById = new Map((products ?? []).map((p) => [p.id, p]));
+
+  // Invitation de la liste d'attente : le lien doit être valide pour ce club et viser une personne inscrite ici.
+  const db = getDatabase();
+  const invitation = input.invitationToken ? await findInvitation(db, club.id, input.invitationToken) : null;
+  if (input.invitationToken && !invitation) {
+    return { ok: false, error: 'Ce lien d’invitation a expiré ou a déjà été utilisé. Contactez le club.' };
+  }
+  if (invitation && !input.members.some((m) => m.categoryId === invitation.category_id)) {
+    return { ok: false, error: 'La place réservée concerne une autre catégorie : vérifiez le groupe choisi.' };
+  }
 
   // Renouvellement : le jeton doit désigner un adhérent de ce club.
   if (input.renewalToken) {
@@ -179,22 +191,26 @@ export async function submitRegistration(
     });
   }
 
-  // Capacité des sections (hors dossiers refusés).
+  // Mode et places de chaque catégorie (dossiers actifs + invitations en cours, qui réservent une place).
+  // La place réservée par l'invitation compte pour la personne invitée.
+  const availability = await clubAvailability(db, club.id, season, [...categoryById.values()]);
   for (const categoryId of new Set(input.members.map((m) => m.categoryId))) {
     const category = categoryById.get(categoryId)!;
-    const wanted = input.members.filter(
-      (m) => m.categoryId === categoryId,
-    ).length;
-    const { count } = await admin
-      .from('members')
-      .select('id', { count: 'exact', head: true })
-      .eq('category_id', categoryId)
-      .eq('season', season)
-      .not('dossier_status', 'in', '(rejected,trial_requested,trial_done)');
-    if ((count ?? 0) + wanted > category.max_capacity)
+    const state = availability.get(categoryId)!;
+    const invited = invitation?.category_id === categoryId;
+    const wanted = input.members.filter((m) => m.categoryId === categoryId).length;
+    if (state.mode !== 'open' && !invited) {
       return {
         ok: false,
-        error: `La section « ${category.name} » est complète.`,
+        error: state.mode === 'preregistration'
+          ? `« ${category.name} » est en pré-inscription : déposez une demande depuis la page Pré-inscription.`
+          : `Les inscriptions sont fermées pour « ${category.name} ».`,
+      };
+    }
+    if (wanted > state.remaining + (invited ? 1 : 0))
+      return {
+        ok: false,
+        error: `La section « ${category.name} » est complète : rejoignez la liste d’attente depuis la page Pré-inscription.`,
       };
   }
 
@@ -353,6 +369,12 @@ export async function submitRegistration(
     })),
   );
   if (orders.length) await admin.from('member_product_orders').insert(orders);
+
+  // Invitation utilisée : la demande est close et rattachée à l'adhérent de la catégorie réservée.
+  if (invitation) {
+    const index = input.members.findIndex((m) => m.categoryId === invitation.category_id);
+    await completeInvitation(db, invitation.id, members[index].id);
+  }
 
   // Échéancier prévisionnel pour les règlements hors carte.
   if (!payByCard && totals.finalTotalAmount > 0) {

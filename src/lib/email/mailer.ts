@@ -76,6 +76,8 @@ export type EmailKind =
   | 'essai'
   | 'reinscription'
   | 'paiement_recu'
+  | 'preinscription_recue'
+  | 'preinscription_invitation'
   | 'test'
   | 'autre';
 

@@ -150,6 +150,35 @@ export type Category = {
   coach_name: string | null;
   description: string | null;
   display_order: number;
+  /** open : inscriptions (liste d'attente si complet) ; preregistration : liste d'intérêt ; closed : rien. */
+  registration_mode: RegistrationMode;
+  /** Invite d'elle-même la personne suivante quand une place se libère (tâche planifiée). */
+  auto_invite: boolean;
+};
+
+export type RegistrationMode = "open" | "preregistration" | "closed";
+export type PreregistrationStatus = "waiting" | "invited" | "registered" | "declined" | "expired" | "cancelled";
+
+export type Preregistration = {
+  id: string;
+  club_id: string;
+  category_id: string;
+  season: string;
+  first_name: string;
+  last_name: string;
+  birth_date: string;
+  gender: "M" | "F" | "X";
+  contact_name: string;
+  email: string;
+  phone: string;
+  message: string | null;
+  status: PreregistrationStatus;
+  invite_token_hash: string | null;
+  invited_at: string | null;
+  invite_expires_at: string | null;
+  member_id: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type Schedule = {
@@ -488,6 +517,10 @@ export type Database = {
       facilities: TableDef<
         Facility,
         "club_id" | "name" | "address" | "city" | "postal_code"
+      >;
+      preregistrations: TableDef<
+        Preregistration,
+        "club_id" | "category_id" | "season" | "first_name" | "last_name" | "birth_date" | "contact_name" | "email" | "phone"
       >;
       categories: TableDef<
         Category,

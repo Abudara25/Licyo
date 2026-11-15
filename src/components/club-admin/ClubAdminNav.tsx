@@ -14,6 +14,7 @@ import {
   SlidersHorizontal,
   ListChecks,
   Mail,
+  Hourglass,
   MessageSquare,
   Image,
 } from 'lucide-react';
@@ -57,6 +58,9 @@ export function ClubAdminNav({
             icon: FileText,
           },
         ]
+      : []),
+    ...(may('members.read') && moduleEnabled(modules, 'inscriptions')
+      ? [{ href: '/club-admin/preinscriptions', label: 'Pré-inscriptions', icon: Hourglass }]
       : []),
     ...(may('finance.read') && moduleEnabled(modules, 'payments')
       ? [{ href: '/club-admin/tresorerie', label: 'Trésorerie', icon: Wallet }]

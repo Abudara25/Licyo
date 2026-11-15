@@ -137,6 +137,8 @@ export default async function Discover({
       gender_filter: "mixed" as const,
       annual_price: c.price,
       max_capacity: 30,
+      registration_mode: "open" as const,
+      auto_invite: false,
       medical_requirement: c.medical,
       coach_name: null,
       description: c.description,

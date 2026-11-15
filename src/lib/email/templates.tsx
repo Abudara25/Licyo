@@ -124,3 +124,34 @@ export function TestEmail({ club, provider }: { club: ClubBrand; provider: strin
     </Layout>
   );
 }
+
+export function PreregistrationReceivedEmail({ club, contactName, personName, categoryName, kind, position }: { club: ClubBrand; contactName: string; personName: string; categoryName: string; kind: 'waitlist' | 'preregistration'; position: number | null }) {
+  return (
+    <Layout club={club} preview={`Demande enregistrée pour ${personName}`}>
+      <Heading as="h1" style={{ fontSize: 22 }}>{kind === 'waitlist' ? 'Inscription sur liste d’attente' : 'Pré-inscription enregistrée'}</Heading>
+      <Text style={p}>Bonjour {contactName},</Text>
+      <Text style={p}>
+        Nous avons bien enregistré la demande de <strong>{personName}</strong> pour <strong>{categoryName}</strong>.
+        {position ? <> Elle est actuellement en position <strong>{position}</strong>.</> : null}
+      </Text>
+      <Text style={p}>
+        {kind === 'waitlist'
+          ? 'Dès qu’une place se libère, vous recevrez un lien personnel pour finaliser l’inscription.'
+          : 'Dès l’ouverture des inscriptions, vous recevrez un lien personnel pour finaliser l’inscription.'}{' '}
+        Ce lien est valable quelques jours : surveillez votre boîte de réception (et les indésirables).
+      </Text>
+    </Layout>
+  );
+}
+
+export function PreregistrationInvitationEmail({ club, contactName, personName, categoryName, link, expiresLabel }: { club: ClubBrand; contactName: string; personName: string; categoryName: string; link: string; expiresLabel: string }) {
+  return (
+    <Layout club={club} preview={`Une place vous attend pour ${personName}`}>
+      <Heading as="h1" style={{ fontSize: 22 }}>Une place vous attend</Heading>
+      <Text style={p}>Bonjour {contactName},</Text>
+      <Text style={p}>Une place est réservée pour <strong>{personName}</strong> en <strong>{categoryName}</strong>.</Text>
+      <Text style={p}>Finalisez l’inscription avant le <strong>{expiresLabel}</strong> : passé ce délai, la place sera proposée à la famille suivante.</Text>
+      <CallToAction club={club} href={link} label="Finaliser l’inscription" />
+    </Layout>
+  );
+}

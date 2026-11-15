@@ -42,6 +42,8 @@ export const memberInputSchema = z.object({
 export const registrationSchema = z.object({
   clubSlug: z.string().min(1),
   renewalToken: z.string().uuid().optional(),
+  /** Lien personnel reçu depuis la liste d’attente : ouvre la place réservée. */
+  invitationToken: z.string().max(100).optional(),
   payer: z.object({
     firstName: name('Prénom'),
     lastName: name('Nom'),

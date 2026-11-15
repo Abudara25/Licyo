@@ -12,7 +12,7 @@ import type { SqlDatabase } from './db/query.ts';
 
 export type TaskOutcome = { task: string; status: 'ok' | 'failed' | 'skipped'; detail: string };
 
-type Task = {
+export type Task = {
   name: string;
   /** Créneau d'exécution : une exécution au plus par créneau. */
   slot: (now: Date) => string;
@@ -21,7 +21,7 @@ type Task = {
 
 const DAY = 24 * 3600 * 1000;
 const iso = (d: Date) => d.toISOString();
-const daily = (now: Date) => now.toISOString().slice(0, 10);
+export const daily = (now: Date) => now.toISOString().slice(0, 10);
 
 /** Durées de conservation appliquées par la purge. */
 export const RETENTION = {

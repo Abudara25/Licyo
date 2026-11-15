@@ -121,6 +121,40 @@ Reste à faire :
   - créer le widget Turnstile pour le domaine ;
   - sauvegarde de la base, puis `npm run db:migrate:remote` (migrations 0002 à 0005).
 
+## Lot 2 — pré-inscriptions et liste d'attente (réalisé le 2026-11-15, non déployé)
+
+- **Mode d'inscription par catégorie** (migration `0006`, `categories.registration_mode`) :
+  - ouvertes : inscription directe, puis liste d'attente dès que le groupe est complet ;
+  - pré-inscriptions : liste d'intérêt avant l'ouverture ;
+  - fermées.
+- **Places restantes** = capacité - dossiers actifs - invitations en cours, car une invitation réserve la place.
+  Le serveur l'applique dans le tunnel d'inscription ; les catégories indisponibles sont grisées dans la liste.
+- **Page publique `/pre-inscription`** :
+  - formulaire court, protégé par Turnstile et la limitation de débit en base ;
+  - âge contrôlé, doublons refusés (une seule demande active par personne, catégorie et saison) ;
+  - e-mail de confirmation indiquant le rang.
+- **Back-office `/club-admin/preinscriptions`** :
+  - lecture : `members.read` ; actions : `members.write` ; mode de la catégorie : `organization.manage` ;
+  - par catégorie : places, file dans l'ordre d'arrivée, invitation, inscription faite à la main, retrait, remise
+    en attente ;
+  - confirmation avant de dépasser la capacité.
+- **Invitation** :
+  - lien personnel valable 7 jours, stocké seulement sous forme d'empreinte ;
+  - il ouvre l'inscription préremplie, avec la catégorie « place réservée » ;
+  - la demande est close et rattachée à l'adhérent après l'inscription ;
+  - si l'e-mail ne peut pas partir, la demande reste en attente et ne bloque pas de place.
+- **Tâche planifiée `liste_attente`** : les liens dépassés expirent et la place est rendue. Pour les catégories en
+  « invitation automatique », chaque place libérée est proposée la nuit suivante à la personne suivante.
+- **Vérifié** :
+  - 53 tests passent ; `tsc` et `next build` sans erreur ;
+  - parcours complet en local (demande, invitation par le bureau, lien reçu, inscription préremplie) à 360 et
+    768 px.
+- **Reste à faire** :
+  - priorité de réinscription : un adhérent de la saison passée est aujourd'hui soumis aux mêmes places que les
+    nouveaux ;
+  - relance avant l'expiration du lien ;
+  - export de la liste.
+
 ## Lots proposés (ordre recommandé)
 
 1. **Socle de fiabilité** : journal des e-mails par club, Turnstile sur les formulaires publics, Cron Trigger du
