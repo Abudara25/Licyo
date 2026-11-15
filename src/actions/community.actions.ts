@@ -1,5 +1,4 @@
 'use server';
-import { headers } from 'next/headers';
 import { z } from 'zod';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { createClient, getClubContext } from '@/lib/db/server';
@@ -14,26 +13,12 @@ import {
   deletePublicFiles,
 } from '@/lib/storage';
 import { type ActionResult, firstError } from '@/lib/validation';
-const lessonHits = new Map<string, number[]>();
-async function lessonRateLimited() {
-  const h = await headers();
-  const ip = (h.get('x-forwarded-for') ?? h.get('x-real-ip') ?? 'unknown')
-    .split(',')[0]
-    .trim();
-  const now = Date.now();
-  for (const [key, times] of lessonHits)
-    if (!times.some((t) => now - t < 3600000)) lessonHits.delete(key);
-  if (lessonHits.size > 4096 && !lessonHits.has(ip)) return true;
-  const times = (lessonHits.get(ip) ?? []).filter((t) => now - t < 3600000);
-  times.push(now);
-  lessonHits.set(ip, times);
-  return times.length > 5;
-}
+import { guardPublicForm, turnstileTokenFrom } from '@/lib/security/public-guard';
 export async function requestPrivateLesson(
   input: unknown,
 ): Promise<ActionResult> {
-  if (await lessonRateLimited())
-    return { ok: false, error: 'Trop de demandes. Réessayez dans une heure.' };
+  const blocked = await guardPublicForm({ bucket: 'lesson', max: 5, windowSeconds: 3600, turnstileToken: turnstileTokenFrom(input) });
+  if (blocked) return { ok: false, error: blocked };
   const parsed = z
     .object({
       slug: z.string().max(50),

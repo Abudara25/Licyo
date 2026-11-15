@@ -261,6 +261,10 @@ const POLICIES: Partial<Record<TableName, Policy[]>> = {
     superAdminAll,
   ],
   audit_events: [{ cmd: 'select', to: 'authenticated', using: (_c, h) => h.isSuperAdmin }],
+  // Journal des e-mails : lu par ceux qui suivent les familles ; écrit uniquement par le serveur (service).
+  email_log: [permRead('members.read', 'communication.manage'), superAdminAll],
+  // scheduled_runs : service et équipe Licyo uniquement.
+  scheduled_runs: [{ cmd: 'select', to: 'authenticated', using: (_c, h) => h.isSuperAdmin }],
 };
 
 /** Colonnes de clubs modifiables par un utilisateur (ancien GRANT UPDATE(...) de 0002). */

@@ -89,6 +89,38 @@ Reste à faire :
 - l'export CSV des réponses ;
 - l'accès de l'encadrement aux allergies de ses adhérents (aujourd'hui, bureau seulement).
 
+## Lot 1 — socle de fiabilité (réalisé le 2026-11-15, non déployé)
+
+- **Journal des e-mails** (`email_log`, migration `0005`) : chaque e-mail envoyé au nom d'un club est tracé (type,
+  destinataire, objet, fournisseur, statut, erreur courte, jamais le contenu). Page `/club-admin/emails` pour qui a
+  `members.read` ou `communication.manage`, avec recherche par adresse et filtre par statut. Purge après 13 mois.
+- **Formulaires publics** (inscription, essai, partenariat, cours particuliers, lien de connexion) :
+  - les anciennes limites en mémoire ne valaient que pour une instance du Worker ; la limitation de débit se fait
+    désormais en base D1, partagée entre toutes les instances ;
+  - Cloudflare Turnstile est vérifié côté serveur (`src/lib/security/`). Si le service est injoignable, l'envoi est
+    refusé.
+  - Sans clés configurées, Turnstile est désactivé ; seule la limitation de débit protège alors les formulaires.
+  - La clé publique est transmise par `<html data-turnstile-site-key>`, réglable sans recompiler.
+- **Tâches planifiées** :
+  - Cron Trigger quotidien (3 h 17 UTC) défini dans `wrangler.jsonc` ;
+  - `worker.ts` enveloppe le Worker OpenNext et appelle `POST /api/cron`, protégé par `CRON_SECRET` (comparaison
+    en temps constant, 32 caractères minimum) ;
+  - chaque tâche est indépendante et verrouillée par créneau (`scheduled_runs`) ;
+  - tâches actuelles : purge (e-mails de plus de 13 mois, exécutions de plus de 90 jours, limites de débit, liens
+    de connexion et sessions expirés) et repérage des exécutions interrompues.
+- **Secrets** : lus par `workerVar()` (liaison Cloudflare, puis `process.env`). En `next dev`, OpenNext ne recopie
+  pas `.dev.vars` dans `process.env`.
+- **Vérifié** :
+  - 46 tests passent ; `tsc`, `next build` et `opennextjs-cloudflare build` sans erreur ;
+  - `wrangler deploy --dry-run` : le Worker assemblé contient le gestionnaire planifié ;
+  - en local : `/api/cron` refusé sans secret, exécuté avec, puis « déjà lancée » au second appel ;
+  - formulaire d'essai soumis avec les clés de test Turnstile, e-mail visible dans le journal, à 360 et 768 px.
+- **Mise en service** (à faire sur demande) :
+  - `npx wrangler secret put CRON_SECRET` et `TURNSTILE_SECRET_KEY` ;
+  - `TURNSTILE_SITE_KEY` dans les `vars` de `wrangler.jsonc` ;
+  - créer le widget Turnstile pour le domaine ;
+  - sauvegarde de la base, puis `npm run db:migrate:remote` (migrations 0002 à 0005).
+
 ## Lots proposés (ordre recommandé)
 
 1. **Socle de fiabilité** : journal des e-mails par club, Turnstile sur les formulaires publics, Cron Trigger du

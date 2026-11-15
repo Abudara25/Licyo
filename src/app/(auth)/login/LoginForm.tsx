@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { TurnstileField } from '@/components/ui/turnstile';
 import { requestLoginLink } from '@/actions/auth.actions';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/form';
@@ -9,12 +10,13 @@ export function LoginForm({ next }: { next: string }) {
   const [email, setEmail] = useState('');
   const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [message, setMessage] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState('');
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setState('sending');
     try {
-      const res = await requestLoginLink({ email: email.trim().toLowerCase(), next });
+      const res = await requestLoginLink({ email: email.trim().toLowerCase(), next, turnstileToken });
       if (res.ok) setState('sent');
       else {
         setMessage(res.error);
@@ -51,6 +53,7 @@ export function LoginForm({ next }: { next: string }) {
           {message}
         </p>
       ) : null}
+      <TurnstileField action="login" onToken={setTurnstileToken} />
       <Button type="submit" size="lg" disabled={state === 'sending'}>
         {state === 'sending' ? 'Envoi…' : 'Recevoir le lien'}
       </Button>

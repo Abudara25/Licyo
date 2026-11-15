@@ -9,6 +9,7 @@ import { computeCart, formatEuros } from '@/lib/pricing';
 import { compressImage } from '@/lib/utils/image-compression';
 import { Field, Input, Select, Checkbox } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
+import { TurnstileField } from '@/components/ui/turnstile';
 import { TactileSignaturePad } from './TactileSignaturePad';
 import { getSportPreset, type SportVocabulary } from '@/config/sports-presets';
 import { parseFormConfig, resolveForm } from '@/config/registration-fields';
@@ -100,6 +101,7 @@ export function RegistrationTunnel({
   const [installmentsCount, setInstallmentsCount] = useState(1);
   const [acceptRules, setAcceptRules] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState('');
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -218,6 +220,7 @@ export function RegistrationTunnel({
     };
     const fd = new FormData();
     fd.set('payload', JSON.stringify(payload));
+    fd.set('turnstileToken', turnstileToken);
     members.forEach((m, i) => (Object.entries(m.files) as [DocKind, File][]).forEach(([kind, file]) => fd.set(`${kind}_${i}`, file)));
     startTransition(async () => {
       const res = await submitRegistration(fd);
@@ -438,6 +441,11 @@ export function RegistrationTunnel({
           </div>
         ) : null}
 
+        {step === 3 ? (
+          <div className="mt-6">
+            <TurnstileField action="registration" onToken={setTurnstileToken} />
+          </div>
+        ) : null}
         <div className="mt-6 flex flex-wrap justify-between gap-3">
           {step > 1 ? <Button type="button" variant="outline" onClick={() => setStep((s) => s - 1)} disabled={pending}>Retour</Button> : <span />}
           {step < 3 ? (

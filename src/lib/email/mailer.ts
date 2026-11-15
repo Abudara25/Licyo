@@ -67,6 +67,52 @@ export async function sendPlatformEmail(msg: {
   return { provider: 'platform', messageId: res?.messageId };
 }
 
+/** Types d'e-mails tracés dans le journal (email_log.kind). */
+export type EmailKind =
+  | 'inscription_recue'
+  | 'inscription_validee'
+  | 'correction_demandee'
+  | 'convocation'
+  | 'essai'
+  | 'reinscription'
+  | 'paiement_recu'
+  | 'test'
+  | 'autre';
+
+/** Message d'erreur court et sans donnée sensible pour le journal. */
+function shortError(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error);
+  return raw.replace(/[\r\n]+/g, ' ').replace(/(token|key|secret|password)=\S+/gi, '$1=…').slice(0, 300);
+}
+
+/**
+ * Inscrit un envoi dans le journal du club. Ne fait jamais échouer l'envoi : une panne du journal est seulement
+ * signalée dans les journaux du Worker.
+ */
+async function logEmail(entry: {
+  clubId: string;
+  kind: EmailKind;
+  to: string;
+  subject: string;
+  provider: 'gmail' | 'platform' | 'log' | 'none';
+  status: 'sent' | 'logged' | 'failed';
+  error?: string;
+}): Promise<void> {
+  try {
+    await createAdminClient().from('email_log').insert({
+      club_id: entry.clubId,
+      kind: entry.kind,
+      recipient: entry.to.trim().toLowerCase().slice(0, 254),
+      subject: entry.subject.slice(0, 200),
+      provider: entry.provider,
+      status: entry.status,
+      error: entry.error ?? null,
+    });
+  } catch (error) {
+    console.error('[mailer] journal des e-mails indisponible', shortError(error));
+  }
+}
+
 /**
  * Routeur d'envoi d'un club :
  * 1. Gmail (OAuth) si le club a connecté son compte Google ;
@@ -76,7 +122,34 @@ export async function sendPlatformEmail(msg: {
  * En cas d'échec de Gmail, repli sur la plateforme pour ne pas perdre un e-mail
  * transactionnel (lien de correction, convocation).
  */
-export async function sendClubEmail({
+export async function sendClubEmail(args: {
+  club: MailClub;
+  to: string;
+  subject: string;
+  reactComponent: ReactElement;
+  replyTo?: string;
+  /** Type d'e-mail pour le journal du club. */
+  kind?: EmailKind;
+}): Promise<SendResult> {
+  const kind = args.kind ?? 'autre';
+  try {
+    const result = await deliverClubEmail(args);
+    await logEmail({
+      clubId: args.club.id,
+      kind,
+      to: args.to,
+      subject: args.subject,
+      provider: result.provider,
+      status: result.provider === 'log' ? 'logged' : 'sent',
+    });
+    return result;
+  } catch (error) {
+    await logEmail({ clubId: args.club.id, kind, to: args.to, subject: args.subject, provider: 'none', status: 'failed', error: shortError(error) });
+    throw error;
+  }
+}
+
+async function deliverClubEmail({
   club,
   to,
   subject,

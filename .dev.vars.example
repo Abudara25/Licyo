@@ -28,3 +28,13 @@ GOOGLE_CLIENT_SECRET=
 
 # Domaines personnalisés des clubs (Cloudflare for SaaS, plus tard)
 CUSTOM_DOMAIN_CNAME_TARGET=
+
+# Tâches planifiées (Cron Trigger → POST /api/cron) : 32 caractères aléatoires au moins.
+# Sans valeur, la route est fermée et les tâches ne tournent pas.
+CRON_SECRET=
+
+# Cloudflare Turnstile (anti-robot des formulaires publics). TURNSTILE_SITE_KEY est publique (vars), le secret par wrangler secret put. Les deux vides = vérification désactivée
+# (la limitation de débit en base reste active). Clés de test Cloudflare : site 1x00000000000000000000AA,
+# secret 1x0000000000000000000000000000000AA (toujours valide).
+TURNSTILE_SITE_KEY=
+TURNSTILE_SECRET_KEY=

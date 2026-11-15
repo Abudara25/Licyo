@@ -159,6 +159,7 @@ export async function validateMember(memberId: string): Promise<ActionResult> {
         club,
         to: family.payer_email,
         subject: `Inscription validée - ${member.first_name}`,
+        kind: 'inscription_validee',
         reactComponent: createElement(DossierValidatedEmail, {
           club,
           memberName: `${member.first_name} ${member.last_name}`,
@@ -209,6 +210,7 @@ export async function requestCorrection(
       club,
       to: family.payer_email,
       subject: `Dossier de ${member.first_name} : une pièce à remplacer`,
+        kind: 'correction_demandee',
       reactComponent: createElement(CorrectionRequestEmail, {
         club,
         memberName: `${member.first_name} ${member.last_name}`,
@@ -803,6 +805,7 @@ export async function sendConvocations(
         club,
         to,
         subject: `Convocation : ${event.title}`,
+        kind: 'convocation',
         reactComponent: createElement(ConvocationEmail, {
           club,
           memberName: `${member.first_name} ${member.last_name}`,
@@ -1312,6 +1315,7 @@ export async function sendTestEmail(): Promise<ActionResult> {
       club,
       to: auth.email,
       subject: `Test d'envoi - ${club.name}`,
+        kind: 'test',
       reactComponent: createElement(TestEmail, {
         club,
         provider: labels[club.email_provider],
@@ -1715,6 +1719,7 @@ export async function sendRenewalInvitations(): Promise<
           club,
           to,
           subject: `Réinscription ${club.current_season} - ${club.name}`,
+        kind: 'reinscription',
           reactComponent: createElement(RenewalInvitationEmail, {
             club,
             memberName: m.first_name,

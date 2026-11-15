@@ -64,6 +64,8 @@ export const TABLES = {
   saas_prospects: { generated: ['id'] },
   platform_announcements: { bool: ['is_active'], generated: ['id'] },
   audit_events: { generated: ['id'] },
+  email_log: { generated: ['id'] },
+  scheduled_runs: { generated: ['id'] },
 } satisfies Record<string, TableMeta>;
 
 export type TableName = keyof typeof TABLES;

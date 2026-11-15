@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { TurnstileField } from '@/components/ui/turnstile';
 import {
   requestPrivateLesson,
   updateClubRequest,
@@ -12,6 +13,7 @@ import { Field, Input, Textarea, Select } from '@/components/ui/form';
 export function LessonForm({ slug }: { slug: string }) {
   const { pending, run } = useAction();
   const [sent, setSent] = useState(false);
+  const [lessonToken, setLessonToken] = useState('');
   return sent ? (
     <p className="notice" role="status">
       Votre demande est reçue. Le club vous recontactera.
@@ -30,6 +32,7 @@ export function LessonForm({ slug }: { slug: string }) {
               email: f.get('email'),
               message: f.get('message'),
               website: f.get('website'),
+              turnstileToken: lessonToken,
             }),
           () => setSent(true),
         );
@@ -65,6 +68,7 @@ export function LessonForm({ slug }: { slug: string }) {
           aria-hidden
           defaultValue=""
         />
+        <TurnstileField action="lesson" onToken={setLessonToken} />
         <Button type="submit" variant="club" disabled={pending}>
           Envoyer ma demande
         </Button>

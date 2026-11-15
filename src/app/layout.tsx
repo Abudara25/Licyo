@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Toaster } from 'sonner';
 import './globals.css';
 import './site-directions.css';
+import { workerVar } from '@/lib/secrets';
 
 export const metadata: Metadata = {
   icons: { icon: '/favicon.svg' },
@@ -25,7 +26,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr">
+    // Clé PUBLIQUE Turnstile, lue par le widget (src/components/ui/turnstile.tsx) sans recompiler le site.
+    <html lang="fr" data-turnstile-site-key={workerVar('TURNSTILE_SITE_KEY')}>
       <body className="min-h-dvh">
         {children}
         <Toaster position="top-center" richColors closeButton />

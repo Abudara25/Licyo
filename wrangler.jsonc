@@ -3,7 +3,7 @@
   // Licyo : application Next.js sur Cloudflare Workers via OpenNext.
   "name": "licyo",
   "account_id": "c49f5a7de0a19465a88ca61bbbe2b89c",
-  "main": ".open-next/worker.js",
+  "main": "worker.ts",
   "compatibility_date": "2026-11-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "upload_source_maps": true,
@@ -11,6 +11,8 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  // Tâches planifiées : chaque nuit à 3 h 17 UTC (src/lib/scheduled.ts, via worker.ts → POST /api/cron).
+  "triggers": { "crons": ["17 3 * * *"] },
   "observability": {
     "enabled": true
   },

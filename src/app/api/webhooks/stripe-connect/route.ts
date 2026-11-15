@@ -71,6 +71,7 @@ export async function POST(req: Request) {
       club,
       to: family.payer_email,
       subject: `Paiement reçu - ${club.name}`,
+        kind: 'paiement_recu',
       reactComponent: createElement(PaymentReceivedEmail, {
         club,
         payerFirstName: family.payer_first_name,

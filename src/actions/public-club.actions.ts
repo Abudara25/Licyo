@@ -1,6 +1,5 @@
 'use server';
 
-import { headers } from 'next/headers';
 import { createElement } from 'react';
 import { createAdminClient } from '@/lib/db/admin';
 import {
@@ -30,6 +29,8 @@ import {
   type ActionResult,
 } from '@/lib/validation';
 import { moduleEnabled } from '@/lib/platform';
+import { clientIp, guardPublicForm, turnstileTokenFrom } from '@/lib/security/public-guard';
+import { rateLimit } from '@/lib/auth/session';
 import { getSportPreset } from '@/config/sports-presets';
 import { parseFormConfig, resolveForm, validateExtraAnswers, type ExtraAnswers } from '@/config/registration-fields';
 import type { Club } from '@/types/database';
@@ -55,25 +56,6 @@ async function loadPublicClub(slug: string): Promise<Club | null> {
   return data.status === 'active' || demoOk ? data : null;
 }
 
-// Limitation simple par IP et par instance : freine les robots sans dépendance externe.
-const hits = new Map<string, number[]>();
-async function rateLimited(
-  bucket: string,
-  max: number,
-  windowMs: number,
-): Promise<boolean> {
-  const h = await headers();
-  const ip =
-    (h.get('x-forwarded-for') ?? '').split(',')[0].trim() ||
-    h.get('x-real-ip') ||
-    'unknown';
-  const key = `${bucket}:${ip}`;
-  const now = Date.now();
-  const recent = (hits.get(key) ?? []).filter((t) => now - t < windowMs);
-  recent.push(now);
-  hits.set(key, recent);
-  return recent.length > max;
-}
 
 function fileFrom(formData: FormData, key: string): File | null {
   const value = formData.get(key);
@@ -87,11 +69,8 @@ function fileFrom(formData: FormData, key: string): File | null {
 export async function submitRegistration(
   formData: FormData,
 ): Promise<ActionResult<{ redirectUrl?: string; familyId: string }>> {
-  if (await rateLimited('registration', 10, 60 * 60 * 1000))
-    return {
-      ok: false,
-      error: 'Trop de tentatives. Réessayez dans une heure.',
-    };
+  const blocked = await guardPublicForm({ bucket: 'registration', max: 10, windowSeconds: 3600, turnstileToken: turnstileTokenFrom(formData) });
+  if (blocked) return { ok: false, error: blocked };
 
   let raw: unknown;
   try {
@@ -394,6 +373,7 @@ export async function submitRegistration(
     club,
     to: input.payer.email,
     subject: `Inscription reçue - ${club.name}`,
+        kind: 'inscription_recue',
     reactComponent: createElement(RegistrationReceivedEmail, {
       club,
       payerFirstName: input.payer.firstName,
@@ -453,11 +433,8 @@ export async function submitRegistration(
 
 /** Réservation d'une séance d'essai gratuite sur un créneau existant. */
 export async function requestTrial(input: unknown): Promise<ActionResult> {
-  if (await rateLimited('trial', 10, 60 * 60 * 1000))
-    return {
-      ok: false,
-      error: 'Trop de tentatives. Réessayez dans une heure.',
-    };
+  const blocked = await guardPublicForm({ bucket: 'trial', max: 10, windowSeconds: 3600, turnstileToken: turnstileTokenFrom(input) });
+  if (blocked) return { ok: false, error: blocked };
   const parsed = trialSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
   const t = parsed.data;
@@ -538,6 +515,7 @@ export async function requestTrial(input: unknown): Promise<ActionResult> {
     club,
     to: t.email,
     subject: `Séance d'essai - ${club.name}`,
+        kind: 'essai',
     reactComponent: createElement(TrialConfirmationEmail, {
       club,
       memberName: t.firstName,
@@ -559,8 +537,8 @@ export async function requestTrial(input: unknown): Promise<ActionResult> {
 }
 
 export async function submitSponsorLead(input: unknown): Promise<ActionResult> {
-  if (await rateLimited('sponsor', 5, 60 * 60 * 1000))
-    return { ok: false, error: 'Trop de tentatives.' };
+  const blocked = await guardPublicForm({ bucket: 'sponsor', max: 5, windowSeconds: 3600, turnstileToken: turnstileTokenFrom(input) });
+  if (blocked) return { ok: false, error: blocked };
   const parsed = sponsorLeadSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
   const club = await loadPublicClub(parsed.data.clubSlug);
@@ -584,7 +562,7 @@ export async function submitSponsorLead(input: unknown): Promise<ActionResult> {
 export async function submitCorrection(
   formData: FormData,
 ): Promise<ActionResult> {
-  if (await rateLimited('correction', 20, 60 * 60 * 1000))
+  if (!(await rateLimit(`public:correction:${await clientIp()}`, 20, 3600)))
     return { ok: false, error: 'Trop de tentatives.' };
   const token = String(formData.get('token') ?? '');
   if (!/^[0-9a-f-]{36}$/i.test(token))

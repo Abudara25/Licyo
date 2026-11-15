@@ -13,6 +13,7 @@ import {
   Wallet,
   SlidersHorizontal,
   ListChecks,
+  Mail,
   MessageSquare,
   Image,
 } from 'lucide-react';
@@ -90,6 +91,9 @@ export function ClubAdminNav({
       : []),
     ...(may('content.write') && moduleEnabled(modules, 'gallery')
       ? [{ href: '/club-admin/galerie', label: 'Galerie', icon: Image }]
+      : []),
+    ...(grantsCanAny(grants, ['members.read', 'communication.manage'])
+      ? [{ href: '/club-admin/emails', label: 'Journal des e-mails', icon: Mail }]
       : []),
     ...(may('settings.manage') && moduleEnabled(modules, 'inscriptions')
       ? [{ href: '/club-admin/formulaire', label: 'Formulaire d’inscription', icon: ListChecks }]

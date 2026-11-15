@@ -439,6 +439,32 @@ export type Database = {
         },
         "club_id" | "title" | "image_url"
       >;
+      email_log: TableDef<
+        {
+          id: string;
+          club_id: string | null;
+          kind: string;
+          recipient: string;
+          subject: string;
+          provider: "gmail" | "platform" | "log" | "none";
+          status: "sent" | "logged" | "failed";
+          error: string | null;
+          created_at: string;
+        },
+        "kind" | "recipient" | "subject" | "provider" | "status"
+      >;
+      scheduled_runs: TableDef<
+        {
+          id: string;
+          task: string;
+          slot: string;
+          status: "running" | "ok" | "failed";
+          detail: string | null;
+          started_at: string;
+          finished_at: string | null;
+        },
+        "task" | "slot"
+      >;
       audit_events: TableDef<
         {
           id: string;

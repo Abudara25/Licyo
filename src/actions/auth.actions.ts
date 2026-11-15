@@ -5,6 +5,8 @@ import { z } from 'zod';
 import { findUserByEmail, rateLimit } from '@/lib/auth/session';
 import { sendLoginLink } from '@/lib/auth/links';
 import { safeNextPath } from '@/lib/auth/tokens';
+import { verifyTurnstile, turnstileMessage } from '@/lib/security/turnstile';
+import { workerVar } from '@/lib/secrets';
 
 export type LoginLinkResult = { ok: true } | { ok: false; error: string };
 
@@ -13,7 +15,7 @@ export type LoginLinkResult = { ok: true } | { ok: false; error: string };
  * on ne révèle pas qui a un compte. Seuls /commencer et /espace-adherent
  * peuvent créer un compte ; ailleurs, il faut avoir été invité.
  */
-export async function requestLoginLink(input: { email: string; next: string }): Promise<LoginLinkResult> {
+export async function requestLoginLink(input: { email: string; next: string; turnstileToken?: string }): Promise<LoginLinkResult> {
   const parsed = z
     .object({ email: z.string().trim().toLowerCase().email().max(254), next: z.string().max(300) })
     .safeParse(input);
@@ -24,6 +26,8 @@ export async function requestLoginLink(input: { email: string; next: string }): 
   const ip = (await headers()).get('cf-connecting-ip') ?? 'inconnue';
   const allowed = (await rateLimit(`login:email:${email}`, 5, 3600)) && (await rateLimit(`login:ip:${ip}`, 30, 3600));
   if (!allowed) return { ok: false, error: 'Trop de demandes. Réessayez dans une heure.' };
+  const human = await verifyTurnstile({ secret: workerVar('TURNSTILE_SECRET_KEY'), token: input.turnstileToken, ip });
+  if (!human.ok) return { ok: false, error: turnstileMessage(human.reason) };
 
   const canCreate = next.startsWith('/commencer') || next.startsWith('/espace-adherent');
   if (!canCreate && !(await findUserByEmail(email))) return { ok: true };

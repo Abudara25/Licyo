@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { TurnstileField } from '@/components/ui/turnstile';
 import { toast } from 'sonner';
 import { Upload } from 'lucide-react';
 import { requestTrial, respondConvocation, submitCorrection, submitSponsorLead } from '@/actions/public-club.actions';
@@ -21,6 +22,7 @@ function Success({ message }: { message: string }) {
 
 export function TrialForm({ clubSlug, categories, schedules, initialCategoryId }: { clubSlug: string; categories: Category[]; schedules: Schedule[]; initialCategoryId?: string }) {
   const [v, setV] = useState({ firstName: '', lastName: '', birthDate: '', gender: 'X' as 'M' | 'F' | 'X', contactFirstName: '', contactLastName: '', email: '', phone: '', address: '', postalCode: '', city: '', scheduleId: '' });
+  const [trialToken, setTrialToken] = useState('');
   const [pending, start] = useTransition();
   const [done, setDone] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +38,7 @@ export function TrialForm({ clubSlug, categories, schedules, initialCategoryId }
       onSubmit={(e) => {
         e.preventDefault();
         start(async () => {
-          const res = await requestTrial({ ...v, clubSlug });
+          const res = await requestTrial({ ...v, clubSlug, turnstileToken: trialToken });
           if (res.ok) setDone(res.message ?? 'Séance réservée.');
           else setError(res.error);
         });
@@ -70,6 +72,7 @@ export function TrialForm({ clubSlug, categories, schedules, initialCategoryId }
       <Field id="t-pc" label="Code postal"><Input id="t-pc" required inputMode="numeric" maxLength={5} autoComplete="postal-code" value={v.postalCode} onChange={set('postalCode')} /></Field>
       <Field id="t-ci" label="Ville"><Input id="t-ci" required autoComplete="address-level2" value={v.city} onChange={set('city')} /></Field>
       {error ? <p role="alert" className="text-sm text-destructive sm:col-span-2">{error}</p> : null}
+      <div className="sm:col-span-2"><TurnstileField action="trial" onToken={setTrialToken} /></div>
       <Button type="submit" variant="club" size="lg" className="sm:col-span-2" disabled={pending}>{pending ? 'Envoi…' : 'Réserver la séance d\'essai'}</Button>
     </form>
   );
@@ -77,6 +80,7 @@ export function TrialForm({ clubSlug, categories, schedules, initialCategoryId }
 
 export function SponsorLeadForm({ clubSlug }: { clubSlug: string }) {
   const [v, setV] = useState({ companyName: '', contactName: '', phone: '', email: '', estimatedBudget: '', website: '' });
+  const [sponsorToken, setSponsorToken] = useState('');
   const [pending, start] = useTransition();
   const [done, setDone] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -88,7 +92,7 @@ export function SponsorLeadForm({ clubSlug }: { clubSlug: string }) {
       onSubmit={(e) => {
         e.preventDefault();
         start(async () => {
-          const res = await submitSponsorLead({ ...v, clubSlug });
+          const res = await submitSponsorLead({ ...v, clubSlug, turnstileToken: sponsorToken });
           if (res.ok) setDone(res.message ?? 'Merci !');
           else setError(res.error);
         });
@@ -109,6 +113,7 @@ export function SponsorLeadForm({ clubSlug }: { clubSlug: string }) {
       {/* Piège à robots : invisible pour les humains et les lecteurs d'écran. */}
       <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden className="hidden" value={v.website} onChange={set('website')} />
       {error ? <p role="alert" className="text-sm text-destructive sm:col-span-2">{error}</p> : null}
+      <div className="sm:col-span-2"><TurnstileField action="sponsor" onToken={setSponsorToken} /></div>
       <Button type="submit" variant="club" size="lg" className="sm:col-span-2" disabled={pending}>{pending ? 'Envoi…' : 'Devenir partenaire'}</Button>
     </form>
   );
