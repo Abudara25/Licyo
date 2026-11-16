@@ -1,0 +1,30 @@
+# Licyo CRM sur Cloudflare Pages (offre gratuite), compte Abiweb. Ressources en Union européenne.
+# Secrets (jamais ici) : PLATFORM_BOOTSTRAP_TOKEN, PLATFORM_OWNER_EMAIL, CRON_SECRET
+#   → npx wrangler pages secret put <NOM> --project-name licyo-demo
+name = "licyo-demo"
+pages_build_output_dir = "dist"
+compatibility_date = "2025-09-01"
+
+[vars]
+APP_ENV = "production"
+# Console fondateur : servie seulement sur ces hôtes (voir functions/_shared/platform-auth.js).
+PLATFORM_HOSTNAMES = "licyo-demo.pages.dev"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "licyo-crm"
+database_id = "a2af6a9f-c2e0-4284-b845-7a2a8eeb32c4"
+
+[[kv_namespaces]]
+binding = "INSCRIPTION_STATUS"
+id = "e1d9485d05a140bd9af2b019b5ff69ea"
+
+[[r2_buckets]]
+binding = "DOSSIERS"
+bucket_name = "licyo-crm-dossiers"
+jurisdiction = "eu"
+
+[[r2_buckets]]
+binding = "DOSSIERS_BACKUP"
+bucket_name = "licyo-crm-dossiers-backup"
+jurisdiction = "eu"

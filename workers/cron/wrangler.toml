@@ -8,6 +8,6 @@ compatibility_date = "2026-09-01"
 crons = ["0 7 * * *", "*/15 * * * *"]
 
 [vars]
-SITE_URL = "https://club-exemple.example"
+SITE_URL = "https://licyo-demo.pages.dev"
 
 # CRON_SECRET n'est jamais écrit ici : `npx wrangler secret put CRON_SECRET` depuis ce dossier.
