@@ -39,6 +39,7 @@ export const EMAIL_KINDS = {
   paiement_partiel: 'Versement reçu, reste à payer',
   educateur_lien: 'Éducateur : lien de la fiche',
   club_educateur: 'Club : fiche éducateur remplie',
+  club_invitation: 'Club : invitation à l’espace admin',
 };
 
 export const EMAIL_ORIGINS = { auto: 'Automatique', manuel: 'Manuel', famille: 'Action famille', doublon: 'Inscription en doublon' };

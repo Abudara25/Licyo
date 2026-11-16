@@ -13,7 +13,7 @@ test('session admin : organisation active accept√©e, suspendue ou absente refus√
   const env = await fixture();
   await env.DB.prepare("INSERT INTO organizations (id, slug, name) VALUES ('org_b', 'b', 'B')").run();
   const request = await sessionFor(env, 'org_b');
-  assert.deepEqual(await isAuthed(request, env), { organizationId: 'org_b' }, 'active');
+  assert.equal((await isAuthed(request, env))?.organizationId, 'org_b', 'active');
 
   await env.DB.prepare("UPDATE organizations SET status = 'suspended' WHERE id = 'org_b'").run();
   assert.equal(await isAuthed(request, env), null, 'suspendue');

@@ -588,6 +588,12 @@ summary.adm-h2 { min-height: 44px; cursor: pointer; }
 .adm-person { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding-bottom: 10px; border-bottom: 1px solid var(--adm-line-soft); font-size: .92rem; }
 .adm-person:last-child { padding-bottom: 0; border-bottom: 0; }
 .adm-person .adm-row-sub { flex: 1 1 140px; }
+/* Comptes du bureau (lot 1 Licyo) : rôle et désactivation sous la personne, sur une ligne qui se replie sur mobile. */
+.adm-account-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; flex-basis: 100%; margin-top: 8px; }
+.adm-account-actions form { margin: 0; }
+.adm-account-role { display: flex; flex: 1 1 260px; gap: 8px; align-items: center; }
+.adm-account-role .adm-select { flex: 1 1 auto; min-width: 0; }
+.adm-account-actions .adm-btn { min-height: 44px; }
 .adm-timeline li { display: grid; grid-template-columns: 9.5rem 1fr; gap: 12px; font-size: .9rem; }
 .adm-timeline time { color: var(--color-text-muted); }
 @media (max-width: 900px) {

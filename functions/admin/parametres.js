@@ -46,6 +46,7 @@ import {
 import { sendPasswordChangeCode, sendWeeklySummary, mailConfigured } from '../_shared/confirmation-email.js';
 import { runReminders, buildWeeklySummary } from '../_shared/automations.js';
 import { helloAssoCredentials } from '../_shared/integrations.js';
+import { can } from '../_shared/admin-users.js';
 
 const AUTOMATIONS = [
   {
@@ -169,7 +170,7 @@ function retentionSection(due) {
   </section>`;
 }
 
-function page({ notificationEmail, securityError, passwordOk, emailError, emailOk, awaitingCode, auto, badges, family, due = [] }) {
+function page({ notificationEmail, securityError, passwordOk, emailError, emailOk, awaitingCode, auto, badges, family, due = [], canManageAccess = false }) {
   const passwordSection = awaitingCode
     ? `${flash('info', 'Un code à 6 chiffres a été envoyé par e-mail. Saisissez-le pour confirmer le changement (valable 15 min).')}
        ${securityError ? flash('error', securityError) : ''}
@@ -237,10 +238,11 @@ ${adminShell({
 
   ${retentionSection(due)}
 
-  <section class="adm-surface">
-    <h2 class="adm-h2" style="margin-bottom:16px;">${icon('lock')}Mot de passe admin</h2>
+  ${canManageAccess ? `<section class="adm-surface">
+    <h2 class="adm-h2" style="margin-bottom:8px;">${icon('lock')}Mot de passe commun du club</h2>
+    <p class="adm-help" style="margin-bottom:16px;">Il ouvre l’espace admin avec les droits du président, sans adresse e-mail. Préférez les comptes nominatifs (<a class="adm-link" href="/admin/comptes">Comptes du bureau</a>) : changer ce mot de passe ferme les connexions ouvertes avec lui, pas celles des comptes.</p>
     ${passwordSection}
-  </section>
+  </section>` : ''}
 </main>
 ${adminScripts('admin-nav')}
 </body></html>`;
@@ -259,7 +261,7 @@ async function render(request, env, organizationId, props, { status = 200, heade
     message,
     error,
   };
-  const badges = await adminBadges(env, { organizationId });
+  const badges = await adminBadges(env, props.admin || { organizationId });
   let family = { whatsappUrl: '' };
   try {
     family = await getFamilyInfo(env, organizationId);
@@ -267,7 +269,7 @@ async function render(request, env, organizationId, props, { status = 200, heade
     // KV indisponible : champ vide.
   }
   const due = await retentionDue(env.DB, organizationId).catch(() => null);
-  return new Response(page({ ...props, auto, badges, due, family: { ...family, ...(props.family || {}) } }), { status, headers: { 'Content-Type': 'text/html;charset=UTF-8', ...headers } });
+  return new Response(page({ ...props, auto, badges, due, canManageAccess: can(props.admin, 'club.admin'), family: { ...family, ...(props.family || {}) } }), { status, headers: { 'Content-Type': 'text/html;charset=UTF-8', ...headers } });
 }
 
 // Dernier passage du cron, et dernier échec s'il est plus récent (voir recordCronFailure dans functions/api/cron.js).
@@ -286,7 +288,7 @@ export async function onRequestGet({ request, env }) {
   }
   const notificationEmail = await getNotificationEmail(env, admin.organizationId);
   const pending = await getPendingPasswordChange(env, admin.organizationId);
-  return render(request, env, admin.organizationId, { notificationEmail, awaitingCode: !!pending });
+  return render(request, env, admin.organizationId, { admin, notificationEmail, awaitingCode: !!pending });
 }
 
 export async function onRequestPost({ request, env }) {
@@ -306,39 +308,39 @@ export async function onRequestPost({ request, env }) {
     const addresses = value.split(',').map((a) => a.trim()).filter(Boolean);
     const allValid = addresses.length > 0 && addresses.every((a) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a));
     if (!allValid) {
-      return render(request, env, admin.organizationId, { notificationEmail: value, emailError: 'Une ou plusieurs adresses ne sont pas valides.' }, { status: 400 });
+      return render(request, env, admin.organizationId, { admin, notificationEmail: value, emailError: 'Une ou plusieurs adresses ne sont pas valides.' }, { status: 400 });
     }
     await setNotificationEmail(env, org, addresses.join(', '));
-    return render(request, env, admin.organizationId, { notificationEmail: addresses.join(', '), emailOk: true });
+    return render(request, env, admin.organizationId, { admin, notificationEmail: addresses.join(', '), emailOk: true });
   }
 
   if (action === 'family-info') {
     const input = String(form.get('whatsappUrl') || '').trim().slice(0, 300);
     const whatsappUrl = normalizeWhatsappUrl(input);
     if (input && !whatsappUrl) {
-      return render(request, env, org, { notificationEmail, family: { whatsappInput: input, familyError: 'Ce lien n’est pas un lien d’invitation WhatsApp (il doit commencer par https://chat.whatsapp.com/).' } }, { status: 400 });
+      return render(request, env, org, { admin, notificationEmail, family: { whatsappInput: input, familyError: 'Ce lien n’est pas un lien d’invitation WhatsApp (il doit commencer par https://chat.whatsapp.com/).' } }, { status: 400 });
     }
     await setFamilyInfo(env, org, { whatsappUrl: whatsappUrl || '' });
-    return render(request, env, org, { notificationEmail, family: { whatsappUrl: whatsappUrl || '', familyOk: true } });
+    return render(request, env, org, { admin, notificationEmail, family: { whatsappUrl: whatsappUrl || '', familyOk: true } });
   }
 
   if (action === 'automations') {
     const config = Object.fromEntries(Object.keys(DEFAULT_AUTOMATIONS).map((key) => [key, form.get(key) === 'on']));
     await setAutomationsConfig(env, org, config);
-    return render(request, env, admin.organizationId, { notificationEmail }, { message: 'Automatisations enregistrées.' });
+    return render(request, env, admin.organizationId, { admin, notificationEmail }, { message: 'Automatisations enregistrées.' });
   }
 
   if (action === 'run-reminders') {
-    if (!mailConfigured(env)) return render(request, env, admin.organizationId, { notificationEmail }, { error: 'Aucun service d’envoi configuré (SMTP_PASSWORD ou BREVO_API_KEY) : aucun e-mail ne peut partir.' });
+    if (!mailConfigured(env)) return render(request, env, admin.organizationId, { admin, notificationEmail }, { error: 'Aucun service d’envoi configuré (SMTP_PASSWORD ou BREVO_API_KEY) : aucun e-mail ne peut partir.' });
     const { sent, failed } = await runReminders(env, admin.organizationId, siteUrl);
-    return render(request, env, admin.organizationId, { notificationEmail }, {
+    return render(request, env, admin.organizationId, { admin, notificationEmail }, {
       message: `${sent} relance${sent > 1 ? 's' : ''} envoyée${sent > 1 ? 's' : ''}${failed ? `, ${failed} échec${failed > 1 ? 's' : ''}` : ''}.`,
     });
   }
 
   if (action === 'send-summary') {
     const ok = await sendWeeklySummary(env, siteUrl, await buildWeeklySummary(env, admin.organizationId), 'manuel');
-    return render(request, env, admin.organizationId, { notificationEmail }, ok ? { message: 'Récapitulatif envoyé.' } : { error: 'Échec de l’envoi du récapitulatif (vérifiez le service d’envoi et les adresses du club).' });
+    return render(request, env, admin.organizationId, { admin, notificationEmail }, ok ? { message: 'Récapitulatif envoyé.' } : { error: 'Échec de l’envoi du récapitulatif (vérifiez le service d’envoi et les adresses du club).' });
   }
 
   if (action === 'password') {
@@ -350,16 +352,16 @@ export async function onRequestPost({ request, env }) {
       currentOk = await verifyAdminPassword(env, org, String(currentPassword || ''));
     } catch (error) {
       if (!(error instanceof AdminAuthUnavailableError)) throw error;
-      return render(request, env, admin.organizationId, { notificationEmail, securityError: 'Vérification impossible pour le moment (stockage indisponible). Réessayez dans un instant.' }, { status: 503 });
+      return render(request, env, admin.organizationId, { admin, notificationEmail, securityError: 'Vérification impossible pour le moment (stockage indisponible). Réessayez dans un instant.' }, { status: 503 });
     }
     if (!currentOk) {
-      return render(request, env, admin.organizationId, { notificationEmail, securityError: 'Mot de passe actuel incorrect.' }, { status: 400 });
+      return render(request, env, admin.organizationId, { admin, notificationEmail, securityError: 'Mot de passe actuel incorrect.' }, { status: 400 });
     }
     if (!newPassword || newPassword.length < 8) {
-      return render(request, env, admin.organizationId, { notificationEmail, securityError: 'Le nouveau mot de passe doit faire au moins 8 caractères.' }, { status: 400 });
+      return render(request, env, admin.organizationId, { admin, notificationEmail, securityError: 'Le nouveau mot de passe doit faire au moins 8 caractères.' }, { status: 400 });
     }
     if (newPassword !== confirmPassword) {
-      return render(request, env, admin.organizationId, { notificationEmail, securityError: 'Les deux mots de passe ne correspondent pas.' }, { status: 400 });
+      return render(request, env, admin.organizationId, { admin, notificationEmail, securityError: 'Les deux mots de passe ne correspondent pas.' }, { status: 400 });
     }
 
     // Tirage cryptographique (pas Math.random, prévisible) : ce code protège un changement de mot de passe.
@@ -378,7 +380,7 @@ export async function onRequestPost({ request, env }) {
       );
     }
     await setPendingPasswordChange(env, org, { code, newPasswordHash: await hashPassword(newPassword) });
-    return render(request, env, admin.organizationId, { notificationEmail, awaitingCode: true });
+    return render(request, env, admin.organizationId, { admin, notificationEmail, awaitingCode: true });
   }
 
   if (action === 'password-confirm') {
@@ -386,7 +388,7 @@ export async function onRequestPost({ request, env }) {
     const submittedCode = String(form.get('code') || '').trim();
 
     if (!pending) {
-      return render(request, env, admin.organizationId, { notificationEmail, securityError: 'Code expiré, recommencez.' }, { status: 400 });
+      return render(request, env, admin.organizationId, { admin, notificationEmail, securityError: 'Code expiré, recommencez.' }, { status: 400 });
     }
     if (!timingSafeEqual(submittedCode, pending.code)) {
       // 5 essais par demande : au 5e code faux, la demande est annulée.
@@ -394,15 +396,15 @@ export async function onRequestPost({ request, env }) {
       if (!allowed) {
         await clearPendingPasswordChange(env, org);
         await clearRateLimit(env.DB, `password-code:${org}`).catch(() => {});
-        return render(request, env, admin.organizationId, { notificationEmail, securityError: 'Trop d’essais : la demande est annulée, recommencez.' }, { status: 400 });
+        return render(request, env, admin.organizationId, { admin, notificationEmail, securityError: 'Trop d’essais : la demande est annulée, recommencez.' }, { status: 400 });
       }
-      return render(request, env, admin.organizationId, { notificationEmail, securityError: 'Code incorrect.', awaitingCode: true }, { status: 400 });
+      return render(request, env, admin.organizationId, { admin, notificationEmail, securityError: 'Code incorrect.', awaitingCode: true }, { status: 400 });
     }
 
     // newPassword : demande en attente créée avant le hachage (au plus 15 minutes d'ancienneté).
     const passwordHash = pending.newPasswordHash || (pending.newPassword ? await hashPassword(pending.newPassword) : null);
     if (!passwordHash) {
-      return render(request, env, admin.organizationId, { notificationEmail, securityError: 'Code expiré, recommencez.' }, { status: 400 });
+      return render(request, env, admin.organizationId, { admin, notificationEmail, securityError: 'Code expiré, recommencez.' }, { status: 400 });
     }
     await setAdminPasswordHash(env, org, passwordHash);
     await clearPendingPasswordChange(env, org);
@@ -410,13 +412,13 @@ export async function onRequestPost({ request, env }) {
     // Toutes les sessions sont fermées (un éventuel cookie volé ne sert plus), puis une nouvelle est
     // ouverte pour la personne qui vient de changer le mot de passe.
     await revokeAllSessions(env, admin.organizationId);
-    return withCookies(await render(request, env, admin.organizationId, { notificationEmail, passwordOk: true }), await createSession(env, admin.organizationId));
+    return withCookies(await render(request, env, admin.organizationId, { admin, notificationEmail, passwordOk: true }), await createSession(env, admin.organizationId, admin.userId));
   }
 
   if (action === 'password-cancel') {
     await clearPendingPasswordChange(env, org);
-    return render(request, env, admin.organizationId, { notificationEmail });
+    return render(request, env, admin.organizationId, { admin, notificationEmail });
   }
 
-  return render(request, env, admin.organizationId, { notificationEmail });
+  return render(request, env, admin.organizationId, { admin, notificationEmail });
 }

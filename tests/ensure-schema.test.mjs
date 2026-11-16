@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ensureSchema, resetSchemaCacheForTests, SchemaTimeoutError, SCHEMA_TIMEOUT_MS } from '../functions/_shared/inscriptions-db.js';
 import { fixture } from './helpers/inscriptions.mjs';
+import { MIGRATIONS } from '../functions/_shared/schema.js';
 
 // Préparation simulée : chaque appel crée une tentative contrôlable par le test.
 function controlled() {
@@ -31,7 +32,7 @@ test('succès normal : vraie base, préparation mémorisée (un seul passage)', 
   await ensureSchema(env.DB, { prepare }); // déjà prête : aucune nouvelle préparation
   assert.equal(attempts.length, 0);
   const { results } = await env.DB.prepare('SELECT MAX(version) AS v FROM schema_migrations').all();
-  assert.equal(results[0].v, 13);
+  assert.equal(results[0].v, MIGRATIONS.at(-1).version);
 });
 
 test('appels simultanés : une seule préparation partagée', async () => {

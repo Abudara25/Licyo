@@ -21,7 +21,7 @@ test('navigation CRM : rubriques partagées, toutes les destinations conservées
     assert.ok(sidebar.includes(`href="/admin/${path}"`), path);
   }
   assert.match(sidebar, /href="\/admin\/educateurs" class="adm-nav-link is-active" aria-current="page"/);
-  assert.match(sidebar, /class="adm-sidebar-foot"><a href="\/admin\/parametres"[\s\S]*?href="\/admin\/inscriptions\?view=archive"/);
+  assert.match(sidebar, /class="adm-sidebar-foot"><a href="\/admin\/comptes"[\s\S]*?href="\/admin\/parametres"[\s\S]*?href="\/admin\/inscriptions\?view=archive"/);
   assert.doesNotMatch(html, /class="adm-tabs"/);
   assert.match(html, /action="\/admin\/recherche" method="GET" role="search"/);
   assert.doesNotMatch(loginPage(), /class="adm-sidebar"/, 'la connexion garde sa mise en page');

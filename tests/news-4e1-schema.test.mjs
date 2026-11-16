@@ -70,6 +70,11 @@ async function toVersion12(env) {
     env.DB.prepare('DROP TABLE articles'),
     env.DB.prepare('DROP TABLE organization_news_state'),
     env.DB.prepare('DELETE FROM schema_migrations WHERE version = 13'),
+    // Migrations suivantes (14, comptes du bureau) retirées aussi : la base est vraiment « en 12 ».
+    env.DB.prepare('DROP TABLE IF EXISTS admin_users'),
+    env.DB.prepare('DROP TABLE IF EXISTS admin_user_invites'),
+    env.DB.prepare('ALTER TABLE admin_sessions DROP COLUMN user_id'),
+    env.DB.prepare('DELETE FROM schema_migrations WHERE version > 13'),
   ]);
 }
 async function dumpTables(env, except = []) {
@@ -89,9 +94,8 @@ test('T1 — migration 13 sur une base en 12 : tables, 3 index, 30 triggers, une
 
   resetSchemaCacheForTests();
   await ensureSchema(env.DB);
-  assert.equal((await first(env, 'SELECT MAX(version) AS v FROM schema_migrations')).v, 13);
-  assert.equal(MIGRATIONS.at(-1).version, 13);
-  assert.equal(MIGRATIONS.at(-1).name, 'news_articles');
+  assert.equal((await first(env, 'SELECT MAX(version) AS v FROM schema_migrations')).v, MIGRATIONS.at(-1).version);
+  assert.equal(MIGRATIONS.find((m) => m.version === 13).name, 'news_articles');
   const names = async (type) => (await all(env, 'SELECT name FROM sqlite_master WHERE type = ? AND name NOT LIKE ? ORDER BY name', type, 'sqlite_%')).map((r) => r.name);
   assert.ok((await names('table')).includes('articles') && (await names('table')).includes('organization_news_state'));
   const named = (await names('index')).filter((n) => n.startsWith('idx_articles_'));
@@ -105,8 +109,12 @@ test('T1 — migration 13 sur une base en 12 : tables, 3 index, 30 triggers, une
   for (const s of states) assert.deepEqual([s.source, s.revision, s.articles_revision, s.import_batch_id, s.validated_at, s.cutover_at], ['json', 1, 0, null, null, null]);
   assert.equal((await first(env, 'SELECT COUNT(*) AS n FROM articles')).n, 0, 'aucun import dans la migration');
   // Toutes les tables préexistantes identiques (hors l'enregistrement de la migration).
-  const after = await dumpTables(env, ['articles', 'organization_news_state']);
-  const strip = (dump) => ({ ...dump, schema_migrations: dump.schema_migrations.filter((m) => m.version !== 13) });
+  const after = await dumpTables(env, ['articles', 'organization_news_state', 'admin_users', 'admin_user_invites']);
+  const strip = (dump) => ({
+    ...dump,
+    schema_migrations: dump.schema_migrations.filter((m) => m.version < 13),
+    admin_sessions: dump.admin_sessions.map(({ user_id, ...rest }) => rest),
+  });
   assert.deepEqual(strip(after), before);
   // Second passage : aucune modification (données et schéma).
   const objects = await schemaObjects(env);
@@ -491,7 +499,15 @@ test('T2 (local) — migration 13 sur une copie en 12 : structure et données pr
   resetSchemaCacheForTests();
   await ensureSchema(env.DB);
   const after = snapshot(sqlite);
-  assert.deepEqual(compareSnapshots(before, after), []);
+  // Migration 14 (comptes du bureau), appliquée ensuite par ensureSchema : ses objets et la colonne user_id ajoutée à
+  // admin_sessions sont hors du périmètre de ce test (voir admin-users.test.mjs).
+  const migration14 = /admin_users|admin_user_invites|: admin_sessions$|table:admin_sessions$/;
+  assert.deepEqual(compareSnapshots(before, after).filter((p) => !migration14.test(p)), []);
+  assert.deepEqual(
+    compareSnapshots(before, after).filter((p) => migration14.test(p)).filter((p) => /admin_sessions/.test(p)),
+    ['objet modifié : table:admin_sessions', 'données modifiées : admin_sessions'],
+    'migration 14 : seule la table des sessions change (colonne user_id)'
+  );
   assert.equal(MIGRATION_13_OBJECTS.size, 2 + 3 + 4 + 30);
   // Second passage : aucun changement.
   resetSchemaCacheForTests();

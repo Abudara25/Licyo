@@ -751,6 +751,33 @@ export async function sendPasswordChangeCode(env, code, siteUrl = 'https://club-
 // Un service d'envoi est configuré : messagerie Infomaniak (SMTP_PASSWORD) ou Brevo (BREVO_API_KEY).
 export const mailConfigured = (env) => Boolean(env.SMTP_PASSWORD || env.BREVO_API_KEY);
 
+// Invitation d'un membre du bureau (comptes nominatifs, lot 1 Licyo) : envoyée à la personne invitée seulement.
+// Le lien est aussi affiché au président qui invite (admin/comptes.js), l'envoi n'est donc qu'une commodité.
+export async function sendAdminInviteEmail(env, { email, name, roleLabel, url, days, organizationId }) {
+  if (!mailConfigured(env)) return false;
+  const siteUrl = new URL(url).origin;
+  const intro = `Vous êtes invité(e) à rejoindre l'espace admin du club, avec le rôle « ${roleLabel} ». Choisissez votre mot de passe pour activer votre compte.`;
+  const html = clubEmail({
+    siteUrl,
+    preheader: intro,
+    eyebrow: 'Espace admin · Invitation',
+    title: 'Votre compte du bureau',
+    subtitle: `Lien valable ${days} jours`,
+    body: `${clubParagraph(`Bonjour ${escapeHtml(name)},`)}
+              ${clubParagraph(escapeHtml(intro))}
+              ${clubCallout(`Ce lien est personnel et ne sert qu'une fois. Il reste valable ${days} jours.`)}
+              ${clubParagraph(escapeHtml("Vous ne connaissez pas ce club ? Ignorez simplement cet e-mail : aucun compte n'est créé sans vous."))}`,
+    cta: { label: 'Activer mon compte', url },
+  });
+  return brevoSend(env, {
+    sender: { email: 'contact@club-exemple.example', name: 'Club Exemple — Site' },
+    to: [{ email, name }],
+    subject: 'Invitation à l’espace admin du club',
+    htmlContent: html,
+    textContent: clubText(`Bonjour ${name},\n\n${intro}\n\nActiver mon compte : ${url}\n\nCe lien est personnel et ne sert qu'une fois. Il reste valable ${days} jours.`),
+  }, { kind: 'club_invitation', origin: 'manuel', organizationId });
+}
+
 // Point de passage unique de tous les envois : chacun est inscrit au journal (_shared/email-log.js,
 // affiché dans /admin/events) avec le type donné par `log` ({ kind, origin, inscriptionId }).
 // Depuis le 2026-10-09 : d'abord la boîte contact@ d'Infomaniak en SMTP (pas de suivi des ouvertures, IP et domaine

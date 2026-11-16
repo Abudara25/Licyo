@@ -29,7 +29,7 @@ export const DEMO_DOMAINS = Object.freeze(['club-exemple.example', 'www.club-exe
 // Tables rattachées à une organisation pendant la phase 1 (voir tests/tenant-scoping.test.mjs, qui vérifie
 // que toute requête sur ces tables filtre par organization_id). site_events (R0a) est créée par son module
 // (_shared/site-events.js, organization_id NOT NULL) ; l'ancienne table globale `events` n'y figure volontairement pas.
-export const TENANT_TABLES = ['inscriptions', 'email_log', 'admin_sessions', 'helloasso_orders', 'locations', 'groups', 'group_schedules', 'prices', 'contacts', 'contact_relationships', 'periods', 'memberships', 'group_memberships', 'contact_relationship_sources', 'contact_duplicate_candidates', 'site_configs', 'site_events', 'preinscriptions', 'articles', 'organization_news_state', 'family_links', 'payment_entries', 'cheques', 'educateurs', 'educateur_links', 'educateur_invites', 'helloasso_payments', 'newsletter_keys', 'newsletter_unsubscribes', 'newsletters'];
+export const TENANT_TABLES = ['inscriptions', 'email_log', 'admin_sessions', 'helloasso_orders', 'locations', 'groups', 'group_schedules', 'prices', 'contacts', 'contact_relationships', 'periods', 'memberships', 'group_memberships', 'contact_relationship_sources', 'contact_duplicate_candidates', 'site_configs', 'site_events', 'preinscriptions', 'articles', 'organization_news_state', 'family_links', 'payment_entries', 'cheques', 'educateurs', 'educateur_links', 'educateur_invites', 'helloasso_payments', 'newsletter_keys', 'newsletter_unsubscribes', 'newsletters', 'admin_users', 'admin_user_invites'];
 // Tables de la migration 3, figées : une migration déjà en production ne doit jamais changer de comportement.
 const PHASE1_TABLES = ['inscriptions', 'email_log', 'admin_sessions'];
 
@@ -327,6 +327,45 @@ export const MIGRATIONS = [
     version: NEWS_MIGRATION_VERSION,
     name: 'news_articles',
     statements: (db) => newsMigrationStatements(db),
+  },
+  {
+    // Lot 1 Licyo (2026-11-16) : comptes nominatifs du bureau, à la place du seul mot de passe partagé par club.
+    // ADDITIVE : deux tables neuves et une colonne nullable sur admin_sessions (NULL = session ouverte avec le mot
+    // de passe partagé, qui reste valable pendant la transition). Le mot de passe d'un compte est une empreinte
+    // PBKDF2 (security.js) ; l'invitation ne garde que l'empreinte SHA-256 de son lien. Voir admin-users.js.
+    version: 14,
+    name: 'admin_users',
+    statements: (db) => [
+      db.prepare(`CREATE TABLE IF NOT EXISTS admin_users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id TEXT NOT NULL REFERENCES organizations(id),
+        email TEXT NOT NULL CHECK (email = lower(email) AND length(email) BETWEEN 3 AND 200),
+        name TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 120),
+        role TEXT NOT NULL CHECK (role IN ('president', 'vice_president', 'secretary', 'assistant_secretary', 'treasurer', 'assistant_treasurer')),
+        password_hash TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'disabled')),
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT,
+        last_login_at TEXT,
+        UNIQUE (organization_id, email)
+      )`),
+      db.prepare(`CREATE TABLE IF NOT EXISTS admin_user_invites (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id TEXT NOT NULL REFERENCES organizations(id),
+        email TEXT NOT NULL CHECK (email = lower(email)),
+        name TEXT NOT NULL,
+        role TEXT NOT NULL CHECK (role IN ('president', 'vice_president', 'secretary', 'assistant_secretary', 'treasurer', 'assistant_treasurer')),
+        token_hash TEXT NOT NULL UNIQUE CHECK (length(token_hash) = 64),
+        invited_by INTEGER,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        expires_at TEXT NOT NULL,
+        used_at TEXT,
+        revoked_at TEXT
+      )`),
+      db.prepare('CREATE INDEX IF NOT EXISTS idx_admin_users_org ON admin_users (organization_id, status)'),
+      db.prepare('CREATE INDEX IF NOT EXISTS idx_admin_user_invites_org ON admin_user_invites (organization_id, expires_at)'),
+      db.prepare('ALTER TABLE admin_sessions ADD COLUMN user_id INTEGER'),
+    ],
   },
 ];
 

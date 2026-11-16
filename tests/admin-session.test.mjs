@@ -23,7 +23,7 @@ async function setup() {
 test('une nouvelle session expire après 30 minutes sans activité', async () => {
   const { env, req, expiresAt, setTimes } = await setup();
   assert.ok(Math.abs((await expiresAt()) - (nowS() + SESSION_IDLE_SECONDS)) <= 2);
-  assert.deepEqual(await isAuthed(req(), env), { organizationId: A });
+  assert.equal((await isAuthed(req(), env))?.organizationId, A);
   await setTimes(nowS() - 3600, nowS() - 1);
   assert.equal(await isAuthed(req(), env), null, 'inactive depuis plus de 30 min : refusée');
 });

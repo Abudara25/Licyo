@@ -66,7 +66,7 @@ test('sessions : le cookie ne contient qu’un jeton, révocable', async () => {
   const cookie = sessionCookie(cookies);
   assert.ok(!cookie.includes(ADMIN_SECRET));
   assert.ok(cookies.some((c) => c.startsWith('admin_auth=;') && c.includes('Max-Age=0')));
-  assert.deepEqual(await isAuthed(requestWith(`autre=1; ${cookie}`), env), { organizationId: DEMO_ORG_ID });
+  assert.equal((await isAuthed(requestWith(`autre=1; ${cookie}`), env))?.organizationId, DEMO_ORG_ID);
 
   const cleared = await destroySession(requestWith(cookie), env);
   assert.ok(cleared.every((c) => c.includes('Max-Age=0')));
@@ -83,7 +83,7 @@ test('connexion : 5 échecs bloquent la connexion 15 minutes, par adresse IP', a
   const ok = await handleLogin(requestWith('', '198.51.100.1'), env, loginForm(ADMIN_SECRET));
   assert.equal(ok.status, 302);
   const cookie = sessionCookie(ok.headers.getSetCookie());
-  assert.deepEqual(await isAuthed(requestWith(cookie), env), { organizationId: DEMO_ORG_ID }, 'session rattachée à l’organisation du domaine');
+  assert.equal((await isAuthed(requestWith(cookie), env))?.organizationId, DEMO_ORG_ID, 'session rattachée à l’organisation du domaine');
 
   for (let i = 0; i < 5; i++) {
     const res = await handleLogin(requestWith('', '198.51.100.2'), env, loginForm(WRONG_SECRET));

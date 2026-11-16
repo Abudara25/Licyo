@@ -250,7 +250,7 @@ test('mot de passe admin propre à chaque organisation : celui de A n’ouvre ja
   const okB = await login(SITE_B, 'mot-de-passe-de-B');
   assert.equal(okB.status, 302);
   const cookieB = okB.headers.getSetCookie().find((c) => c.startsWith(`${COOKIE_NAME}=`)).split(';')[0];
-  assert.deepEqual(await isAuthed(req(`${SITE_B}/admin/inscriptions`, { cookie: cookieB }), env), { organizationId: ORG_B });
+  assert.equal((await isAuthed(req(`${SITE_B}/admin/inscriptions`, { cookie: cookieB }), env))?.organizationId, ORG_B);
   assert.equal((await login(SITE_A, 'mot-de-passe-de-B')).status, 401, 'mot de passe B sur le domaine A');
 });
 

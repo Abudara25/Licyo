@@ -9,6 +9,7 @@ import {
   sendReminderEmail,
   sendReinscriptionEmail,
   sendPasswordChangeCode,
+  sendAdminInviteEmail,
   sendFollowUpEmail,
   sendClubUploadAlert,
   sendPhotoRefusedEmail,
@@ -168,6 +169,7 @@ export async function sendEmailSamples(env, organizationId, siteUrl, to) {
     ['Club : fiche éducateur remplie', () => sendEducateurClubAlert(e, { ...SAMPLE_EDUCATEUR(organizationId, to), submitted_at: '2026-11-12 10:00:00' }, siteUrl)],
     ['Famille : newsletter', () => sendNewsletter(e, { email: to, prenom: 'Sam', nom: 'Exemple' }, { subject: 'Les nouvelles du club', message: 'Voici les nouvelles du mois.\n\nÀ bientôt au stade !', siteUrl, unsubscribeUrl: `${siteUrl}/newsletter/desinscription/exemple` })],
     ['Club : code de confirmation', () => sendPasswordChangeCode(e, '000000', siteUrl, organizationId)],
+    ['Club : invitation à l’espace admin', () => sendAdminInviteEmail(e, { email: to, name: 'Camille Exemple', roleLabel: 'Secrétaire', url: `${siteUrl}/admin/invitation/exemple`, days: 7, organizationId })],
   ];
   const results = [];
   for (const [label, send] of samples) {

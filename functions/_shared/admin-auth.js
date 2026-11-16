@@ -18,6 +18,7 @@ import { dossierStatus, ARCHIVE_MOTIFS, ARCHIVE_MOTIFS_MANUELS, ensureSchema } f
 import { resolveOrganization } from './organization.js';
 import { DEMO_ORG_ID } from './schema.js';
 import { getAdminPasswordHash, setAdminPasswordHash as storeAdminPasswordHash } from './settings-kv.js';
+import { verifyUserLogin, sessionIdentity, can } from './admin-users.js';
 
 export const COOKIE_NAME = 'admin_session';
 // Ancien cookie, qui contenait le mot de passe lui-même : effacé à chaque connexion et déconnexion.
@@ -84,13 +85,15 @@ export const withCookies = (response, cookies) => {
   return response;
 };
 
-// Contexte admin de la requête : { organizationId } si la session est valide, sinon null.
+// Contexte admin de la requête : { organizationId, userId, role, name, email, shared } si la session est valide,
+// sinon null. userId null et shared vrai : session ouverte avec le mot de passe partagé (droits du président).
+// Les droits se lisent avec can(admin, permission) (admin-users.js).
 // L'organisation vient de la session (fixée à la connexion), jamais d'un paramètre du navigateur :
 // toutes les requêtes des pages admin filtrent ensuite sur admin.organizationId.
 // Authentifié ne veut pas dire « accès à tout » : uniquement aux données de cette organisation.
 export async function isAuthed(request, env, { touch = true } = {}) {
   const session = await readSession(request, env, { touch });
-  return session && { organizationId: session.organizationId };
+  return session && { organizationId: session.organizationId, userId: session.userId, role: session.role, name: session.name, email: session.email, shared: session.shared };
 }
 
 // Session de la requête : { organizationId, expiresAt } ou null. touch : prolonge l'expiration (activité) ; false pour
@@ -104,7 +107,7 @@ export async function readSession(request, env, { touch = true } = {}) {
     // Recherche par jeton, donc sans organisation connue à l'avance (le jeton désigne sa session et son
     // organisation). Même requête : l'organisation doit exister et être active.
     const row = await env.DB.prepare(
-      `SELECT s.created_at, s.expires_at, s.organization_id FROM admin_sessions s /* toutes-organisations */
+      `SELECT s.created_at, s.expires_at, s.organization_id, s.user_id FROM admin_sessions s /* toutes-organisations */
        JOIN organizations o ON o.id = s.organization_id AND o.status = 'active'
        WHERE s.token_hash = ?`
     )
@@ -112,6 +115,9 @@ export async function readSession(request, env, { touch = true } = {}) {
       .first();
     const now = Math.floor(Date.now() / 1000);
     if (!row || row.expires_at <= now || !row.organization_id) return null;
+    // Compte désactivé ou supprimé entre-temps : la session ne vaut plus rien.
+    const identity = await sessionIdentity(env.DB, row.organization_id, row.user_id);
+    if (!identity) return null;
     let expiresAt = row.expires_at;
     // Échéance d'inactivité : jamais plus loin que maintenant + SESSION_IDLE_SECONDS (les sessions ouvertes avant la
     // mise en place, valables 14 jours, sont ramenées à cette limite même par une simple lecture).
@@ -125,21 +131,22 @@ export async function readSession(request, env, { touch = true } = {}) {
       expiresAt = target;
     }
     if (expiresAt <= now) return null;
-    return { organizationId: row.organization_id, expiresAt };
+    return { organizationId: row.organization_id, expiresAt, ...identity };
   } catch {
     return null;
   }
 }
 
-// Ouvre une session pour une organisation ; renvoie les en-têtes Set-Cookie à ajouter à la réponse.
-export async function createSession(env, organizationId) {
+// Ouvre une session pour une organisation, et pour un compte nominatif (userId) ou le mot de passe partagé (null) ;
+// renvoie les en-têtes Set-Cookie à ajouter à la réponse.
+export async function createSession(env, organizationId, userId = null) {
   if (!organizationId) throw new Error('createSession : organisation requise');
   await ensureSessionsTable(env.DB);
   const token = randomToken();
   const now = Math.floor(Date.now() / 1000);
   await env.DB.prepare('DELETE FROM admin_sessions WHERE organization_id = ? AND expires_at <= ?').bind(organizationId, now).run();
-  await env.DB.prepare('INSERT INTO admin_sessions (token_hash, created_at, expires_at, organization_id) VALUES (?, ?, ?, ?)')
-    .bind(await sha256Hex(token), now, now + SESSION_IDLE_SECONDS, organizationId)
+  await env.DB.prepare('INSERT INTO admin_sessions (token_hash, created_at, expires_at, organization_id, user_id) VALUES (?, ?, ?, ?, ?)')
+    .bind(await sha256Hex(token), now, now + SESSION_IDLE_SECONDS, organizationId, userId)
     .run();
   return [cookie(COOKIE_NAME, token, SESSION_TTL_SECONDS), cookie(LEGACY_COOKIE_NAME, '', 0)];
 }
@@ -158,10 +165,11 @@ export async function destroySession(request, env) {
   return [cookie(COOKIE_NAME, '', 0), cookie(LEGACY_COOKIE_NAME, '', 0)];
 }
 
-// Après un changement de mot de passe : toutes les sessions de l'organisation, sur tous les appareils, sont fermées.
+// Après un changement du mot de passe partagé : toutes les sessions ouvertes AVEC CE MOT DE PASSE, sur tous les
+// appareils, sont fermées. Les sessions des comptes nominatifs n'en dépendent pas et restent ouvertes.
 export async function revokeAllSessions(env, organizationId) {
   await ensureSessionsTable(env.DB);
-  await env.DB.prepare('DELETE FROM admin_sessions WHERE organization_id = ?').bind(organizationId).run();
+  await env.DB.prepare('DELETE FROM admin_sessions WHERE organization_id = ? AND user_id IS NULL').bind(organizationId).run();
 }
 
 // Formulaire de connexion (POST /admin/inscriptions sans action).
@@ -181,22 +189,32 @@ export async function handleLogin(request, env, form) {
     return html('Connexion impossible pour le moment (base de données indisponible). Réessayez dans un instant.', 503);
   }
   if (!organization) return html('Espace introuvable pour ce site.', 404);
+  // Avec une adresse e-mail : compte nominatif. Sans adresse : mot de passe partagé du club (transition).
+  const email = String(form.get('email') || '').trim();
+  const password = String(form.get('password') || '');
   let valid;
+  let userId = null;
   try {
-    valid = await verifyAdminPassword(env, organization.id, String(form.get('password') || ''));
+    if (email) {
+      const user = await verifyUserLogin(env.DB, organization.id, email, password);
+      valid = Boolean(user);
+      userId = user?.id ?? null;
+    } else {
+      valid = await verifyAdminPassword(env, organization.id, password);
+    }
   } catch (error) {
     if (error instanceof AdminAuthUnavailableError) return html('Connexion impossible pour le moment (stockage indisponible). Réessayez dans un instant.', 503);
-    throw error;
+    return html('Connexion impossible pour le moment (base de données indisponible). Réessayez dans un instant.', 503);
   }
   if (!valid) {
     await hitRateLimit(env.DB, bucket, LOGIN_LIMIT).catch(() => {});
-    return html('Mot de passe incorrect.', 401);
+    return html(email ? 'Adresse e-mail ou mot de passe incorrect.' : 'Mot de passe incorrect.', 401);
   }
   await clearRateLimit(env.DB, bucket).catch(() => {});
 
   let cookies;
   try {
-    cookies = await createSession(env, organization.id);
+    cookies = await createSession(env, organization.id, userId);
   } catch {
     return html('Connexion impossible pour le moment (base de données indisponible). Réessayez dans un instant.', 503);
   }
@@ -210,7 +228,7 @@ export const escapeHtml = (str = '') =>
 // Version (?v=) de tous les assets chargés par l'admin — Cloudflare Pages les met en cache 4h sans
 // possibilité de le changer (voir CLAUDE.md). Valeur écrite par `npm run sync` (empreinte des assets) :
 // ne pas la modifier à la main.
-const ASSETS_VERSION = 'b4846615e6';
+const ASSETS_VERSION = '52c68fc4d9';
 const asset = (path) => `${path}?v=${ASSETS_VERSION}`;
 
 // Icônes au trait (viewBox 24, stroke 1.8), même convention que les SVG du site public.
@@ -295,25 +313,27 @@ export function adminScripts(...names) {
 // Navigation commune : barre latérale sur ordinateur, cinq entrées en bas sur mobile.
 // Les rubriques sont partagées avec le menu « Plus » : une seule liste de destinations.
 const ADMIN_NAV_LINKS = [
-  { key: 'dashboard', href: '/admin/dashboard', label: 'Vue d’ensemble', short: 'Accueil', icon: 'dashboard', mobile: 1 },
+  { key: 'dashboard', perm: 'members.read', href: '/admin/dashboard', label: 'Vue d’ensemble', short: 'Accueil', icon: 'dashboard', mobile: 1 },
   // « À traiter » (2026-11-10) : dans la barre du haut et dans la barre du bas du mobile. Barre du bas : Accueil, À
   // traiter, Inscriptions, Adhérents (toujours visibles, demande de l'utilisateur), puis « Plus ».
-  { key: 'a-traiter', href: '/admin/a-traiter', label: 'À traiter', short: 'À traiter', icon: 'check', mobile: 2 },
-  { key: 'inscriptions', href: '/admin/inscriptions', label: 'Inscriptions', short: 'Inscriptions', icon: 'file', mobile: 3,
+  { key: 'a-traiter', perm: 'members.read', href: '/admin/a-traiter', label: 'À traiter', short: 'À traiter', icon: 'check', mobile: 2 },
+  { key: 'inscriptions', perm: 'members.read', href: '/admin/inscriptions', label: 'Inscriptions', short: 'Inscriptions', icon: 'file', mobile: 3,
     badgeLabel: (n) => `${n} dossier${n > 1 ? 's' : ''} à vérifier` },
-  { key: 'adherents', href: '/admin/adherents', label: 'Adhérents', short: 'Adhérents', icon: 'users', mobile: 4 },
-  { key: 'preinscriptions', href: '/admin/preinscriptions', label: 'Pré-inscriptions', icon: 'plus' },
-  { key: 'reinscription', href: '/admin/reinscription', label: 'Réinscription', icon: 'refresh' },
-  { key: 'archive', href: '/admin/inscriptions?view=archive', label: 'Corbeille', icon: 'trash' },
-  { key: 'events', href: '/admin/events', label: 'Événements', icon: 'activity' },
+  { key: 'adherents', perm: 'members.read', href: '/admin/adherents', label: 'Adhérents', short: 'Adhérents', icon: 'users', mobile: 4 },
+  { key: 'preinscriptions', perm: 'members.read', href: '/admin/preinscriptions', label: 'Pré-inscriptions', icon: 'plus' },
+  { key: 'reinscription', perm: 'members.read', href: '/admin/reinscription', label: 'Réinscription', icon: 'refresh' },
+  { key: 'archive', perm: 'members.read', href: '/admin/inscriptions?view=archive', label: 'Corbeille', icon: 'trash' },
+  { key: 'events', perm: 'sport.manage', href: '/admin/events', label: 'Événements', icon: 'activity' },
   // Newsletter (2026-11-13) : un texte envoyé à toutes les familles, avec lien de désinscription.
-  { key: 'newsletter', href: '/admin/newsletter', label: 'Newsletter', icon: 'mail' },
-  { key: 'email', href: '/admin/email', label: 'Écrire un e-mail', icon: 'send' },
+  { key: 'newsletter', perm: 'communication.manage', href: '/admin/newsletter', label: 'Newsletter', icon: 'mail' },
+  { key: 'email', perm: 'communication.manage', href: '/admin/email', label: 'Écrire un e-mail', icon: 'send' },
   // Éducateurs (2026-11-12) : fiches remplies par les encadrants eux-mêmes ; raccourci sur le tableau de bord.
-  { key: 'educateurs', href: '/admin/educateurs', label: 'Éducateurs', icon: 'user' },
-  { key: 'categories', href: '/admin/categories', label: 'Catégories', icon: 'tag' },
+  { key: 'educateurs', perm: 'sport.manage', href: '/admin/educateurs', label: 'Éducateurs', icon: 'user' },
+  { key: 'categories', perm: 'sport.manage', href: '/admin/categories', label: 'Catégories', icon: 'tag' },
   // Import de l'export des paiements HelloAsso (2026-11-13) : échéances, paiements en ligne et Tap to pay.
-  { key: 'parametres', href: '/admin/parametres', label: 'Paramètres', icon: 'settings' },
+  { key: 'parametres', perm: 'settings.manage', href: '/admin/parametres', label: 'Paramètres', icon: 'settings' },
+  // Comptes nominatifs du bureau (lot 1 Licyo, 2026-11-16) : président seulement.
+  { key: 'comptes', perm: 'club.admin', href: '/admin/comptes', label: 'Comptes du bureau', icon: 'lock' },
 ];
 
 // Rubriques (2026-11-13, refonte « boîte de traitement ») : on arrive sur « À traiter » ; la saison se lit dans l'ordre
@@ -324,7 +344,7 @@ const ADMIN_NAV_GROUPS = [
   { label: 'Club', keys: ['educateurs', 'categories'] },
   { label: 'Communication', keys: ['newsletter', 'email', 'events'] },
 ];
-const ADMIN_NAV_FOOT = ['parametres', 'archive'];
+const ADMIN_NAV_FOOT = ['comptes', 'parametres', 'archive'];
 
 // Pastilles de compteur des onglets (2026-10-09) : nombre de dossiers signés à vérifier (fiches actives de
 // l'organisation de la session), sur l'onglet Inscriptions. Une seule requête COUNT, même règle que
@@ -340,11 +360,17 @@ export async function adminBadges(env, admin) {
       .bind(admin.organizationId)
       .first();
     const n = Number(row?.n) || 0;
-    return n > 0 ? { inscriptions: n } : {};
+    return { ...(n > 0 ? { inscriptions: n } : {}), ...viewerEntry(admin) };
   } catch {
-    return {};
+    return viewerEntry(admin);
   }
 }
+
+// Qui consulte (rôle, pour masquer les rubriques non permises ; le serveur vérifie de toute façon, voir
+// admin-permissions.js). Sans rôle connu (appelant qui ne passe que l'organisation) : rien n'est masqué.
+const viewerOf = (admin) => (admin?.role ? { role: admin.role, name: admin.name, shared: admin.shared } : null);
+const viewerEntry = (admin) => (viewerOf(admin) ? { viewer: viewerOf(admin) } : {});
+const allowedLink = (link, badges) => !link.perm || !badges?.viewer || can(badges.viewer, link.perm);
 
 // Pastille d'un onglet : chiffre visible (plafonné à « 9+ »), phrase complète pour les lecteurs d'écran.
 function navBadge(link, badges) {
@@ -366,18 +392,18 @@ export function adminShell({ active, eyebrow = '', title, subtitle = '', stats =
     return `<a href="${l.href}" class="adm-nav-link${current(l.key)}" data-nav-label="${l.label}">${icon(l.icon)}<span>${l.label}${badge.text}</span>${badge.dot}</a>`;
   };
   const navGroups = (mobile = false) => ADMIN_NAV_GROUPS.map((group) => {
-    const links = group.keys.map((key) => ADMIN_NAV_LINKS.find((l) => l.key === key)).filter((l) => !mobile || !l.mobile);
+    const links = group.keys.map((key) => ADMIN_NAV_LINKS.find((l) => l.key === key)).filter((l) => (!mobile || !l.mobile) && allowedLink(l, badges));
     return links.length ? `<div class="adm-nav-section"><p class="adm-nav-label">${group.label}</p>${links.map(navLink).join('')}</div>` : '';
   }).join('');
-  const footLinks = ADMIN_NAV_FOOT.map((key) => navLink(ADMIN_NAV_LINKS.find((l) => l.key === key))).join('');
-  const mobileLinks = ADMIN_NAV_LINKS.filter((l) => l.mobile)
+  const footLinks = ADMIN_NAV_FOOT.map((key) => ADMIN_NAV_LINKS.find((l) => l.key === key)).filter((l) => allowedLink(l, badges)).map(navLink).join('');
+  const mobileLinks = ADMIN_NAV_LINKS.filter((l) => l.mobile && allowedLink(l, badges))
     .sort((a, b) => a.mobile - b.mobile)
     .map((l) => {
       const badge = navBadge(l, badges);
       return `<a href="${l.href}" class="adm-tabbar-link${current(l.key)}"><span class="adm-tabbar-ico">${icon(l.icon)}${badge.dot}</span><span>${l.short}</span>${badge.text}</a>`;
     })
     .join('');
-  const moreLinks = ADMIN_NAV_LINKS.filter((l) => !l.mobile);
+  const moreLinks = ADMIN_NAV_LINKS.filter((l) => !l.mobile && allowedLink(l, badges));
   const moreActive = moreLinks.some((l) => l.key === active);
 
   // La barre du haut est hors du bandeau pour rester collée en haut au défilement (.adm-hero a un
@@ -451,13 +477,18 @@ export function loginPage({ error } = {}) {
     ${error ? flash('error', typeof error === 'string' ? error : 'Mot de passe incorrect.') : ''}
     <div id="login-inactif" hidden>${flash('info', 'Vous avez été déconnecté après 30 minutes d’inactivité.')}</div>
     <div class="form-field">
+      <label for="email">Adresse e-mail</label>
+      <input type="email" id="email" name="email" autocomplete="username" autocapitalize="off" spellcheck="false" inputmode="email" maxlength="200" autofocus>
+    </div>
+    <div class="form-field">
       <label for="password">Mot de passe</label>
       <div class="adm-password">
-        <input type="password" id="password" name="password" autocomplete="current-password" autocapitalize="off" spellcheck="false" required autofocus>
+        <input type="password" id="password" name="password" autocomplete="current-password" autocapitalize="off" spellcheck="false" required>
         <button type="button" class="adm-password-toggle" data-password-toggle="password" aria-pressed="false" aria-label="Afficher le mot de passe" hidden>${icon('eye')}</button>
       </div>
     </div>
     <button type="submit" class="adm-btn adm-btn-primary adm-btn-block">${icon('lock')}Se connecter</button>
+    <p class="adm-help" style="margin-top:12px;">Mot de passe commun du club : laissez l’adresse vide. Chaque membre du bureau peut avoir son propre compte, sur invitation du président.</p>
   </form>
 </main>
 ${adminScripts('admin-login')}
