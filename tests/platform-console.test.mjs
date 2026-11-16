@@ -10,8 +10,9 @@ import { createSession, isAuthed } from '../functions/_shared/admin-auth.js';
 import { resolveOrganization, clearOrganizationCache } from '../functions/_shared/organization.js';
 import { onRequest as guard, platformPermission } from '../functions/platform/_middleware.js';
 import * as dashboard from '../functions/platform/index.js';
-import * as orgDetail from '../functions/platform/organisations/[id].js';
-import * as nouvelle from '../functions/platform/organisations/nouvelle.js';
+import * as orgApi from '../functions/platform/api/organisations/[id].js';
+import * as createApi from '../functions/platform/api/organisations/index.js';
+import * as donnees from '../functions/platform/donnees.js';
 import * as equipe from '../functions/platform/equipe.js';
 import * as demarrage from '../functions/platform/demarrage.js';
 import * as connexion from '../functions/platform/connexion.js';
@@ -107,33 +108,36 @@ test('CSRF : avec une session, tout envoi exige le jeton et la même origine', a
   const { env, owner } = await setup();
   const cookie = cookieOf(await auth.createPlatformSession(env, owner.id));
   const org = (await data.listOrganizations(env.DB))[0];
-  const url = `${CONSOLE}/platform/organisations/${org.id}`;
-  const noToken = await call(env, orgDetail, url, { cookie, method: 'POST', fields: { action: 'suspend', _csrf: 'faux' }, params: { id: org.id } });
+  const url = `${CONSOLE}/platform/api/organisations/${org.id}`;
+  const noToken = await call(env, orgApi, url, { cookie, method: 'POST', fields: { action: 'block', reason: 'test', _csrf: 'faux' }, params: { id: org.id } });
   assert.equal(noToken.status, 403);
-  const foreign = { request: req(url, { cookie, method: 'POST', body: form({ action: 'suspend' }), headers: { Origin: 'https://ailleurs.example' } }), env, params: { id: org.id }, data: {} };
-  foreign.next = () => orgDetail.onRequestPost(foreign);
+  const foreign = { request: req(url, { cookie, method: 'POST', body: form({ action: 'block', reason: 'test' }), headers: { Origin: 'https://ailleurs.example' } }), env, params: { id: org.id }, data: {} };
+  foreign.next = () => orgApi.onRequestPost(foreign);
   assert.equal((await guard(foreign)).status, 403);
   assert.equal((await env.DB.prepare('SELECT status FROM organizations WHERE id = ?').bind(org.id).first()).status, 'active', 'rien n’a changé');
-  // Les formulaires des pages reçoivent le jeton.
-  const page = await (await call(env, orgDetail, url, { cookie, params: { id: org.id } })).text();
-  assert.match(page, /name="_csrf" value="[0-9a-f]{64}"/);
+  // La page de la console reçoit le jeton (formulaire caché lu par l'interface pour ses appels).
+  const page = await (await call(env, dashboard, `${CONSOLE}/platform`, { cookie })).text();
+  assert.match(page, /id="csrf-source"[^>]*><input type="hidden" name="_csrf" value="[0-9a-f]{64}"/);
+  // Avec le bon jeton : l'action passe.
+  assert.equal((await call(env, orgApi, url, { cookie, method: 'POST', fields: { action: 'block', reason: 'test réel' }, params: { id: org.id } })).status, 200);
 });
 
 test('organisation : création avec domaine et accès du président, site résolu, lien sur le domaine du club', async () => {
   const { env, owner } = await setup();
   const cookie = cookieOf(await auth.createPlatformSession(env, owner.id));
-  const res = await call(env, nouvelle, `${CONSOLE}/platform/organisations/nouvelle`, {
+  const res = await call(env, createApi, `${CONSOLE}/platform/api/organisations`, {
     cookie,
     method: 'POST',
-    fields: { name: 'Rugby Club Les Pins', sport: 'rugby', domain: 'https://www.rc-pins.example/', presidentName: 'Ana Président', presidentEmail: 'ana@example.fr' },
+    fields: { name: 'Rugby Club Les Pins', slug: 'rc-pins', sport: 'rugby', plan: 'club', customDomain: 'https://www.rc-pins.example/', adminName: 'Ana Président', adminEmail: 'ana@example.fr' },
   });
   assert.equal(res.status, 200);
-  const body = await res.text();
-  const link = body.match(/https:\/\/www\.rc-pins\.example\/admin\/invitation\/(i[A-Za-z0-9_-]{43})/);
+  const body = await res.json();
+  const link = body.inviteUrl.match(/^https:\/\/www\.rc-pins\.example\/admin\/invitation\/(i[A-Za-z0-9_-]{43})$/);
   assert.ok(link, 'lien du président affiché, sur le domaine du club');
   const org = (await data.listOrganizations(env.DB)).find((o) => o.name === 'Rugby Club Les Pins');
   assert.equal(org.domain, 'www.rc-pins.example');
   assert.equal(org.sport, 'rugby');
+  assert.equal(org.domains, 2, 'domaine du club + sous-domaine de la plateforme');
   clearOrganizationCache();
   assert.equal((await resolveOrganization(req('https://www.rc-pins.example/'), env)).id, org.id);
   // Le président active son compte : il est président de CE club.
@@ -142,7 +146,8 @@ test('organisation : création avec domaine et accès du président, site résol
   assert.equal(president.role, 'president');
   // Doublons refusés.
   await assert.rejects(() => data.createOrganization(env, owner, { name: 'Autre', sport: 'rugby', domain: 'www.rc-pins.example', presidentName: 'X', presidentEmail: 'x@example.fr' }), /déjà attribué/);
-  await assert.rejects(() => data.createOrganization(env, owner, { name: 'Rugby Club Les Pins', sport: 'rugby', domain: 'autre.example', presidentName: 'X', presidentEmail: 'x@example.fr' }), /identifiant court/);
+  await assert.rejects(() => data.createOrganization(env, owner, { name: 'Rugby Club Les Pins', slug: 'rc-pins', sport: 'rugby', domain: 'autre.example', presidentName: 'X', presidentEmail: 'x@example.fr' }), /identifiant court/);
+  await assert.rejects(() => data.createOrganization(env, owner, { name: 'Offre inconnue', sport: 'rugby', plan: 'or', domain: 'z2.example', presidentName: 'X', presidentEmail: 'x@example.fr' }), /Offre inconnue/);
   await assert.rejects(() => data.createOrganization(env, owner, { name: 'Sans sport', sport: 'tennis', domain: 'z.example', presidentName: 'X', presidentEmail: 'x@example.fr' }), /sport/);
 });
 
@@ -168,22 +173,26 @@ test('suspension : site et admin du club fermés aussitôt, réactivation, journ
 test('droits : commercial crée sans suspendre ; support renvoie l’accès sans suspendre ; équipe réservée au propriétaire', async () => {
   const { env, owner } = await setup();
   const org = (await data.listOrganizations(env.DB))[0];
-  const url = `${CONSOLE}/platform/organisations/${org.id}`;
+  const url = `${CONSOLE}/platform/api/organisations/${org.id}`;
+  const create = `${CONSOLE}/platform/api/organisations`;
   const sales = await operatorCookie(env, owner, 'sales');
   const support = await operatorCookie(env, owner, 'support');
   const admin = await operatorCookie(env, owner, 'admin');
 
-  assert.equal((await call(env, orgDetail, url, { cookie: sales.cookie, method: 'POST', fields: { action: 'suspend' }, params: { id: org.id } })).status, 403);
-  assert.equal((await call(env, nouvelle, `${CONSOLE}/platform/organisations/nouvelle`, { cookie: sales.cookie })).status, 200);
-  assert.equal((await call(env, orgDetail, url, { cookie: support.cookie, method: 'POST', fields: { action: 'suspend' }, params: { id: org.id } })).status, 403);
-  const resend = await call(env, orgDetail, url, { cookie: support.cookie, method: 'POST', fields: { action: 'president-invite', name: 'Prés', email: 'pres@example.fr' }, params: { id: org.id } });
-  assert.equal(resend.status, 200);
-  assert.equal((await call(env, nouvelle, `${CONSOLE}/platform/organisations/nouvelle`, { cookie: support.cookie })).status, 403);
+  assert.equal((await call(env, orgApi, url, { cookie: sales.cookie, method: 'POST', fields: { action: 'block', reason: 'x' }, params: { id: org.id } })).status, 403);
+  const fields = (slug) => ({ name: `Club ${slug}`, slug, sport: 'judo', adminName: 'P', adminEmail: `${slug}@example.fr` });
+  assert.equal((await call(env, createApi, create, { cookie: sales.cookie, method: 'POST', fields: fields('vente') })).status, 200, 'le commercial crée');
+  assert.equal((await call(env, orgApi, url, { cookie: support.cookie, method: 'POST', fields: { action: 'block', reason: 'x' }, params: { id: org.id } })).status, 403);
+  assert.equal((await call(env, createApi, create, { cookie: support.cookie, method: 'POST', fields: fields('support') })).status, 403, 'le support ne crée pas');
+  // Tous les rôles lisent les données de la console.
+  for (const who of [sales, support]) assert.equal((await call(env, donnees, `${CONSOLE}/platform/donnees`, { cookie: who.cookie })).status, 200);
   for (const who of [sales, support, admin]) assert.equal((await call(env, equipe, `${CONSOLE}/platform/equipe`, { cookie: who.cookie })).status, 403);
-  assert.equal((await call(env, orgDetail, url, { cookie: admin.cookie, method: 'POST', fields: { action: 'suspend' }, params: { id: org.id } })).status, 200);
+  assert.equal((await call(env, orgApi, url, { cookie: admin.cookie, method: 'POST', fields: { action: 'block', reason: 'motif de test' }, params: { id: org.id } })).status, 200);
 
   assert.equal(platformPermission('GET', '/platform/inconnue'), 'team.manage', 'route inconnue : propriétaire seulement');
-  assert.equal(platformPermission('POST', '/platform/organisations/x', 'domain-add'), 'orgs.manage');
+  assert.equal(platformPermission('POST', '/platform/api/organisations/x', 'block'), 'orgs.manage');
+  assert.equal(platformPermission('POST', '/platform/api/organisations'), 'orgs.create');
+  assert.equal(platformPermission('GET', '/platform/donnees'), 'platform.read');
 });
 
 test('équipe : propriétaire protégé, rôle Propriétaire non délégable, désactivation = déconnexion', async () => {
@@ -198,4 +207,25 @@ test('équipe : propriétaire protégé, rôle Propriétaire non délégable, d�
   const password = pw();
   await auth.acceptOperatorInvite(env.DB, used.token, password, password);
   await assert.rejects(() => auth.acceptOperatorInvite(env.DB, used.token, password, password), /plus valable/);
+});
+
+test('données de la console : réelles, sans prix inventé, sans code issu des données', async () => {
+  const { env, owner } = await setup();
+  await data.createOrganization(env, owner, { name: 'Club </script><b>', slug: 'club-script', sport: 'judo', plan: 'club', domain: 'script.example', presidentName: 'P', presidentEmail: 'p@example.fr' });
+  const cookie = cookieOf(await auth.createPlatformSession(env, owner.id));
+  const res = await call(env, donnees, `${CONSOLE}/platform/donnees`, { cookie });
+  assert.equal(res.headers.get('Content-Type'), 'text/javascript;charset=UTF-8');
+  const source = await res.text();
+  assert.doesNotMatch(source, /<\/script>/, 'aucun « < » brut issu des données');
+  const mod = await import(`data:text/javascript,${encodeURIComponent(source)}`);
+  const club = mod.ORGANIZATIONS.find((o) => o.slug === 'club-script');
+  assert.equal(club.name, 'Club </script><b>');
+  assert.equal(club.plan, 'club');
+  assert.equal(club.mrrCents, 0, 'aucun revenu sans tarif ni facturation active');
+  assert.equal(club.storageMb, null, 'stockage non mesuré');
+  assert.ok(mod.PLANS.every((p) => p.priceCents === null), 'aucun tarif fixé');
+  assert.deepEqual([mod.INCIDENTS, mod.TICKETS, mod.ONBOARDINGS], [[], [], []]);
+  assert.ok(mod.DOMAINS.every((d) => d.status === 'UNVERIFIED'));
+  assert.equal(mod.OPERATOR_DISPLAY.name, 'Fondateur Test');
+  assert.equal(mod.orgById(club.id).slug, 'club-script');
 });

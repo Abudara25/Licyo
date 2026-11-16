@@ -80,6 +80,9 @@ async function toVersion12(env) {
     env.DB.prepare('DROP TABLE IF EXISTS platform_operator_invites'),
     env.DB.prepare('DROP TABLE IF EXISTS platform_audit'),
     env.DB.prepare('ALTER TABLE organizations DROP COLUMN sport'),
+    // Migration 16 (cycle de vie, offres) retirée aussi.
+    env.DB.prepare('DROP TABLE IF EXISTS platform_plans'),
+    ...['lifecycle', 'plan', 'billing_mode', 'billing_status'].map((c) => env.DB.prepare(`ALTER TABLE organizations DROP COLUMN ${c}`)),
     env.DB.prepare('DELETE FROM schema_migrations WHERE version > 13'),
   ]);
 }
@@ -115,12 +118,12 @@ test('T1 — migration 13 sur une base en 12 : tables, 3 index, 30 triggers, une
   for (const s of states) assert.deepEqual([s.source, s.revision, s.articles_revision, s.import_batch_id, s.validated_at, s.cutover_at], ['json', 1, 0, null, null, null]);
   assert.equal((await first(env, 'SELECT COUNT(*) AS n FROM articles')).n, 0, 'aucun import dans la migration');
   // Toutes les tables préexistantes identiques (hors l'enregistrement de la migration).
-  const after = await dumpTables(env, ['articles', 'organization_news_state', 'admin_users', 'admin_user_invites', 'platform_operators', 'platform_sessions', 'platform_operator_invites', 'platform_audit']);
+  const after = await dumpTables(env, ['articles', 'organization_news_state', 'admin_users', 'admin_user_invites', 'platform_operators', 'platform_sessions', 'platform_operator_invites', 'platform_audit', 'platform_plans']);
   const strip = (dump) => ({
     ...dump,
     schema_migrations: dump.schema_migrations.filter((m) => m.version < 13),
     admin_sessions: dump.admin_sessions.map(({ user_id, ...rest }) => rest),
-    organizations: dump.organizations.map(({ sport, ...rest }) => rest),
+    organizations: dump.organizations.map(({ sport, lifecycle, plan, billing_mode, billing_status, ...rest }) => rest),
   });
   assert.deepEqual(strip(after), strip(before));
   // Second passage : aucune modification (données et schéma).

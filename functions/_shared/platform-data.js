@@ -126,8 +126,14 @@ export async function createOrganization(env, actor, input, { origin = 'https' }
   if (!SLUG_RE.test(slug)) throw new PlatformError('Identifiant court invalide (lettres, chiffres et tirets, 3 à 48 caractères).');
   const sport = SPORTS[input.sport] ? input.sport : null;
   if (!sport) throw new PlatformError('Choisissez le sport du club.');
-  const host = normalizeHost(input.domain);
-  await assertHostFree(db, host);
+  // Domaines : domaine personnalisé et/ou sous-domaine de la plateforme (au moins un).
+  const hosts = [...new Set([input.domain, ...(input.extraDomains || [])].map(normalizeHost).filter(Boolean))];
+  if (!hosts.length) throw new PlatformError('Indiquez au moins un domaine.');
+  for (const h of hosts) await assertHostFree(db, h);
+  const host = hosts[0];
+  const plan = input.plan ? await db.prepare('SELECT key FROM platform_plans WHERE key = ?').bind(String(input.plan)).first() : null;
+  if (input.plan && !plan) throw new PlatformError('Offre inconnue.');
+  const timezone = /^[A-Za-z]+\/[A-Za-z_]+$/.test(String(input.timezone || '')) ? input.timezone : 'Europe/Paris';
   const email = normalizeEmail(input.email);
   if (email && !isEmail(email)) throw new PlatformError('Adresse e-mail du club invalide.');
   if (await db.prepare('SELECT 1 FROM organizations WHERE slug = ?').bind(slug).first()) throw new PlatformError('Cet identifiant court est déjà pris.');
@@ -136,16 +142,18 @@ export async function createOrganization(env, actor, input, { origin = 'https' }
 
   const id = `org_${crypto.randomUUID().replaceAll('-', '')}`; // identifiant opaque et stable (le slug peut changer)
   await db.batch([
-    db.prepare("INSERT INTO organizations (id, slug, name, type, status, email, sport) VALUES (?, ?, ?, 'sports_club', 'active', ?, ?)").bind(id, slug, name, email || null, sport),
-    db.prepare('INSERT INTO organization_domains (domain, organization_id) VALUES (?, ?)').bind(host, id),
+    db
+      .prepare("INSERT INTO organizations (id, slug, name, type, status, email, sport, plan, timezone) VALUES (?, ?, ?, 'sports_club', 'active', ?, ?, ?, ?)")
+      .bind(id, slug, name, email || null, sport, plan?.key ?? null, timezone),
+    ...hosts.map((h) => db.prepare('INSERT INTO organization_domains (domain, organization_id) VALUES (?, ?)').bind(h, id)),
   ]);
   clearOrganizationCache();
-  await audit(db, actor, 'org.create', id, { name, domain: host, sport });
+  await audit(db, actor, 'org.create', id, { name, domain: hosts.join(', '), sport, plan: plan?.key ?? 'aucune' });
   const invite = await invitePresident(env, actor, id, president, { origin });
   return { id, slug, host, invite };
 }
 
-export async function setOrganizationStatus(env, actor, id, status) {
+export async function setOrganizationStatus(env, actor, id, status, reason = '') {
   if (!ORG_STATUS[status]) throw new PlatformError('Statut inconnu.');
   const org = await env.DB.prepare('SELECT id, status FROM organizations WHERE id = ?').bind(id).first();
   if (!org) throw new PlatformError('Club introuvable.');
@@ -155,7 +163,7 @@ export async function setOrganizationStatus(env, actor, id, status) {
   if (status === 'suspended') statements.push(env.DB.prepare('DELETE FROM admin_sessions WHERE organization_id = ?').bind(id));
   await env.DB.batch(statements);
   clearOrganizationCache();
-  await audit(env.DB, actor, status === 'suspended' ? 'org.suspend' : 'org.reactivate', id);
+  await audit(env.DB, actor, status === 'suspended' ? 'org.suspend' : 'org.reactivate', id, reason ? { motif: String(reason).slice(0, 300) } : null);
 }
 
 export async function addDomain(env, actor, id, value) {

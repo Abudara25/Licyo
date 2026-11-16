@@ -19,6 +19,9 @@ const isOpen = (path) => OPEN.has(path) || path.startsWith('/platform/invitation
 
 // [préfixe, permission en lecture, permission en écriture (ou fonction de l'action)].
 const RULES = [
+  ['/platform/donnees', 'platform.read', 'platform.read'],
+  ['/platform/api/organisations/', 'platform.read', 'orgs.manage'],
+  ['/platform/api/organisations', 'platform.read', 'orgs.create'],
   ['/platform/organisations/nouvelle', 'orgs.create', 'orgs.create'],
   ['/platform/organisations/', 'platform.read', (action) => (action === 'president-invite' ? 'orgs.support' : 'orgs.manage')],
   ['/platform/organisations', 'platform.read', 'orgs.manage'],

@@ -419,6 +419,36 @@ export const MIGRATIONS = [
       db.prepare('ALTER TABLE organizations ADD COLUMN sport TEXT'),
     ],
   },
+  {
+    // Lot 2 Licyo (2026-11-16) : les trois états DISTINCTS d'une organisation de la maquette (ADR-003) — cycle de vie
+    // du contrat, facturation, et accès (dérivé, jamais stocké : status 'suspended' = blocage opérateur) — plus l'offre.
+    // Offres administrables (platform_plans) : AUCUN prix n'est fixé (price_cents NULL = « à définir »), décision du
+    // propriétaire ; les quotas et modules reprennent les exemples de la maquette et se modifient depuis la console.
+    version: 16,
+    name: 'platform_lifecycle_plans',
+    statements: (db) => [
+      db.prepare("ALTER TABLE organizations ADD COLUMN lifecycle TEXT NOT NULL DEFAULT 'LIVE'"),
+      db.prepare('ALTER TABLE organizations ADD COLUMN plan TEXT'),
+      db.prepare("ALTER TABLE organizations ADD COLUMN billing_mode TEXT NOT NULL DEFAULT 'manual'"),
+      db.prepare("ALTER TABLE organizations ADD COLUMN billing_status TEXT NOT NULL DEFAULT 'MANUAL'"),
+      db.prepare(`CREATE TABLE IF NOT EXISTS platform_plans (
+        key TEXT PRIMARY KEY CHECK (key GLOB '[a-z]*' AND length(key) <= 32),
+        name TEXT NOT NULL,
+        tagline TEXT NOT NULL DEFAULT '',
+        price_cents INTEGER CHECK (price_cents IS NULL OR price_cents >= 0),
+        quotas TEXT NOT NULL DEFAULT '{}',
+        modules TEXT NOT NULL DEFAULT '[]',
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )`),
+      db.prepare(
+        `INSERT OR IGNORE INTO platform_plans (key, name, tagline, quotas, modules, sort_order) VALUES
+         ('starter', 'Starter', 'Petites associations, un sport', '{"members":300,"admins":3,"storageGb":5,"emailsPerMonth":2000,"customDomains":0}', '["site","crm","registrations","news"]', 1),
+         ('club', 'Club', 'Clubs structurés, paiements en ligne', '{"members":1500,"admins":10,"storageGb":25,"emailsPerMonth":10000,"customDomains":1}', '["site","crm","registrations","payments","documents","messaging","news","data_io"]', 2),
+         ('pro', 'Pro', 'Omnisports et académies', '{"members":null,"admins":null,"storageGb":100,"emailsPerMonth":50000,"customDomains":3}', '["site","crm","registrations","payments","documents","messaging","news","schedule","portal","data_io"]', 3)`
+      ),
+    ],
+  },
 ];
 
 // Configuration du site : brouillon et version publiée d'une organisation (voir _shared/site-config.js).
