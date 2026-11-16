@@ -1,0 +1,72 @@
+/* ---------- Match card ---------- */
+.match-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 26px 28px;
+  display: grid; gap: 18px;
+}
+.match-meta {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: .82rem; text-transform: uppercase; letter-spacing: .05em; color: var(--color-text-muted);
+}
+.match-meta .comp { color: var(--color-primary); font-weight: 600; }
+.match-teams { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 14px; text-align: center; }
+.match-team { display: flex; flex-direction: column; align-items: center; gap: 10px; font-weight: 600; }
+.match-team .crest {
+  width: 58px; height: 58px; border-radius: 50%;
+  background: var(--color-bg-alt); display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--color-accent-pale);
+  font-family: var(--font-display); color: var(--color-primary);
+}
+.match-score { font-family: var(--font-display); font-size: 1.6rem; color: var(--color-primary); }
+.match-score .sep { color: var(--color-text-muted); font-size: 1rem; margin: 0 4px; }
+.match-vs { font-family: var(--font-display); color: var(--color-text-muted); font-size: 1.1rem; }
+.match-footer { display: flex; justify-content: space-between; align-items: center; font-size: .88rem; color: var(--color-text-muted); border-top: 1px dashed var(--color-bg-alt); padding-top: 14px; }
+.badge-result {
+  display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: .72rem; font-weight: 700; letter-spacing: .04em;
+}
+.badge-win { background: var(--color-success-bg); color: var(--color-success); }
+.badge-draw { background: var(--color-accent-soft); color: var(--color-accent-dark); }
+.badge-loss { background: var(--color-danger-bg); color: var(--color-danger); }
+
+/* ---------- Tables (calendrier/classement) ---------- */
+.table-wrap { overflow-x: auto; border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
+table { width: 100%; border-collapse: collapse; background: var(--color-surface); min-width: 560px; }
+th, td { padding: 14px 18px; text-align: left; font-size: .92rem; }
+thead th {
+  background: var(--color-primary-strong); color: var(--color-accent-pale);
+  font-family: var(--font-display); letter-spacing: .04em; text-transform: uppercase; font-size: .78rem;
+}
+tbody tr:nth-child(even) { background: var(--color-bg); }
+tbody tr:hover { background: var(--color-accent-soft); }
+
+/* ---------- Timeline (histoire du club) ---------- */
+.timeline { position: relative; padding-left: 32px; border-left: 3px solid var(--color-accent-pale); }
+.timeline-item { position: relative; padding-bottom: 36px; }
+.timeline-item:last-child { padding-bottom: 0; }
+.timeline-item::before {
+  content: ''; position: absolute; left: -41px; top: 4px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--color-accent); border: 3px solid var(--color-surface); box-shadow: 0 0 0 3px var(--color-accent-pale);
+}
+.timeline-item .year { font-family: var(--font-display); color: var(--color-primary); font-size: 1.1rem; }
+
+/* ---------- People / staff cards ---------- */
+.person {
+  text-align: center; background: var(--color-surface); border-radius: var(--radius-lg);
+  padding: 28px 20px; box-shadow: var(--shadow-sm); transition: transform .3s var(--ease), box-shadow .3s var(--ease);
+}
+.person:hover { transform: translateY(-6px); box-shadow: var(--shadow-md); }
+.person .avatar {
+  width: 92px; height: 92px; border-radius: 50%; margin: 0 auto 16px;
+  background: linear-gradient(135deg, var(--color-accent-light), var(--color-accent-dark));
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 1.5rem; color: var(--color-primary-deep);
+}
+.person h3 { font-size: 1.05rem; margin-bottom: 2px; }
+.person .role, .card .role { color: var(--color-accent-text); font-size: .85rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+/* Carte blanche posée sur une section sombre (equipe.html, "L'encadrement") : sans ça elle hérite du
+   texte crème et des titres or de la section, illisibles sur fond blanc. */
+.photo-section .card h3 { color: var(--color-primary); }
+

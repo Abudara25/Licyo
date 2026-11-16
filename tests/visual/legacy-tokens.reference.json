@@ -1,0 +1,154 @@
+{
+  "--maroon-950": {
+    "property": "color",
+    "value": "rgb(58, 15, 16)"
+  },
+  "--maroon-900": {
+    "property": "color",
+    "value": "rgb(79, 20, 20)"
+  },
+  "--maroon-800": {
+    "property": "color",
+    "value": "rgb(108, 26, 26)"
+  },
+  "--maroon-700": {
+    "property": "color",
+    "value": "rgb(128, 24, 24)"
+  },
+  "--maroon-600": {
+    "property": "color",
+    "value": "rgb(149, 34, 34)"
+  },
+  "--gold-600": {
+    "property": "color",
+    "value": "rgb(208, 136, 48)"
+  },
+  "--gold-500": {
+    "property": "color",
+    "value": "rgb(240, 160, 48)"
+  },
+  "--gold-400": {
+    "property": "color",
+    "value": "rgb(244, 182, 88)"
+  },
+  "--gold-300": {
+    "property": "color",
+    "value": "rgb(248, 210, 142)"
+  },
+  "--gold-100": {
+    "property": "color",
+    "value": "rgb(253, 240, 218)"
+  },
+  "--red-600": {
+    "property": "color",
+    "value": "rgb(192, 40, 40)"
+  },
+  "--red-500": {
+    "property": "color",
+    "value": "rgb(214, 58, 58)"
+  },
+  "--cream-100": {
+    "property": "color",
+    "value": "rgb(251, 247, 238)"
+  },
+  "--cream-200": {
+    "property": "color",
+    "value": "rgb(243, 236, 216)"
+  },
+  "--ink-900": {
+    "property": "color",
+    "value": "rgb(32, 20, 18)"
+  },
+  "--ink-700": {
+    "property": "color",
+    "value": "rgb(74, 58, 54)"
+  },
+  "--white": {
+    "property": "color",
+    "value": "rgb(255, 255, 255)"
+  },
+  "--color-bg": {
+    "property": "color",
+    "value": "rgb(251, 247, 238)"
+  },
+  "--color-surface": {
+    "property": "color",
+    "value": "rgb(255, 255, 255)"
+  },
+  "--color-text": {
+    "property": "color",
+    "value": "rgb(32, 20, 18)"
+  },
+  "--color-text-muted": {
+    "property": "color",
+    "value": "rgb(74, 58, 54)"
+  },
+  "--color-primary": {
+    "property": "color",
+    "value": "rgb(128, 24, 24)"
+  },
+  "--color-primary-dark": {
+    "property": "color",
+    "value": "rgb(79, 20, 20)"
+  },
+  "--color-accent": {
+    "property": "color",
+    "value": "rgb(240, 160, 48)"
+  },
+  "--color-accent-dark": {
+    "property": "color",
+    "value": "rgb(208, 136, 48)"
+  },
+  "--color-accent-text": {
+    "property": "color",
+    "value": "rgb(165, 90, 24)"
+  },
+  "--color-danger": {
+    "property": "color",
+    "value": "rgb(192, 40, 40)"
+  },
+  "--font-display": {
+    "property": "font-family",
+    "value": "Oswald, \"Arial Narrow\", sans-serif"
+  },
+  "--font-body": {
+    "property": "font-family",
+    "value": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
+  },
+  "--radius-sm": {
+    "property": "border-top-left-radius",
+    "value": "8px"
+  },
+  "--radius-md": {
+    "property": "border-top-left-radius",
+    "value": "14px"
+  },
+  "--radius-lg": {
+    "property": "border-top-left-radius",
+    "value": "22px"
+  },
+  "--container": {
+    "property": "max-width",
+    "value": "1180px"
+  },
+  "--header-h": {
+    "property": "max-width",
+    "value": "84px"
+  },
+  "--shadow-sm": {
+    "property": "box-shadow",
+    "value": "rgba(58, 15, 16, 0.08) 0px 2px 10px 0px"
+  },
+  "--shadow-md": {
+    "property": "box-shadow",
+    "value": "rgba(58, 15, 16, 0.14) 0px 10px 30px 0px"
+  },
+  "--shadow-lg": {
+    "property": "box-shadow",
+    "value": "rgba(58, 15, 16, 0.22) 0px 20px 50px 0px"
+  },
+  "--ease": {
+    "property": "transition-timing-function",
+    "value": "cubic-bezier(0.2, 0.7, 0.2, 1)"
+  }
+}

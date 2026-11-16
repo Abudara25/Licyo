@@ -1,0 +1,7 @@
+.bg-maroon {
+  background: linear-gradient(160deg, var(--color-primary-strong), var(--color-primary-deep));
+  color: var(--color-on-dark);
+}
+.bg-maroon h2, .bg-maroon h3, .photo-section h2, .photo-section h3 { color: var(--color-accent-light); }
+.bg-maroon .section-sub, .photo-section .section-sub { color: rgba(var(--color-on-dark-rgb), 0.78); }
+

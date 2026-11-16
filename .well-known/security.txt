@@ -1,0 +1,4 @@
+Contact: mailto:contact@club-exemple.example
+Expires: 2027-11-15T00:00:00.000Z
+Preferred-Languages: fr
+Canonical: https://club-exemple.example/.well-known/security.txt

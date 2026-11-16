@@ -1,0 +1,13 @@
+name = "licyo-cron"
+main = "index.js"
+compatibility_date = "2026-09-01"
+
+# Tous les jours à 7h UTC (9h en été, 8h en hiver à Paris) : toutes les tâches.
+# Toutes les 15 minutes : newsletters programmées seulement (voir index.js).
+[triggers]
+crons = ["0 7 * * *", "*/15 * * * *"]
+
+[vars]
+SITE_URL = "https://club-exemple.example"
+
+# CRON_SECRET n'est jamais écrit ici : `npx wrangler secret put CRON_SECRET` depuis ce dossier.

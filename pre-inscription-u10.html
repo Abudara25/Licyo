@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pré-inscription — Club Exemple</title>
+<meta name="description" content="Liste d'intérêt du Club Exemple pour les groupes pas encore ouverts : gratuite et sans engagement.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://club-exemple.example/pre-inscription-u10">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Pré-inscription — Club Exemple">
+<meta property="og:description" content="Liste d'intérêt pour les groupes pas encore ouverts : gratuite et sans engagement.">
+<meta property="og:image" content="https://club-exemple.example/assets/images/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:url" content="https://club-exemple.example/pre-inscription-u10">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://club-exemple.example/assets/images/og-image.jpg">
+<link rel="icon" href="assets/images/favicon.ico">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="assets/images/apple-touch-icon.png">
+<meta name="theme-color" content="#4f1414">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Club Exemple">
+<link rel="preload" href="assets/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/oswald.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/styles.css?v=f4f1edfdb5">
+</head>
+<body>
+<a href="#main" class="skip-link">Aller au contenu</a>
+
+<header class="site-header">
+  <div class="container">
+    <a href="/" class="brand">
+      <img src="assets/images/logo-96.webp" alt="Blason du Club Exemple" width="48" height="48">
+      <span class="brand-name"><strong>Club Exemple</strong><span>Région Démo</span></span>
+    </a>
+    <nav class="main-nav" id="main-nav" aria-label="Navigation principale">
+      <ul>
+        <li><a href="/">Accueil</a></li>
+        <li><a href="/actualites">Actualités</a></li>
+        <li><a href="/equipe">Le Club</a></li>
+        <li><a href="/entrainements">Entraînements</a></li>
+        <li><a href="/partenaires">Partenaires</a></li>
+        <li><a href="/contact">Contact</a></li>
+      </ul>
+      <a href="/inscription" class="btn btn-primary btn-sm nav-cta adhesion-cta">Inscription</a>
+    </nav>
+    <div class="header-actions">
+      <a href="/inscription" class="btn btn-primary btn-sm adhesion-cta">Inscription</a>
+      <button class="burger" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="main-nav">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <div class="page-header">
+    <div class="container">
+      <span class="eyebrow">Nouveau groupe en projet</span>
+      <h1>Pré-inscription</h1>
+      <p>Un groupe pas encore ouvert pour l'âge de votre enfant ? Laissez vos coordonnées : nous vous recontactons dès qu'il ouvre.</p>
+    </div>
+  </div>
+
+  <section class="bg-surface" id="pre-inscription">
+    <div class="container insc-layout">
+
+      <div class="insc-main" data-reveal>
+        <span class="eyebrow">Futurs groupes</span>
+        <h2 class="section-title">Pré-inscrire mon enfant</h2>
+
+        <div class="prein-status" id="preinscription-status" data-state="open">
+          <div class="prein-open">
+            <p class="section-sub">Ces groupes ne sont pas encore ouverts : chacun démarrera quand assez d'enfants seront intéressés. Laissez-nous vos coordonnées, cela prend une minute.</p>
+
+            <form id="preinscription-form" novalidate>
+              <div class="form-row">
+              <div class="form-field">
+                <label for="prein-enfant-prenom">Prénom de l'enfant</label>
+                <input type="text" id="prein-enfant-prenom" name="enfantPrenom" placeholder="Prénom" autocomplete="off" maxlength="200" required>
+              </div>
+              <div class="form-field">
+                <label for="prein-enfant-nom">Nom de l'enfant</label>
+                <input type="text" id="prein-enfant-nom" name="enfantNom" placeholder="Nom" autocomplete="off" maxlength="200" required>
+              </div>
+              </div>
+              <div class="form-field">
+                <label for="prein-naissance">Date de naissance</label>
+                <input type="date" id="prein-naissance" name="naissance" required>
+                <small class="form-hint">Le groupe est choisi d'après l'année de naissance.</small>
+              </div>
+              <div id="preinscription-age" class="form-alert prein-age" role="alert" hidden
+                data-young="Votre enfant, né(e) en {annee}, est trop jeune pour les groupes en pré-inscription ({groupe})." data-old="Votre enfant, né(e) en {annee}, est trop âgé(e) pour les groupes en pré-inscription ({groupe})." data-category="Bonne nouvelle : il ou elle peut déjà s'inscrire en {categorie}." data-none="Nous n'avons pas encore de groupe pour son âge : écrivez-nous, nous en parlerons ensemble."
+                data-inscription="Aller au formulaire d'inscription" data-inscription-href="/inscription"
+                data-contact="Nous contacter" data-contact-href="/contact"
+                data-full="Les places de pré-inscription du groupe {groupe} sont toutes prises. Écrivez-nous : nous vous préviendrons si une place se libère." data-closed="La pré-inscription du groupe {groupe} n'est pas ouverte pour le moment. Une question ? Écrivez-nous." data-opened="Bonne nouvelle : le groupe {groupe} est ouvert. Inscrivez votre enfant directement avec le formulaire d'inscription."></div>
+              <div class="form-row">
+              <div class="form-field">
+                <label for="prein-pays-naissance">Pays de naissance</label>
+                <input type="text" id="prein-pays-naissance" name="paysNaissance" placeholder="Pays" autocomplete="off" maxlength="100" value="France" required>
+              </div>
+              <div class="form-field">
+                <label for="prein-cp-naissance">Code postal de naissance</label>
+                <input type="text" id="prein-cp-naissance" name="cpNaissance" placeholder="5 chiffres" autocomplete="off" inputmode="numeric" maxlength="5" pattern="[0-9]{5}">
+              </div>
+              </div>
+              <div class="form-field address-field">
+                <label for="prein-ville-naissance">Ville de naissance</label>
+                <input type="text" id="prein-ville-naissance" name="villeNaissance" placeholder="Ville de naissance" autocomplete="off" maxlength="100" required>
+                <ul id="prein-ville-naissance-suggestions" class="address-suggestions" role="listbox" aria-label="Ville de naissance" hidden></ul>
+              </div>
+              <div class="form-field">
+                <label for="prein-taille-maillot">Taille de maillot</label>
+                <select id="prein-taille-maillot" name="tailleMaillot" required>
+                  <option value="" disabled selected>Choisir une taille</option>
+                  <option value="4 ans">4 ans</option>
+                  <option value="6 ans">6 ans</option>
+                  <option value="8 ans">8 ans</option>
+                  <option value="10 ans">10 ans</option>
+                  <option value="12 ans">12 ans</option>
+                </select>
+                <small class="form-hint">Tenue (maillot, short, survêtement, sac) — taille approximative, à ajuster si besoin.</small>
+              </div>
+              <div class="form-row">
+              <div class="form-field">
+                <label for="prein-parent-prenom">Prénom du parent</label>
+                <input type="text" id="prein-parent-prenom" name="parentPrenom" placeholder="Prénom" autocomplete="given-name" maxlength="200" required>
+              </div>
+              <div class="form-field">
+                <label for="prein-parent-nom">Nom du parent</label>
+                <input type="text" id="prein-parent-nom" name="parentNom" placeholder="Nom" autocomplete="family-name" maxlength="200" required>
+              </div>
+              </div>
+              <div class="form-row">
+              <div class="form-field">
+                <label for="prein-email">E-mail (parent)</label>
+                <input type="email" id="prein-email" name="email" placeholder="vous@exemple.fr" autocomplete="email" maxlength="200" required>
+              </div>
+              <div class="form-field">
+                <label for="prein-telephone">Téléphone (parent)</label>
+                <input type="tel" id="prein-telephone" name="telephone" placeholder="06 12 34 56 78" autocomplete="tel" maxlength="200" required>
+              </div>
+              </div>
+              <details class="form-parent2">
+                <summary>Ajouter un second responsable légal <span>(facultatif)</span></summary>
+                <div class="form-row">
+              <div class="form-field">
+                <label for="prein-parent2-prenom">Prénom du 2e responsable</label>
+                <input type="text" id="prein-parent2-prenom" name="parent2Prenom" placeholder="Prénom" autocomplete="off" maxlength="200">
+              </div>
+              <div class="form-field">
+                <label for="prein-parent2-nom">Nom du 2e responsable</label>
+                <input type="text" id="prein-parent2-nom" name="parent2Nom" placeholder="Nom" autocomplete="off" maxlength="200">
+              </div>
+                </div>
+                <div class="form-row">
+              <div class="form-field">
+                <label for="prein-parent2-email">E-mail (2e responsable)</label>
+                <input type="email" id="prein-parent2-email" name="parent2Email" placeholder="autre@exemple.fr" autocomplete="off" maxlength="200">
+              </div>
+              <div class="form-field">
+                <label for="prein-parent2-telephone">Téléphone (2e responsable)</label>
+                <input type="tel" id="prein-parent2-telephone" name="parent2Telephone" placeholder="06 12 34 56 78" autocomplete="off" maxlength="200">
+              </div>
+                </div>
+                <p class="form-parent2-hint">Il recevra aussi l'e-mail de confirmation et nos nouvelles du groupe.</p>
+              </details>
+              <div class="form-field">
+                <label for="prein-commentaire">Un message pour le club <span class="form-optional">(facultatif)</span></label>
+                <textarea id="prein-commentaire" name="commentaire" rows="3" maxlength="500" placeholder="Ex. : déjà joué en club, disponibilités…"></textarea>
+              </div>
+              <div class="form-checks">
+                <label class="form-check">
+                  <input type="checkbox" id="prein-rgpd" name="rgpd" required>
+                  <span>J'accepte que le club conserve ces informations pour me recontacter au sujet de ce futur groupe (<a href="/confidentialite">politique de confidentialité</a>).</span>
+                </label>
+              </div>
+              <p class="form-note">Ce n'est pas encore une inscription : la place sera confirmée quand le club vous recontactera, avec le dossier et le paiement.</p>
+              <div id="preinscription-turnstile"></div>
+              <p id="preinscription-error" class="form-alert" role="alert" hidden></p>
+              <button type="submit" class="btn btn-primary">Envoyer la pré-inscription</button>
+            </form>
+          </div>
+
+          <div id="preinscription-success" class="form-result" role="status" hidden>
+            <h3>Pré-inscription enregistrée, merci !</h3>
+            <p>Un e-mail de confirmation vient de vous être envoyé. Nous vous recontacterons dès qu'une place sera disponible. Pensez à vérifier vos courriers indésirables.</p>
+          </div>
+
+          <div class="prein-full form-result">
+            <h3>Les places sont prises</h3>
+            <p>La liste de pré-inscription est complète. Écrivez-nous à <a href="mailto:contact@club-exemple.example" data-org="org.email" data-org-attr="href:org.mailto">contact@club-exemple.example</a> : nous vous préviendrons si une place se libère.</p>
+            <a href="/contact" class="btn btn-primary">Nous contacter</a>
+          </div>
+
+          <div class="prein-closed form-result">
+            <h3>Pré-inscription fermée</h3>
+            <p>La pré-inscription n'est pas ouverte pour le moment. Une question ? Écrivez-nous à <a href="mailto:contact@club-exemple.example" data-org="org.email" data-org-attr="href:org.mailto">contact@club-exemple.example</a>.</p>
+            <a href="/contact" class="btn btn-primary">Nous contacter</a>
+          </div>
+
+          <div class="prein-opened form-result">
+            <h3>Le groupe est ouvert !</h3>
+            <p>Assez d'enfants se sont pré-inscrits : le groupe ouvre. Inscrivez votre enfant directement avec le formulaire d'inscription (dossier, photo et paiement).</p>
+            <a href="/inscription" class="btn btn-primary">Inscrire mon enfant</a>
+          </div>
+        </div>
+      </div>
+
+      <aside class="insc-aside" data-reveal aria-label="Places disponibles">
+        <div class="insc-recap">
+          <p class="insc-recap-kicker">Places disponibles</p>
+          <p class="insc-recap-price"><span id="preinscription-remaining">15</span></p>
+          <p class="insc-recap-sub"><span id="preinscription-remaining-label" data-one="place restante" data-many="places restantes">places restantes</span> sur <span id="preinscription-capacity">15</span></p>
+          <div class="prein-progress" aria-hidden="true"><span id="preinscription-progress" style="width:0%"></span></div>
+          <ul class="prein-groups" id="preinscription-groups" hidden></ul>
+          <ul class="insc-recap-list">
+            <li>Filles et garçons : le groupe dépend de <strong>l'année de naissance</strong></li>
+            <li>Gratuit et sans engagement : rien à payer ni à envoyer aujourd'hui</li>
+            <li>Chaque groupe ouvre dès qu'il y a assez d'enfants</li>
+            <li>Nous vous recontactons pour l'inscription définitive</li>
+          </ul>
+          <p class="insc-recap-help">Une question ? <a href="mailto:contact@club-exemple.example" data-org="org.email" data-org-attr="href:org.mailto">contact@club-exemple.example</a>. Votre enfant a l'âge d'une catégorie déjà ouverte ? Direction la <a href="/inscription">page Inscription</a>.</p>
+        </div>
+      </aside>
+
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-brand">
+          <img src="assets/images/logo-96.webp" alt="">
+          <strong>Club Exemple</strong>
+        </div>
+        <p>Club de football loisir à Demoville, le Club Exemple accueille les filles et les garçons de 5 à 9 ans<span data-org-if="groups.any"> (<span data-org-list="groups-names">U6, U7, U8 et U9</span>)</span> dans un esprit familial, 100% porté par des bénévoles.</p>
+        <div class="social-row">
+          <a href="https://www.facebook.com/club.exemple" aria-label="Facebook" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M13.5 21v-7.2h2.4l.4-2.8h-2.8v-1.6c0-.8.2-1.4 1.4-1.4h1.5V5.4c-.3 0-1.3-.1-2.4-.1-2.4 0-4 1.5-4 4.2v1.9H7.5v2.8h2.1V21h3.9z"/></svg></a>
+          <a href="https://www.instagram.com/club.exemple" aria-label="Instagram" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 8.2a3.8 3.8 0 100 7.6 3.8 3.8 0 000-7.6zm0 6.3a2.5 2.5 0 110-5 2.5 2.5 0 010 5zm5-6.6a1 1 0 11-2 0 1 1 0 012 0zM12 3c-2.5 0-2.8 0-3.7.1-1 .1-1.7.2-2.3.5-.6.2-1.1.6-1.6 1.1-.5.5-.8 1-1.1 1.6-.2.6-.4 1.3-.5 2.3C3 9.5 3 9.8 3 12.3s0 2.8.1 3.7c.1 1 .2 1.7.5 2.3.2.6.6 1.1 1.1 1.6.5.5 1 .8 1.6 1.1.6.2 1.3.4 2.3.5.9.1 1.2.1 3.7.1s2.8 0 3.7-.1c1-.1 1.7-.2 2.3-.5.6-.2 1.1-.6 1.6-1.1.5-.5.8-1 1.1-1.6.2-.6.4-1.3.5-2.3.1-.9.1-1.2.1-3.7s0-2.8-.1-3.7c-.1-1-.2-1.7-.5-2.3-.2-.6-.6-1.1-1.1-1.6-.5-.5-1-.8-1.6-1.1-.6-.2-1.3-.4-2.3-.5C14.8 3 14.5 3 12 3z"/></svg></a>
+        </div>
+      </div>
+      <div>
+        <h3>Navigation</h3>
+        <ul>
+          <li><a href="/">Accueil</a></li>
+          <li><a href="/actualites">Actualités</a></li>
+          <li><a href="/equipe">Le Club</a></li>
+          <li><a href="/entrainements">Entraînements</a></li>
+          <li><a href="/partenaires">Partenaires</a></li>
+          <li><a href="/contact">Contact</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Infos pratiques</h3>
+        <ul>
+          <li data-org-if="location.short"><a href="/contact" data-org="location.short">Stade municipal, Demoville</a></li>
+          <li data-org-if="org.email"><a href="mailto:contact@club-exemple.example" data-org="org.email" data-org-attr="href:org.mailto">contact@club-exemple.example</a></li>
+          <li data-org-if="org.phone"><a href="tel:+33100000000" data-org="org.phone" data-org-attr="href:org.tel">01 00 00 00 00</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 Club Exemple — Tous droits réservés.</p>
+      <p><a href="/mentions-legales">Mentions légales</a> · <a href="/confidentialite">Confidentialité</a></p>
+      <p>Région Démo · Depuis 2020</p>
+      <p>Site créé par <a href="https://licyo.fr" target="_blank" rel="nofollow noopener">Licyo</a></p>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/js/main.js?v=9ad992df26"></script>
+<script src="assets/js/preinscription.js?v=4931843fdd"></script>
+<script src="assets/js/naissance-autocomplete.js?v=1b9bb200a0"></script>
+</body>
+</html>

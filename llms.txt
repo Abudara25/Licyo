@@ -1,0 +1,12 @@
+# Club Exemple
+
+> Club Exemple est un club sportif fictif servant de démonstration à la plateforme Licyo. Ses informations (lieu, horaires, tarifs) sont des exemples et ne décrivent aucun club réel.
+
+## Pages principales
+
+- [Accueil](https://club-exemple.example/)
+- [Le Club](https://club-exemple.example/equipe)
+- [Entraînements](https://club-exemple.example/entrainements)
+- [Inscription](https://club-exemple.example/inscription)
+- [Actualités](https://club-exemple.example/actualites)
+- [Contact](https://club-exemple.example/contact)

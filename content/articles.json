@@ -1,0 +1,22 @@
+{
+  "articles": [
+    {
+      "title": "Bienvenue sur le site du Club Exemple",
+      "date": "2026-09-01",
+      "category": "club",
+      "slug": "bienvenue-club-exemple",
+      "excerpt": "Ce site de démonstration montre ce que Licyo propose à un club : actualités, entraînements, inscriptions en ligne.",
+      "body": "Le Club Exemple est un club fictif. Il sert à présenter la plateforme Licyo sans aucune donnée réelle.",
+      "image": "/assets/images/actualites/banniere-club.webp"
+    },
+    {
+      "title": "Reprise des entraînements",
+      "date": "2026-09-08",
+      "category": "club",
+      "slug": "reprise-entrainements",
+      "excerpt": "Les entraînements reprennent la semaine prochaine pour toutes les catégories.",
+      "body": "Les entraînements reprennent la semaine prochaine.\n\nPensez à compléter le dossier d'inscription en ligne avant la première séance.",
+      "image": ""
+    }
+  ]
+}

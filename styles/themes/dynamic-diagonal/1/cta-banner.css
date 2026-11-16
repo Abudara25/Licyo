@@ -1,0 +1,19 @@
+/* ---------- CTA banner ---------- */
+.cta-banner {
+  background: linear-gradient(120deg, var(--color-accent), var(--color-accent-dark));
+  color: var(--color-primary-deep);
+  border-radius: var(--radius-lg);
+  padding: 48px;
+  display: flex; align-items: center; justify-content: space-between; gap: 28px; flex-wrap: wrap;
+}
+.cta-banner h3 { font-family: var(--font-display); text-transform: uppercase; letter-spacing: .02em; font-size: 1.5rem; color: var(--color-primary-deep); margin-bottom: 6px; }
+.cta-banner p { color: var(--color-primary-dark); margin-bottom: 0; }
+
+/* Variante compacte (rappel en tête d'une page, ex. pré-inscription U10 sur la page Inscription). */
+.cta-banner--compact { padding: 24px 32px; gap: 16px 24px; }
+.cta-banner--compact h3 { font-size: 1.15rem; margin-bottom: 4px; }
+.cta-banner--compact p { font-size: .95rem; line-height: 1.5; }
+@media (max-width: 600px) {
+  .cta-banner--compact { padding: 18px 20px; }
+  .cta-banner--compact .btn { width: 100%; }
+}

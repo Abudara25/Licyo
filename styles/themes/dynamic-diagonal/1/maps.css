@@ -1,0 +1,32 @@
+/* ---------- Carte Google Maps (chargée au clic, voir main.js) ---------- */
+/* Le cadre prend la hauteur de son contenu tant que la carte n'est pas chargée ; l'iframe, elle,
+   porte son propre ratio une fois insérée (le JS remplace .map-placeholder par l'iframe). */
+.map-embed { border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm); background: var(--color-accent-soft); }
+.map-embed iframe { width: 100%; height: auto; aspect-ratio: 16 / 10; }
+.map-embed--wide { max-width: 640px; margin-inline: auto; }
+.map-embed--wide iframe { aspect-ratio: 16 / 9; }
+.map-placeholder {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 32px 20px 20px; text-align: center;
+  background-image:
+    radial-gradient(circle at 50% 45%, var(--color-accent-soft) 0 110px, transparent 220px),
+    linear-gradient(rgba(var(--color-primary-rgb), .07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--color-primary-rgb), .07) 1px, transparent 1px);
+  background-size: auto, 32px 32px, 32px 32px;
+}
+.map-pin {
+  display: grid; place-items: center; width: 52px; height: 52px; margin-bottom: 12px;
+  border-radius: 50%; background: var(--color-primary); color: var(--color-accent-pale);
+  box-shadow: 0 0 0 8px rgba(var(--color-primary-rgb), .1);
+}
+.map-pin svg { width: 24px; height: 24px; }
+.map-placeholder strong { color: var(--color-primary-dark); }
+.map-address { font-size: .9rem; color: var(--color-text-muted); }
+.map-placeholder .btn { margin-top: 16px; }
+.map-link {
+  display: inline-flex; align-items: center; min-height: 44px;
+  font-size: .88rem; font-weight: 600; color: var(--color-primary);
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.map-note { margin: 0; font-size: .78rem; color: var(--color-text-muted); }
+
