@@ -367,6 +367,58 @@ export const MIGRATIONS = [
       db.prepare('ALTER TABLE admin_sessions ADD COLUMN user_id INTEGER'),
     ],
   },
+  {
+    // Lot 2 Licyo (2026-11-16) : console fondateur (« Platform »), surface distincte de l'admin des clubs (ADR-018).
+    // ADDITIVE : opérateurs Licyo nominatifs (rôle plateforme, jamais tous les droits par facilité), leurs sessions et
+    // invitations, journal des actions plateforme, et le sport principal de chaque organisation (colonne nullable).
+    // Aucune de ces tables ne porte organization_id comme frontière : elles appartiennent à la plateforme.
+    version: 15,
+    name: 'platform_console',
+    statements: (db) => [
+      db.prepare(`CREATE TABLE IF NOT EXISTS platform_operators (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT NOT NULL UNIQUE CHECK (email = lower(email) AND length(email) BETWEEN 3 AND 200),
+        name TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 120),
+        role TEXT NOT NULL CHECK (role IN ('owner', 'admin', 'support', 'sales')),
+        password_hash TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'disabled')),
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT,
+        last_login_at TEXT
+      )`),
+      db.prepare(`CREATE TABLE IF NOT EXISTS platform_sessions (
+        token_hash TEXT PRIMARY KEY CHECK (length(token_hash) = 64),
+        operator_id INTEGER NOT NULL REFERENCES platform_operators(id),
+        created_at INTEGER NOT NULL,
+        expires_at INTEGER NOT NULL
+      )`),
+      db.prepare(`CREATE TABLE IF NOT EXISTS platform_operator_invites (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT NOT NULL CHECK (email = lower(email)),
+        name TEXT NOT NULL,
+        role TEXT NOT NULL CHECK (role IN ('owner', 'admin', 'support', 'sales')),
+        token_hash TEXT NOT NULL UNIQUE CHECK (length(token_hash) = 64),
+        invited_by INTEGER,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        expires_at TEXT NOT NULL,
+        used_at TEXT,
+        revoked_at TEXT
+      )`),
+      db.prepare(`CREATE TABLE IF NOT EXISTS platform_audit (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        at TEXT NOT NULL DEFAULT (datetime('now')),
+        operator_id INTEGER,
+        operator_name TEXT,
+        action TEXT NOT NULL,
+        target_organization_id TEXT,
+        detail TEXT
+      )`),
+      db.prepare('CREATE INDEX IF NOT EXISTS idx_platform_sessions_operator ON platform_sessions (operator_id)'),
+      db.prepare('CREATE INDEX IF NOT EXISTS idx_platform_audit_at ON platform_audit (at)'),
+      db.prepare('CREATE INDEX IF NOT EXISTS idx_platform_audit_org ON platform_audit (target_organization_id, at)'),
+      db.prepare('ALTER TABLE organizations ADD COLUMN sport TEXT'),
+    ],
+  },
 ];
 
 // Configuration du site : brouillon et version publiée d'une organisation (voir _shared/site-config.js).

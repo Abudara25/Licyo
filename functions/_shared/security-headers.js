@@ -17,7 +17,7 @@ export const SECURITY_HEADERS = Object.freeze({
 
 // Données personnelles : jamais en cache (navigateur, proxy, Cloudflare). Admin (fiches, photos, dossiers, exports CSV),
 // espace famille, réinscription, demande de lien, API, connexion du CMS.
-const PRIVATE_PREFIXES = ['/admin', '/depot/', '/reinscription/', '/educateur/', '/newsletter/', '/espace-famille', '/api/', '/auth', '/callback'];
+const PRIVATE_PREFIXES = ['/admin', '/platform', '/depot/', '/reinscription/', '/educateur/', '/newsletter/', '/espace-famille', '/api/', '/auth', '/callback'];
 // Liens secrets dans l'URL : aucun référent transmis, même vers le site lui-même.
 const TOKEN_PREFIXES = ['/depot/', '/reinscription/', '/educateur/', '/newsletter/'];
 // Relais OAuth du CMS (_shared/oauth-common.js) : sa page de retour exécute un script en ligne, que la CSP bloquerait.

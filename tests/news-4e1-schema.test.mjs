@@ -74,6 +74,12 @@ async function toVersion12(env) {
     env.DB.prepare('DROP TABLE IF EXISTS admin_users'),
     env.DB.prepare('DROP TABLE IF EXISTS admin_user_invites'),
     env.DB.prepare('ALTER TABLE admin_sessions DROP COLUMN user_id'),
+    // Migration 15 (console fondateur) retirée aussi.
+    env.DB.prepare('DROP TABLE IF EXISTS platform_sessions'),
+    env.DB.prepare('DROP TABLE IF EXISTS platform_operators'),
+    env.DB.prepare('DROP TABLE IF EXISTS platform_operator_invites'),
+    env.DB.prepare('DROP TABLE IF EXISTS platform_audit'),
+    env.DB.prepare('ALTER TABLE organizations DROP COLUMN sport'),
     env.DB.prepare('DELETE FROM schema_migrations WHERE version > 13'),
   ]);
 }
@@ -109,13 +115,14 @@ test('T1 — migration 13 sur une base en 12 : tables, 3 index, 30 triggers, une
   for (const s of states) assert.deepEqual([s.source, s.revision, s.articles_revision, s.import_batch_id, s.validated_at, s.cutover_at], ['json', 1, 0, null, null, null]);
   assert.equal((await first(env, 'SELECT COUNT(*) AS n FROM articles')).n, 0, 'aucun import dans la migration');
   // Toutes les tables préexistantes identiques (hors l'enregistrement de la migration).
-  const after = await dumpTables(env, ['articles', 'organization_news_state', 'admin_users', 'admin_user_invites']);
+  const after = await dumpTables(env, ['articles', 'organization_news_state', 'admin_users', 'admin_user_invites', 'platform_operators', 'platform_sessions', 'platform_operator_invites', 'platform_audit']);
   const strip = (dump) => ({
     ...dump,
     schema_migrations: dump.schema_migrations.filter((m) => m.version < 13),
     admin_sessions: dump.admin_sessions.map(({ user_id, ...rest }) => rest),
+    organizations: dump.organizations.map(({ sport, ...rest }) => rest),
   });
-  assert.deepEqual(strip(after), before);
+  assert.deepEqual(strip(after), strip(before));
   // Second passage : aucune modification (données et schéma).
   const objects = await schemaObjects(env);
   const full = await dumpTables(env);
@@ -501,7 +508,7 @@ test('T2 (local) — migration 13 sur une copie en 12 : structure et données pr
   const after = snapshot(sqlite);
   // Migration 14 (comptes du bureau), appliquée ensuite par ensureSchema : ses objets et la colonne user_id ajoutée à
   // admin_sessions sont hors du périmètre de ce test (voir admin-users.test.mjs).
-  const migration14 = /admin_users|admin_user_invites|: admin_sessions$|table:admin_sessions$/;
+  const migration14 = /admin_users|admin_user_invites|: admin_sessions$|table:admin_sessions$|platform_|: organizations$|table:organizations$/;
   assert.deepEqual(compareSnapshots(before, after).filter((p) => !migration14.test(p)), []);
   assert.deepEqual(
     compareSnapshots(before, after).filter((p) => migration14.test(p)).filter((p) => /admin_sessions/.test(p)),

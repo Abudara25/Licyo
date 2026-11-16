@@ -1,0 +1,75 @@
+/* Console fondateur Licyo : compléments à la maquette (tokens, base, layout, components, pages copiés tels quels).
+   Uniquement ce que la version rendue côté serveur ajoute : menu opérateur en <details>, entrées « Bientôt »,
+   recherche du haut, pages de connexion, confort tactile sur mobile. */
+
+/* Menu de l'opérateur (remplace le menu déroulant scripté de la maquette). */
+.operator-menu { position: relative; }
+.operator-menu > summary { list-style: none; cursor: pointer; }
+.operator-menu > summary::-webkit-details-marker { display: none; }
+.operator-pop { left: 0; right: auto; top: auto; bottom: calc(100% + 6px); }
+.operator-pop form { margin: 0; }
+
+/* Entrées prévues, pas encore construites. */
+.nav-link.is-soon { cursor: default; opacity: 0.62; }
+.nav-link.is-soon:hover { background: none; color: var(--ui-text-2); }
+.nav-link.is-soon .nav-count { font-weight: 560; }
+
+.env-card .dot.env-prod { background: var(--tone-success-dot); box-shadow: 0 0 0 3px var(--tone-success-bg); }
+
+/* Recherche du haut : vrai formulaire GET vers la liste des organisations. */
+.topbar-search { margin: 0; }
+.topbar-search .input-icon { width: 280px; max-width: 280px; }
+.topbar-search .input { height: 36px; min-height: 36px; }
+
+/* Pages sans session. */
+.auth-wrap { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; }
+.auth-card { width: min(440px, 100%); padding: 28px 24px; }
+.auth-brand { padding: 0 0 20px; }
+.auth-card h1 { font-size: 22px; letter-spacing: -0.02em; margin-bottom: 6px; }
+.auth-card .lead { color: var(--ui-text-2); margin-bottom: 18px; }
+.auth-card form { display: flex; flex-direction: column; gap: 14px; }
+
+/* Lien à transmettre (invitation) et formulaires en ligne. */
+.copy-row { display: flex; gap: 8px; align-items: center; }
+.copy-row .input { font-family: var(--ui-mono); font-size: 12.5px; }
+.inline-form { display: inline-flex; gap: 8px; align-items: center; margin: 0; flex-wrap: wrap; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.form-grid .span-2 { grid-column: 1 / -1; }
+.form-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 4px; }
+.org-cell { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.org-cell .who { font-weight: 620; color: var(--ui-text); }
+.org-cell .sub { font-size: 12px; color: var(--ui-text-3); font-family: var(--ui-mono); }
+.list-row.between { justify-content: space-between; }
+.filter-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+
+@media (max-width: 1023px) {
+  .topbar-search .input-icon { width: 200px; }
+}
+
+/* Mobile : cibles tactiles de 44 px, champs à 16 px (pas de zoom automatique sur iOS). */
+@media (max-width: 767px) {
+  .btn, .menu-item, .nav-link, .tab { min-height: 44px; }
+  .btn-sm { min-height: 44px; padding-inline: 12px; }
+  .btn-icon, .btn-sm.btn-icon { width: 44px; }
+  .input, .select, .textarea, .topbar-search .input { font-size: 16px; min-height: 44px; height: auto; }
+  .topbar-search { display: none; }
+  .form-grid { grid-template-columns: minmax(0, 1fr); }
+  .form-actions .btn { flex: 1 1 auto; }
+}
+
+/* En-tête de la fiche d'une organisation : logo puis titre. */
+.org-hero { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
+.org-hero .page-header { flex: 1; margin-bottom: 0; }
+@media (max-width: 767px) { .org-hero { align-items: flex-start; } .org-hero .org-logo.lg { width: 48px; height: 48px; font-size: 16px; } }
+
+/* Valeurs longues (identifiants) : retour à la ligne plutôt que débordement. */
+.kv dd { overflow-wrap: anywhere; }
+/* Bouton répété sous 768 px seulement : au-dessus, il est déjà dans la barre du haut. */
+.only-sm { display: none; }
+@media (max-width: 767px) { .only-sm { display: inline-flex; } }
+
+/* Tiroir fermé : pas d'ombre qui déborde sur le bord gauche de l'écran. */
+@media (max-width: 1023px) {
+  .sidebar { box-shadow: none; }
+  .app.nav-open .sidebar { box-shadow: var(--ui-shadow-lg); }
+}

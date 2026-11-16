@@ -8,7 +8,7 @@ import { clientKey, hitRateLimit } from '../../_shared/security.js';
 
 const LIMIT = { limit: 10, windowSeconds: 15 * 60 };
 const html = (body, status = 200) =>
-  new Response(body, { status, headers: { 'Content-Type': 'text/html;charset=UTF-8', 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' } });
+  new Response(body, { status, headers: { 'Content-Type': 'text/html;charset=UTF-8', 'Cache-Control': 'no-store', 'Referrer-Policy': 'same-origin' } });
 
 function shell(content) {
   return `${adminHead('Invitation', 'adm adm-login-body')}
